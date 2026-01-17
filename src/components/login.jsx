@@ -1,11 +1,18 @@
 import React from 'react'
 import { useEffect } from 'react';
+import { useUser } from '../context/UserContext';
+import { useNavigate } from 'react-router-dom';
+
 const Login = () => {
+    const { setUsername } = useUser();
+    const navigate = useNavigate();
+
     useEffect(() => {
         if (localStorage.getItem("nsstoken")) {
-            window.location.href = "/dashboard";
+            navigate("/college-dashboard");
         }
-    }, []);
+    }, [navigate]);
+
     const handleLogin = async (e) => {
         e.preventDefault();
         const username = e.target.username.value;
@@ -21,14 +28,12 @@ const Login = () => {
             });
             const data = await res.json();
             console.log(data);
-            if (data.success
-
-            ) {
+            if (data.success) {
                 localStorage.setItem("nsstoken", data.token);
-
-                window.location.href = "/dashboard";
+                setUsername(username);
+                localStorage.setItem("nss_username", username);
+                navigate("/college-dashboard");
             }
-
         }
         catch (error) {
             console.log(error)
