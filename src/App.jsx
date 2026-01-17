@@ -1,19 +1,19 @@
 import { useEffect, useState } from 'react'
-import {Routes,Route} from 'react-router-dom'
+import { Routes, Route } from 'react-router-dom'
 import './App.css'
 
 import Home from './components/home.jsx'
+import Login from './components/login.jsx'
 function App() {
   return (
     <>
-     <div>
-      <Routes>
-        <Route path='/' element={<Home/>} ></Route>
-       
-        <Route path='*' element={<h1>404 Not Found</h1>} ></Route>
+      <div>
+        <Routes>
+          <Route path='/' element={<Home />} ></Route>
+          <Route path='*' element={<h1>404 Not Found</h1>} ></Route>
 
-      </Routes>
-     </div>
+        </Routes>
+      </div>
     </>
   )
 }
