@@ -51,6 +51,34 @@ app.post('/login', async (req, res) => {
         token
     });
 });
+app.get('/college-dashboard', async (req, res) => {
+    console.log('inside college-dashboard');
+
+    const { username } = req.query;   // ✅ params from URL
+    console.log(username);
+
+    if (!username) {
+        return res.status(400).json({
+            success: false,
+            message: "Username is required"
+        });
+    }
+
+    const user = await User.findOne({ userName: username });
+
+    if (!user) {
+        return res.status(401).json({
+            success: false,
+            message: "User not found"
+        });
+    }
+
+    res.json({
+        success: true,
+        user
+    });
+});
+
 
 app.listen(PORT, () => {
     console.log(`Server is running on http://localhost:${PORT}`);
