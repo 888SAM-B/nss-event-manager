@@ -14,9 +14,26 @@ mongoose.connect(mongoURI, { useNewUrlParser: true, useUnifiedTopology: true })
     .then(() => console.log('Connected to MongoDB'))
     .catch(err => console.error('Failed to connect to MongoDB', err));
 
+const unitSchema = new mongoose.Schema({
+    name: String,
+    head: String,
+    password: String,
+    contact: String,
+    members: Array,
+    unitNumber: String,
+    createdDate: String,
+    events: { type: Array, default: [] },
+    collegeId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' }
+});
+
+const Unit = mongoose.model('Unit', unitSchema);
+
 const insLoginScheme = new mongoose.Schema({
     userName: String,
-    password: String
+    password: String,
+    insName: String,
+    code: String,
+    units: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Unit' }]
 });
 
 const User = mongoose.model('User', insLoginScheme);
@@ -64,7 +81,7 @@ app.get('/college-dashboard', async (req, res) => {
         });
     }
 
-    const user = await User.findOne({ userName: username });
+    const user = await User.findOne({ userName: username }).populate('units');
 
     if (!user) {
         return res.status(401).json({
@@ -77,6 +94,85 @@ app.get('/college-dashboard', async (req, res) => {
         success: true,
         user
     });
+});
+
+app.post('/addUnit', async (req, res) => {
+    console.log('inside addUnit');
+    const { username, name, password, head, contact, members, unitNumber, createdDate } = req.body;
+
+    if (!username) {
+        return res.status(400).json({ success: false, message: "Username is required" });
+    }
+
+    try {
+        const user = await User.findOne({ userName: username });
+        if (!user) {
+            return res.status(404).json({ success: false, message: "User not found" });
+        }
+
+        if (user.units.length > 6) {
+            return res.status(400).json({ success: false, message: "Maximum 6 units allowed" });
+        }
+
+        const newUnit = new Unit({
+            name,
+            head,
+            password,
+            contact,
+            members,
+            unitNumber,
+            createdDate,
+            collegeId: user._id
+        });
+
+        await newUnit.save();
+
+        user.units.push(newUnit._id);
+        await user.save();
+
+        res.json({
+            success: true,
+            message: "Unit added successfully",
+            unit: newUnit
+        });
+    } catch (error) {
+        console.error("Error adding unit:", error);
+        res.status(500).json({ success: false, message: "Internal Server Error" });
+    }
+});
+
+app.delete('/deleteUnit', async (req, res) => {
+    const { username, unitNumber } = req.body;
+
+    if (!username || !unitNumber) {
+        return res.status(400).json({ success: false, message: "Username and Unit Number are required" });
+    }
+
+    try {
+        const user = await User.findOne({ userName: username });
+        if (!user) {
+            return res.status(404).json({ success: false, message: "User not found" });
+        }
+
+        const unit = await Unit.findOne({ unitNumber: unitNumber, collegeId: user._id });
+
+        if (!unit) {
+            return res.status(404).json({ success: false, message: "Unit not found" });
+        }
+
+        await Unit.findByIdAndDelete(unit._id);
+
+        user.units.pull(unit._id);
+        await user.save();
+
+        res.json({
+            success: true,
+            message: "Unit deleted successfully"
+        });
+    } catch (error) {
+        console.error("Error deleting unit:", error);
+        res.status(500).json({ success: false, message: "Internal Server Error" });
+    }
 });
 
 
