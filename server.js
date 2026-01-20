@@ -19,6 +19,7 @@ const unitSchema = new mongoose.Schema({
     head: String,
     password: String,
     contact: String,
+    mail: String,
     members: Array,
     unitNumber: String,
     createdDate: String,
@@ -71,7 +72,7 @@ app.post('/login', async (req, res) => {
 app.get('/college-dashboard', async (req, res) => {
     console.log('inside college-dashboard');
 
-    const { username } = req.query;   // ✅ params from URL
+    const { username } = req.query;
     console.log(username);
 
     if (!username) {
@@ -98,7 +99,7 @@ app.get('/college-dashboard', async (req, res) => {
 
 app.post('/addUnit', async (req, res) => {
     console.log('inside addUnit');
-    const { username, name, password, head, contact, members, unitNumber, createdDate } = req.body;
+    const { username, name, password, head, contact, mail, members, unitNumber, createdDate } = req.body;
 
     if (!username) {
         return res.status(400).json({ success: false, message: "Username is required" });
@@ -119,12 +120,13 @@ app.post('/addUnit', async (req, res) => {
             head,
             password,
             contact,
+            mail: mail,
             members,
             unitNumber,
             createdDate,
             collegeId: user._id
         });
-
+        console.log(newUnit);
         await newUnit.save();
 
         user.units.push(newUnit._id);
@@ -171,6 +173,89 @@ app.delete('/deleteUnit', async (req, res) => {
         });
     } catch (error) {
         console.error("Error deleting unit:", error);
+        res.status(500).json({ success: false, message: "Internal Server Error" });
+    }
+});
+
+app.post('/unit-login', async (req, res) => {
+    console.log('inside unit-login');
+    const { collegeCode, unitCode, unitPassword } = req.body;
+    console.log(collegeCode, unitCode, unitPassword);
+    const user = await User.findOne({ code: collegeCode });
+    if (!user) {
+        return res.status(401).json({ success: false, message: "Invalid college code" });
+    }
+    const unit = await Unit.findOne({ unitNumber: unitCode, collegeId: user._id });
+    if (!unit) {
+        return res.status(401).json({ success: false, message: "Invalid unit code" });
+    }
+    if (unit.password !== unitPassword) {
+        return res.status(401).json({ success: false, message: "Invalid unit password" });
+    }
+    const token = jwt.sign({ unitNumber: unitCode }, process.env.JWT_SECRET, { expiresIn: "1d" });
+    res.json({ success: true, token });
+});
+
+app.get('/unit-dashboard/:unitCode', async (req, res) => {
+    console.log('inside unit-dashboard');
+
+    const { unitCode } = req.params; // 👈 PARAMS
+    console.log("Unit Code:", unitCode);
+
+    if (!unitCode) {
+        return res.status(400).json({ success: false, message: "Unit Code is required" });
+    }
+
+    const unit = await Unit.findOne({ unitNumber: unitCode });
+    if (!unit) {
+        return res.status(401).json({ success: false, message: "Unit not found" });
+    }
+    console.log(unit);
+    const college = await User.findOne({ _id: unit.collegeId });
+
+    res.json({ success: true, unit, college });
+});
+
+app.put('/update-unit-members', async (req, res) => {
+    const { unitCode, members } = req.body;
+    if (!unitCode || !members) {
+        return res.status(400).json({ success: false, message: "Unit Code and Members are required" });
+    }
+
+    try {
+        const unit = await Unit.findOne({ unitNumber: unitCode });
+        if (!unit) {
+            return res.status(404).json({ success: false, message: "Unit not found" });
+        }
+
+        unit.members = members;
+        await unit.save();
+
+        res.json({ success: true, message: "Members updated successfully", unit });
+    } catch (error) {
+        console.error("Error updating members:", error);
+        res.status(500).json({ success: false, message: "Internal Server Error" });
+    }
+});
+
+app.post('/add-unit-member', async (req, res) => {
+    const { unitCode, member } = req.body;
+    if (!unitCode || !member) {
+        return res.status(400).json({ success: false, message: "Unit Code and Member details are required" });
+    }
+
+    try {
+        const unit = await Unit.findOne({ unitNumber: unitCode });
+        if (!unit) {
+            return res.status(404).json({ success: false, message: "Unit not found" });
+        }
+
+        unit.members.push(member);
+        await unit.save();
+
+        res.json({ success: true, message: "Member added successfully", unit });
+    } catch (error) {
+        console.error("Error adding member:", error);
         res.status(500).json({ success: false, message: "Internal Server Error" });
     }
 });
