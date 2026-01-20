@@ -1,9 +1,9 @@
 :root {
     --primary-color: #4f46e5;
     --primary-hover: #4338ca;
-    --bg-color: #f3f4f6;
-    --card-bg: #ffffff;
-    --text-main: #1f2937;
+    --bg-color: #27292e;
+    --card-bg: #242222e4;
+    --text-main: #f4f4f4;
     --text-secondary: #6b7280;
     --border-color: #e5e7eb;
     --danger-color: #ef4444;
@@ -138,4 +138,67 @@ button {
     display: grid;
     grid-template-columns: repeat(2, 1fr);
     gap: 1rem;
+}
+
+.units-list {
+    display: flex;
+}
+
+.styled-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 25px 0;
+    font-size: 0.9em;
+    min-width: 400px;
+    box-shadow: 0 0 20px rgba(0, 0, 0, 0.15);
+    background-color: #333;
+    color: var(--text-main);
+    border-radius: var(--radius);
+    overflow: hidden;
+}
+
+.styled-table thead tr {
+    background-color: var(--primary-color);
+    color: #ffffff;
+    text-align: left;
+}
+
+.styled-table th,
+.styled-table td {
+    padding: 12px 15px;
+}
+
+.styled-table tbody tr {
+    border-bottom: 1px solid #444;
+}
+
+.styled-table tbody tr:nth-of-type(even) {
+    background-color: #3b3b3b;
+}
+
+.styled-table tbody tr:last-of-type {
+    border-bottom: 2px solid var(--primary-color);
+}
+
+.filter-container {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 1rem;
+    flex-wrap: wrap;
+    align-items: center;
+}
+
+.filter-input {
+    padding: 0.5rem;
+    border-radius: var(--radius);
+    border: 1px solid var(--border-color);
+    background: #333;
+    color: white;
+}
+
+.logout-btn {
+    margin-top: 1rem;
+    position: absolute;
+    top: 1rem;
+    right: 3rem;
 }

@@ -15,6 +15,7 @@ const CollegeDashboard = () => {
     const [newMembers, setNewMembers] = useState([]);
     const [newUnitPassword, setNewUnitPassword] = useState("");
     const [newUnitContact, setNewUnitContact] = useState("");
+    const [newUnitMail, setNewUnitMail] = useState("");
 
     const handleAddMember = () => {
         setNewMembers([...newMembers, { name: "", dept: "", year: "", contact: "" }]);
@@ -53,6 +54,7 @@ const CollegeDashboard = () => {
             password: newUnitPassword,
             head: newUnitHead,
             contact: newUnitContact,
+            mail: newUnitMail,
             members: newMembers,
             unitNumber,
             createdDate
@@ -227,6 +229,10 @@ const CollegeDashboard = () => {
                             <label className="form-label">Contact Number</label>
                             <input className="form-input" placeholder="Contact Number" value={newUnitContact} onChange={(e) => setNewUnitContact(e.target.value)} />
                         </div>
+                        <div className="form-group">
+                            <label className="form-label">E - Mail </label>
+                            <input className="form-input" placeholder="E - Mail" value={newUnitMail} onChange={(e) => setNewUnitMail(e.target.value)} />
+                        </div>
                         <h3>Members</h3>
                         {newMembers.map((member, index) => (
                             <div key={index} className="unit-card inside-create-unit" style={{ padding: '1rem', marginBottom: '0.5rem' }}>
@@ -238,7 +244,9 @@ const CollegeDashboard = () => {
                                     <div className="form-group">
                                         <input className="form-input" placeholder="Name" value={member.name} onChange={(e) => handleMemberChange(index, "name", e.target.value)} />
                                     </div>
-
+                                    <div className="form-group">
+                                        <input className="form-input" placeholder="Reg No" value={member.regNo} onChange={(e) => handleMemberChange(index, "regNo", e.target.value)} />
+                                    </div>
                                     <div className="form-group">
                                         <input className="form-input" placeholder="Dept" value={member.dept} onChange={(e) => handleMemberChange(index, "dept", e.target.value)} />
                                     </div>
