@@ -120,6 +120,7 @@ button {
     box-shadow: var(--shadow);
     margin-bottom: 1rem;
     margin-left: 1rem;
+    cursor: pointer;
 }
 
 .flex-between {

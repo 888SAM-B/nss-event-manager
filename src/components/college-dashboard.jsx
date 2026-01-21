@@ -172,8 +172,12 @@ const CollegeDashboard = () => {
                 {units.length === 0 ? (
                     <p>No units created yet.</p>
                 ) : (
+
                     units.map((unit, idx) => (
-                        <div key={unit.id || idx} className="unit-card">
+                        <div key={unit.id || idx} className="unit-card" onClick={()=>{
+                            
+                            localStorage.setItem("nssunitCode", unit.unitNumber);
+                            navigate('/unit-dashboard')}} >
                             <h4>{unit.name || unit.unitName} <span style={{ fontSize: '0.8em', color: '#666' }}>({unit.unitNumber})</span></h4>
                             <p><strong>Head:</strong> {unit.head || unit.unitHead}</p>
                             <p><strong>Created:</strong> {unit.createdDate}</p>

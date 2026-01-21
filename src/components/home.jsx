@@ -9,6 +9,7 @@ const Home = () => {
                 <h1>NSS EVENT MANAGER</h1>
                 <p>Manage your events with ease</p>
                 <button onClick={() => navigate("/login")} >LOGIN</button>
+                <button onClick={() => navigate("/unit-login")} >Unit Logn</button>
             </div>
         </>
     );

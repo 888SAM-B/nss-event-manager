@@ -132,7 +132,29 @@ const UnitDashboard = () => {
                 <p>{error}</p>
             </div>
         );
+
     }
+    const handleDeleteClick = async (member) => {
+        if (!window.confirm("Are you sure you want to delete this member?")) return;
+        const token = localStorage.getItem("unitToken");
+
+        try {
+            const res = await axios.delete(
+                `${import.meta.env.VITE_API_URL}/delete-unit-member`,
+                {
+                    headers: { Authorization: `Bearer ${token}` },
+                    data: { unitCode: unit.unitNumber, member }
+                }
+            );
+            if (res.data.success) {
+                setUnit(res.data.unit);
+                alert("Member deleted successfully!");
+            }
+        } catch (err) {
+            console.error(err);
+            alert("Failed to delete member");
+        }
+    };
 
     return (
         <div style={{ padding: "20px" }}>
@@ -206,6 +228,9 @@ const UnitDashboard = () => {
                                         style={{ padding: "4px 8px", fontSize: "12px" }}
                                     >
                                         Edit
+                                    </button>
+                                    <button onClick={() => handleDeleteClick(member)} className="btn btn-danger" style={{ padding: "4px 8px", fontSize: "12px" }}>
+                                        Delete
                                     </button>
                                 </td>
                             </tr>
