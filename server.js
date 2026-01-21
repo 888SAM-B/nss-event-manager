@@ -45,19 +45,16 @@ app.get('/', (_req, res) => {
 
 app.post('/login', async (req, res) => {
     console.log('inside login');
-
     const { username, password } = req.body;
     console.log(username, password);
     console.log(await User.find())
     const user = await User.findOne({ userName: username, password });
-
     if (!user) {
         return res.status(401).json({
             success: false,
             message: "Invalid username or password"
         });
     }
-
     const token = jwt.sign(
         { userName: username },
         process.env.JWT_SECRET,
@@ -260,7 +257,25 @@ app.post('/add-unit-member', async (req, res) => {
     }
 });
 
-
+app.delete('/delete-unit-member', async (req, res) => {
+    const { unitCode, member } = req.body;
+    if (!unitCode || !member) {
+        return res.status(400).json({ success: false, message: "Unit Code and Member     are required" });
+    }
+    try {
+        const unit = await Unit.findOne({ unitNumber: unitCode });
+        if (!unit) {
+            return res.status(404).json({ success: false, message: "Unit not found" });
+        }
+        unit.members = unit.members.filter(m => m.regNo !== member.regNo);
+        await unit.save();
+        res.json({ success: true, message: "Member deleted successfully", unit });
+    } catch (error) {
+        console.error("Error deleting member:", error);
+        res.status(500).json({ success: false, message: "Internal Server Error" });
+    }
+});
+    
 app.listen(PORT, () => {
     console.log(`Server is running on http://localhost:${PORT}`);
 });
