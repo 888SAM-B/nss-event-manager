@@ -156,6 +156,10 @@ const UnitDashboard = () => {
         }
     };
 
+
+    const handleAddEventClick = () => {
+        navigate('/events', { state: { unitCode: unit.unitNumber, collegeCode: college.code } });
+    };
     return (
         <div style={{ padding: "20px" }}>
             <h2> {college?.code} {college?.insName}  </h2>
@@ -308,6 +312,10 @@ const UnitDashboard = () => {
                     </div>
                 </div>
             )}
+            <h2>Add Event</h2>
+            <button className="btn btn-primary" onClick={handleAddEventClick} style={{ marginBottom: "1rem" }}>
+                Explore and Create Events Event
+            </button>
         </div>
     );
 };

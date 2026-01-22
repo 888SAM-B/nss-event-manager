@@ -174,22 +174,19 @@ const CollegeDashboard = () => {
                 ) : (
 
                     units.map((unit, idx) => (
-                        <div key={unit.id || idx} className="unit-card" onClick={()=>{
-                            
+                        <div key={unit.id || idx} className="unit-card" onClick={() => {
+
                             localStorage.setItem("nssunitCode", unit.unitNumber);
-                            navigate('/unit-dashboard')}} >
+                            navigate('/unit-dashboard')
+                        }} >
                             <h4>{unit.name || unit.unitName} <span style={{ fontSize: '0.8em', color: '#666' }}>({unit.unitNumber})</span></h4>
                             <p><strong>Head:</strong> {unit.head || unit.unitHead}</p>
                             <p><strong>Created:</strong> {unit.createdDate}</p>
 
-                            <details>
-                                <summary>Members ({unit.members ? unit.members.length : 0})</summary>
-                                <ul>
-                                    {unit.members && unit.members.map((m, i) => (
-                                        <li key={i}>{m.name} - {m.dept} ({m.year})</li>
-                                    ))}
-                                </ul>
-                            </details>
+
+                            <summary>Members ({unit.members ? unit.members.length : 0})</summary>
+
+
                             <button
                                 className="btn btn-danger"
                                 style={{ marginTop: '1rem', marginBottom: '0.5rem', fontSize: '0.8rem', padding: '0.3rem 0.8rem' }}
