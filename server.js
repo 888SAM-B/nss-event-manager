@@ -33,11 +33,32 @@ const insLoginScheme = new mongoose.Schema({
     userName: String,
     password: String,
     insName: String,
+    events: { type: Array, default: [] },
     code: String,
     units: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Unit' }]
 });
 
 const User = mongoose.model('User', insLoginScheme);
+
+
+const eventSchema = new mongoose.Schema({
+    name: String,
+    description: String,
+    category: String,
+    singleDay: Boolean,
+    date: String,
+    dateFrom: String,
+    dateTo: String,
+    timeFrom: String,
+    timeTo: String,
+    venue: String,
+    images: Array,
+    unitId: { type: mongoose.Schema.Types.ObjectId, ref: 'Unit' },
+    collegeId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' }
+});
+
+const Event = mongoose.model('Event', eventSchema);
+
 
 app.get('/', (_req, res) => {
     res.send('Hello, World!');
@@ -275,7 +296,44 @@ app.delete('/delete-unit-member', async (req, res) => {
         res.status(500).json({ success: false, message: "Internal Server Error" });
     }
 });
-    
+
+
+app.post('/addEvent', async (req, res) => {
+    console.log("inside add event")
+    const { eventData } = req.body;
+    console.log(eventData)
+    if (!eventData) {
+        return res.status(400).json({ success: false, message: "Event details are required" });
+    }
+    console.log(eventData);
+    try {
+        const unit = await Unit.findOne({ unitNumber: eventData.unitCode });
+        if (!unit) {
+            return res.status(404).json({ success: false, message: "Unit not found" });
+        }
+        const college = await User.findOne({ code: eventData.collegeCode });
+        if (!college) {
+            return res.status(404).json({ success: false, message: "College not found" });
+        }
+        const newEvent = new Event({
+            ...eventData,
+            unitId: unit._id,
+            collegeId: college._id
+        });
+        await newEvent.save();
+        console.log(newEvent._id, "id");
+        unit.events.push(newEvent._id);
+        await unit.save();
+        college.events.push(newEvent._id);
+        await college.save();
+        res.json({ success: true, message: "Event added successfully", event: newEvent });
+    } catch (error) {
+        console.error("Error adding event:", error);
+        res.status(500).json({ success: false, message: "Internal Server Error" });
+    }
+});
+
+
 app.listen(PORT, () => {
     console.log(`Server is running on http://localhost:${PORT}`);
 });
