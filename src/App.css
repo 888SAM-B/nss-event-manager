@@ -1,0 +1,131 @@
+.login-page {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: radial-gradient(circle at center, var(--bg-secondary) 0%, var(--bg-color) 100%);
+    padding: var(--space-4);
+}
+
+.login-card {
+    width: 100%;
+    max-width: 420px;
+
+}
+
+.dashboard-header {
+    background: var(--card-bg);
+    border-bottom: 1px solid var(--border-color);
+    padding: var(--space-4) 0;
+    margin-bottom: var(--space-8);
+    position: absolute;
+    width: 100%;
+    top: 0;
+    z-index: var(--z-sticky);
+    backdrop-filter: blur(8px);
+    background-color: rgba(30, 34, 48, 0.8);
+}
+
+.stat-card {
+    background: var(--card-bg);
+    border: 1px solid var(--border-color);
+    padding: var(--space-6);
+    border-radius: var(--radius-lg);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+}
+
+.stat-value {
+    font-size: var(--text-3xl);
+    font-weight: 800;
+    color: var(--primary-400);
+}
+
+.stat-label {
+    color: var(--text-secondary);
+    font-size: var(--text-sm);
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.actionbuttons {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-4);
+
+}
+
+.one {
+    border: 1px solid var(--border-color);
+    display: flex;
+    flex-direction: column;
+    margin: auto;
+    padding-top: 20px;
+    align-items: center;
+    width: 80%;
+    border-radius: 10px;
+}
+
+.main-container {
+    margin-top: 150px;
+}
+
+.evt-container {
+    margin-top: 120px;
+}
+
+.ed button {
+    border-radius: 7px;
+}
+
+.add-member button {
+    width: 100%;
+}
+
+.evt-container {
+    margin-bottom: 20px;
+}
+
+@media screen and (max-width:500px) {
+    .one {
+        width: 100%;
+    }
+
+    .actionbuttons button {
+        width: 80%;
+    }
+
+    .dashboard-header .container {
+        flex-direction: column;
+        align-items: flex-start;
+
+
+    }
+
+    .member {
+        flex-direction: column;
+        align-items: flex-start;
+        margin-top: 30px;
+    }
+
+    .main-container {
+        margin-top: 190px;
+    }
+
+    .add-member {
+        flex-direction: column;
+    }
+
+    .add-member button {
+        height: 50px;
+
+    }
+
+    .add-member {
+        width: 100%;
+    }
+
+
+}

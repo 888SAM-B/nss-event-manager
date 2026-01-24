@@ -3,6 +3,7 @@ import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import { useEffect } from "react";
 import { useState } from "react";
+
 const CollegeDashboard = () => {
     const username = localStorage.getItem("nss_username");
     const navigate = useNavigate();
@@ -90,7 +91,8 @@ const CollegeDashboard = () => {
             alert("An error occurred while creating the unit.");
         }
     };
-    const handleDeleteUnit = async (unitNumber) => {
+    const handleDeleteUnit = async (unitNumber, e) => {
+        e.stopPropagation(); // Prevent card click when deleting
         if (!confirm("Are you sure you want to delete this unit? This action cannot be undone.")) {
             return;
         }
@@ -133,7 +135,7 @@ const CollegeDashboard = () => {
                     console.log(res.data.user);
                     setinsName(res.data.user.insName);
                     setinsCode(res.data.user.code);
-                    setUnits(res.data.user.units);
+                    setUnits(res.data.user.units || []); // Ensure units is array
                 } else {
                     navigate("/");
                 }
@@ -144,134 +146,156 @@ const CollegeDashboard = () => {
         };
         fetchDashboard();
     }, [username, navigate]);
+
     return (
-        <>
-            <h1>College Dashboard: {insName} {insCode}</h1>
-            <button
-                onClick={() => {
-                    localStorage.removeItem("nsstoken");
-                    navigate("/");
-                }}
-            >
-                Logout
-            </button>
-            <div className="flex-between" style={{ marginBottom: "1rem" }}>
-                <h2>Welcome to the NSS Event Manager</h2>
-                <button
-                    className="btn btn-primary"
-                    onClick={() => setShowUnitModal(true)}
-                    disabled={units.length >= 6}
-                    style={units.length >= 6 ? { opacity: 0.5, cursor: 'not-allowed' } : {}}
-                    title={units.length >= 6 ? "Maximum limit of 6 units reached" : ""}
-                >
-                    Create Unit
-                </button>
-            </div>
-            <h3>Units ({units.length}/6)</h3>
-            <div className="units-list">
-                {units.length === 0 ? (
-                    <p>No units created yet.</p>
-                ) : (
+        <div style={{ minHeight: '100vh', background: 'var(--bg-color)' }}>
+            <header className="dashboard-header">
+                <div className="container flex-between">
+                    <div>
+                        <h1 className="mb-0" style={{ fontSize: '1.5rem' }}>{insName || 'College Dashboard'}</h1>
+                        <span className="badge badge-primary">{insCode}</span>
+                    </div>
+                    <button
+                        className="btn btn-danger"
+                        onClick={() => {
+                            localStorage.removeItem("nsstoken");
+                            navigate("/");
+                        }}
+                    >
+                        Logout
+                    </button>
+                </div>
+            </header>
 
-                    units.map((unit, idx) => (
-                        <div key={unit.id || idx} className="unit-card" onClick={() => {
+            <main className="container">
+                <div className="flex-between mb-6">
+                    <div>
+                        <h2>NSS Units Management</h2>
+                        <p>Manage your college NSS units and members</p>
+                    </div>
+                    <button
+                        className="btn btn-primary"
+                        onClick={() => setShowUnitModal(true)}
+                        disabled={units.length >= 6}
+                        title={units.length >= 6 ? "Maximum limit of 6 units reached" : ""}
+                    >
+                        + Create New Unit
+                    </button>
+                </div>
 
-                            localStorage.setItem("nssunitCode", unit.unitNumber);
-                            navigate('/unit-dashboard')
-                        }} >
-                            <h4>{unit.name || unit.unitName} <span style={{ fontSize: '0.8em', color: '#666' }}>({unit.unitNumber})</span></h4>
-                            <p><strong>Head:</strong> {unit.head || unit.unitHead}</p>
-                            <p><strong>Created:</strong> {unit.createdDate}</p>
-
-
-                            <summary>Members ({unit.members ? unit.members.length : 0})</summary>
-
-
-                            <button
-                                className="btn btn-danger"
-                                style={{ marginTop: '1rem', marginBottom: '0.5rem', fontSize: '0.8rem', padding: '0.3rem 0.8rem' }}
-                                onClick={() => handleDeleteUnit(unit.unitNumber)}
-                            >
-                                Delete Unit
-                            </button>
+                <div className="units-list grid-cols-3">
+                    {units.length === 0 ? (
+                        <div className="col-span-3 text-center p-6 card">
+                            <p>No units created yet. Click the button above to create your first unit.</p>
                         </div>
-                    ))
-                )}
-            </div>
+                    ) : (
+                        units.map((unit, idx) => (
+                            <div
+                                key={unit.id || idx}
+                                className="unit-card"
+                                onClick={() => {
+                                    localStorage.setItem("nssunitCode", unit.unitNumber);
+                                    navigate('/unit-dashboard')
+                                }}
+                                style={{ width: '100%', margin: 0 }}
+                            >
+                                <div className="flex-between mb-3">
+                                    <h4 className="mb-0">{unit.name || unit.unitName}</h4>
+                                    <span className="badge badge-success">{unit.unitNumber}</span>
+                                </div>
+                                <div className="mb-4">
+                                    <p className="mb-1 text-sm"><strong className="text-white">Head:</strong> {unit.head || unit.unitHead}</p>
+                                    <p className="mb-1 text-sm"><strong className="text-white">Created:</strong> {unit.createdDate}</p>
+                                    <p className="mb-1 text-sm"><strong className="text-white">Members:</strong> {unit.members ? unit.members.length : 0}</p>
+                                </div>
+
+                                <button
+                                    className="btn btn-danger btn-sm w-100"
+                                    onClick={(e) => handleDeleteUnit(unit.unitNumber, e)}
+                                    style={{ width: '100%' }}
+                                >
+                                    Delete Unit
+                                </button>
+                            </div>
+                        ))
+                    )}
+                </div>
+            </main>
+
             {showUnitModal && (
                 <div className="modal-overlay">
                     <div className="modal-content">
-                        <h2>Create New Unit</h2>
-                        <div className="form-group">
-                            <label className="form-label">Unit Name</label>
-                            <input
-                                type="text"
-                                className="form-input"
-                                value={newUnitName}
-                                onChange={(e) => setNewUnitName(e.target.value)}
-                                placeholder="e.g. NSS Unit A"
-                            />
+                        <div className="flex-between mb-4">
+                            <h2 className="mb-0">Create New Unit</h2>
+                            <button className="btn btn-sm btn-secondary" onClick={() => setShowUnitModal(false)}>&times;</button>
                         </div>
-                        <div className="form-group">
-                            <label className="form-label">Unit Password</label>
-                            <input className="form-input" placeholder="password" value={newUnitPassword} onChange={(e) => setNewUnitPassword(e.target.value)} />
-                        </div>
-                        <div className="form-group">
-                            <label className="form-label">Unit Head</label>
-                            <input
-                                type="text"
-                                className="form-input"
-                                value={newUnitHead}
-                                onChange={(e) => setNewUnitHead(e.target.value)}
-                                placeholder="Name of Unit Head"
-                            />
-                        </div>
-                        <div className="form-group">
-                            <label className="form-label">Contact Number</label>
-                            <input className="form-input" placeholder="Contact Number" value={newUnitContact} onChange={(e) => setNewUnitContact(e.target.value)} />
-                        </div>
-                        <div className="form-group">
-                            <label className="form-label">E - Mail </label>
-                            <input className="form-input" placeholder="E - Mail" value={newUnitMail} onChange={(e) => setNewUnitMail(e.target.value)} />
-                        </div>
-                        <h3>Members</h3>
-                        {newMembers.map((member, index) => (
-                            <div key={index} className="unit-card inside-create-unit" style={{ padding: '1rem', marginBottom: '0.5rem' }}>
-                                <div className="flex-between">
-                                    <h4>Member {index + 1}</h4>
-                                    <button className="btn btn-danger" onClick={() => handleRemoveMember(index)} style={{ padding: '0.2rem 0.5rem', fontSize: '0.8rem' }}>Remove</button>
-                                </div>
-                                <div className="grid-cols-2">
-                                    <div className="form-group">
-                                        <input className="form-input" placeholder="Name" value={member.name} onChange={(e) => handleMemberChange(index, "name", e.target.value)} />
-                                    </div>
-                                    <div className="form-group">
-                                        <input className="form-input" placeholder="Reg No" value={member.regNo} onChange={(e) => handleMemberChange(index, "regNo", e.target.value)} />
-                                    </div>
-                                    <div className="form-group">
-                                        <input className="form-input" placeholder="Dept" value={member.dept} onChange={(e) => handleMemberChange(index, "dept", e.target.value)} />
-                                    </div>
-                                    <div className="form-group">
-                                        <input className="form-input" placeholder="Year" value={member.year} onChange={(e) => handleMemberChange(index, "year", e.target.value)} />
-                                    </div>
-                                    <div className="form-group">
-                                        <input className="form-input" placeholder="Contact" value={member.contact} onChange={(e) => handleMemberChange(index, "contact", e.target.value)} />
-                                    </div>
-                                </div>
-                            </div>
-                        ))}
 
-                        <button className="btn" onClick={handleAddMember} style={{ width: '100%', marginBottom: '1rem', border: '1px dashed #ccc', marginTop: '1rem' }}>
-                            + Add Member
-                        </button>
-                        <div className="flex-between" style={{ marginTop: '1rem' }}>
-                            <button className="btn" onClick={() => setShowUnitModal(false)}>Cancel</button>
+                        <div className="grid-cols-2 mb-4">
+                            <div className="form-group">
+                                <label className="form-label">Unit Name</label>
+                                <input
+                                    type="text"
+                                    className="form-input"
+                                    value={newUnitName}
+                                    onChange={(e) => setNewUnitName(e.target.value)}
+                                    placeholder="e.g. NSS Unit A"
+                                />
+                            </div>
+                            <div className="form-group">
+                                <label className="form-label">Unit Head</label>
+                                <input
+                                    type="text"
+                                    className="form-input"
+                                    value={newUnitHead}
+                                    onChange={(e) => setNewUnitHead(e.target.value)}
+                                    placeholder="Name of Unit Head"
+                                />
+                            </div>
+                            <div className="form-group">
+                                <label className="form-label">Contact Number</label>
+                                <input className="form-input" placeholder="Contact" value={newUnitContact} onChange={(e) => setNewUnitContact(e.target.value)} />
+                            </div>
+                            <div className="form-group">
+                                <label className="form-label">Email</label>
+                                <input className="form-input" placeholder="Email" value={newUnitMail} onChange={(e) => setNewUnitMail(e.target.value)} />
+                            </div>
+                            <div className="form-group col-span-2" style={{ gridColumn: '1 / -1' }}>
+                                <label className="form-label">Unit Password</label>
+                                <input className="form-input" type="password" placeholder="Set a password for unit login" value={newUnitPassword} onChange={(e) => setNewUnitPassword(e.target.value)} />
+                            </div>
+                        </div>
+
+                        <div className="mb-6">
+                            <div className="flex-between mb-3">
+                                <h3 className="mb-0 text-lg">Initial Members (Optional)</h3>
+                                <button className="btn btn-sm btn-secondary" onClick={handleAddMember}>+ Add Member</button>
+                            </div>
+
+                            {newMembers.map((member, index) => (
+                                <div key={index} className="card p-4 mb-3" style={{ background: 'var(--dark-bg-tertiary)' }}>
+                                    <div className="flex-between mb-2">
+                                        <h4 className="text-sm mb-0">Member {index + 1}</h4>
+                                        <button className="text-danger" style={{ background: 'none', border: 'none' }} onClick={() => handleRemoveMember(index)}>Remove</button>
+                                    </div>
+                                    <div className="grid-cols-2">
+                                        <input className="form-input mb-2" placeholder="Name" value={member.name} onChange={(e) => handleMemberChange(index, "name", e.target.value)} />
+                                        <input className="form-input mb-2" placeholder="Reg No" value={member.regNo} onChange={(e) => handleMemberChange(index, "regNo", e.target.value)} />
+                                        <input className="form-input mb-2" placeholder="Dept" value={member.dept} onChange={(e) => handleMemberChange(index, "dept", e.target.value)} />
+                                        <input className="form-input mb-2" placeholder="Year" value={member.year} onChange={(e) => handleMemberChange(index, "year", e.target.value)} />
+                                        <input className="form-input mb-2" placeholder="Contact" value={member.contact} onChange={(e) => handleMemberChange(index, "contact", e.target.value)} />
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+
+                        <div className="flex-between pt-4" style={{ borderTop: '1px solid var(--border-color)' }}>
+                            <button className="btn btn-secondary" onClick={() => setShowUnitModal(false)}>Cancel</button>
                             <button className="btn btn-primary" onClick={handleCreateUnit}>Create Unit</button>
                         </div>
                     </div>
                 </div>
             )}
-        </>
+        </div>
     );
 };
 

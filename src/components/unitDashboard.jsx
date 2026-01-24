@@ -54,6 +54,7 @@ const UnitDashboard = () => {
     const handleLogout = () => {
         localStorage.removeItem("unitToken");
         localStorage.removeItem("nssunitCode");
+        localStorage.removeItem("nsscollegeCode");
         navigate("/unit-login");
     };
 
@@ -123,17 +124,6 @@ const UnitDashboard = () => {
         }
     };
 
-    if (loading) return <h2>Loading Unit Dashboard...</h2>;
-
-    if (error) {
-        return (
-            <div style={{ padding: "20px" }}>
-                <h2>Error</h2>
-                <p>{error}</p>
-            </div>
-        );
-
-    }
     const handleDeleteClick = async (member) => {
         if (!window.confirm("Are you sure you want to delete this member?")) return;
         const token = localStorage.getItem("unitToken");
@@ -156,166 +146,237 @@ const UnitDashboard = () => {
         }
     };
 
-
     const handleAddEventClick = () => {
         navigate('/events', { state: { unitCode: unit.unitNumber, collegeCode: college.code } });
     };
+
+    if (loading) return (
+        <div className="flex-center" style={{ height: '100vh' }}>
+            <div className="loading"></div>
+            <h2 className="ms-2">Loading Unit Dashboard...</h2>
+        </div>
+    );
+
+    if (error) {
+        return (
+            <div className="container p-6">
+                <div className="card text-center">
+                    <h2 className="text-danger mb-2">Error</h2>
+                    <p>{error}</p>
+                    <button className="btn btn-primary mt-4" onClick={() => navigate('/unit-login')}>Go to Login</button>
+                </div>
+            </div>
+        );
+    }
+
     return (
-        <div style={{ padding: "20px" }}>
-            <h2> {college?.code} {college?.insName}  </h2>
-            <h4>{college?.userName}</h4>
+        <div style={{ minHeight: '100vh', background: 'var(--bg-color)' }}>
+            <header className="dashboard-header">
+                <div className="container flex-between">
+                    <div>
+                        <span className="badge badge-primary">Unit Dashboard</span>
+                        <h1 className="mb-0" style={{ fontSize: '1.5rem', marginTop: '1rem', marginBottom: '0.3rem' }}>{college?.code} - {college?.insName} </h1>
+                    </div>
+                    <button onClick={handleLogout} className="btn btn-danger">Logout</button>
+                </div>
+            </header>
 
-            <h1>Unit Dashboard</h1>
+            <main className="container main-container" >
+                <div className="grid-cols-2 mb-6">
+                    <div className="card">
+                        <h3 className="mb-4">Unit Details</h3>
+                        <div className="grid-cols-2">
+                            <div>
+                                <p className="text-xs text-muted mb-1">UNIT CODE</p>
+                                <p className="fw-bold">{unit?.unitNumber}</p>
+                            </div>
+                            <div>
+                                <p className="text-xs text-muted mb-1">UNIT NAME</p>
+                                <p className="fw-bold">{unit?.name}</p>
+                            </div>
+                            <div>
+                                <p className="text-xs text-muted mb-1">UNIT HEAD</p>
+                                <p className="fw-bold">{unit?.head}</p>
+                            </div>
+                            <div>
+                                <p className="text-xs text-muted mb-1">CONTACT</p>
+                                <p className="fw-bold">{unit?.contact}</p>
+                            </div>
+                            <div style={{ gridColumn: '1 / -1' }}>
+                                <p className="text-xs text-muted mb-1">EMAIL</p>
+                                <p className="fw-bold">{unit?.mail}</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div className="card  flex-column text-center">
+                        <h3 className="mb-4">Quick Actions</h3>
+                        <div className="flex-center actionbuttons" >
+                            <div className="one">
+                                <button className="btn btn-primary btn-lg w-100 mb-3" onClick={handleAddEventClick}>
+                                    Create Events
+                                </button>
+                                <p className="text-sm text-muted">Manage events, volunteers and more from here.</p>
+                            </div>
+                            <div className="one">
+                                <button className="btn btn-primary btn-lg w-100 mb-3" onClick={handleAddEventClick}>
+                                    Explore Events
+                                </button>
+                                <p className="text-sm text-muted">Explore events created by other units.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
 
-            <hr />
+                <div className="flex-between member mb-4 align-items-end">
+                    <div className="unit-members-header" >
+                        <h3 className="mb-1 ">Unit Members</h3>
+                        <p className="text-sm">Manage student volunteers</p>
+                    </div>
+                    <div className="d-flex gap-2 add-member ">
+                        <input
+                            type="text"
+                            className="filter-input"
+                            placeholder="Search members..."
+                            value={search}
+                            onChange={(e) => setSearch(e.target.value)}
+                        />
+                        <button className="btn add-btn btn-primary" onClick={handleAddClick}>
+                            + Add Member
+                        </button>
+                    </div>
+                </div>
 
-            <p><b>Unit Code:</b> {unit?.unitNumber}</p>
-            <p><b>Unit Name:</b> {unit?.name}</p>
-            <p><b>Unit Head:</b> {unit?.head}</p>
-            <p><b>Contact:</b> {unit?.contact}</p>
-            <p><b>Email:</b> {unit?.mail}</p>
-
-            <hr />
-
-            <h3>Unit Members</h3>
-
-            <button className="btn btn-primary" onClick={handleAddClick} style={{ marginBottom: "1rem" }}>
-                Add Member
-            </button>
-
-            <input
-                type="text"
-                placeholder="Search by name / department / year / reg no"
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                style={{
-                    padding: "6px",
-                    marginBottom: "10px",
-                    width: "300px",
-                }}
-            />
-
-            {filteredMembers?.length > 0 ? (
-                <table
-                    border="1"
-                    cellPadding="8"
-                    cellSpacing="0"
-                    style={{
-                        width: "100%",
-                        borderCollapse: "collapse",
-                    }}
-                >
-                    <thead>
-                        <tr style={{ backgroundColor: "#cebfbfff", color: "black" }}>
-                            <th>S.No</th>
-                            <th>Name</th>
-                            <th>Reg No</th>
-                            <th>Department</th>
-                            <th>Year of Study</th>
-                            <th>Contact</th>
-                            <th>Action</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {filteredMembers.map((member, index) => (
-                            <tr key={index}>
-                                <td>{index + 1}</td>
-                                <td>{member.name}</td>
-                                <td>{member.regNo}</td>
-                                <td>{member.dept}</td>
-                                <td>{member.year}</td>
-                                <td>{member.contact}</td>
-                                <td>
-                                    <button
-                                        onClick={() => handleUpdateClick(member)}
-                                        className="btn btn-primary"
-                                        style={{ padding: "4px 8px", fontSize: "12px" }}
-                                    >
-                                        Edit
-                                    </button>
-                                    <button onClick={() => handleDeleteClick(member)} className="btn btn-danger" style={{ padding: "4px 8px", fontSize: "12px" }}>
-                                        Delete
-                                    </button>
-                                </td>
-                            </tr>
-                        ))}
-                    </tbody>
-                </table>
-            ) : (
-                <p>No members found</p>
-            )}
-
-            <hr />
-
-            <button onClick={handleLogout} className="btn btn-danger logout-btn">Logout</button>
+                <div className="card p-0 overflow-hidden">
+                    {filteredMembers?.length > 0 ? (
+                        <div style={{ overflowX: 'auto' }}>
+                            <table className="styled-table" style={{ margin: 0, boxShadow: 'none' }}>
+                                <thead>
+                                    <tr>
+                                        <th>S.No</th>
+                                        <th>Name</th>
+                                        <th>Reg No</th>
+                                        <th>Department</th>
+                                        <th>Year</th>
+                                        <th>Contact</th>
+                                        <th>Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {filteredMembers.map((member, index) => (
+                                        <tr key={index}>
+                                            <td>{index + 1}</td>
+                                            <td>{member.name}</td>
+                                            <td><span className="badge badge-secondary">{member.regNo}</span></td>
+                                            <td>{member.dept}</td>
+                                            <td>{member.year}</td>
+                                            <td>{member.contact}</td>
+                                            <td>
+                                                <div className="d-flex ed gap-2">
+                                                    <button
+                                                        onClick={() => handleUpdateClick(member)}
+                                                        className="btn btn-sm btn-primary"
+                                                    >
+                                                        Edit
+                                                    </button>
+                                                    <button
+                                                        onClick={() => handleDeleteClick(member)}
+                                                        className="btn btn-sm btn-danger"
+                                                    >
+                                                        Delete
+                                                    </button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    ) : (
+                        <div className="p-6 text-center">
+                            <p className="mb-0">No members found matching your search.</p>
+                        </div>
+                    )}
+                </div>
+            </main>
 
             {isModalOpen && (
                 <div className="modal-overlay">
                     <div className="modal-content">
-                        <h2>{editingIndex === null ? "Add Member" : "Update Member"}</h2>
+                        <div className="flex-between mb-4">
+                            <h2 className="mb-0">{editingIndex === null ? "Add New Member" : "Edit Member"}</h2>
+                            <button className="btn btn-sm btn-secondary" onClick={() => setIsModalOpen(false)}>&times;</button>
+                        </div>
+
                         <form onSubmit={handleSaveMember}>
-                            <div className="form-group">
-                                <label className="form-label">Name</label>
-                                <input
-                                    className="form-input"
-                                    name="name"
-                                    value={memberForm.name}
-                                    onChange={handleEditChange}
-                                    required
-                                />
+                            <div className="grid-cols-2">
+                                <div className="form-group">
+                                    <label className="form-label">Name</label>
+                                    <input
+                                        className="form-input"
+                                        name="name"
+                                        value={memberForm.name}
+                                        onChange={handleEditChange}
+                                        required
+                                        placeholder="Full Name"
+                                    />
+                                </div>
+                                <div className="form-group">
+                                    <label className="form-label">Reg No</label>
+                                    <input
+                                        className="form-input"
+                                        name="regNo"
+                                        value={memberForm.regNo}
+                                        onChange={handleEditChange}
+                                        required
+                                        placeholder="Registration Number"
+                                    />
+                                </div>
+                                <div className="form-group">
+                                    <label className="form-label">Department</label>
+                                    <input
+                                        className="form-input"
+                                        name="dept"
+                                        value={memberForm.dept}
+                                        onChange={handleEditChange}
+                                        required
+                                        placeholder="e.g. CSE"
+                                    />
+                                </div>
+                                <div className="form-group">
+                                    <label className="form-label">Year of Study</label>
+                                    <input
+                                        className="form-input"
+                                        type="number"
+                                        min="1"
+                                        max={5}
+                                        name="year"
+                                        value={memberForm.year}
+                                        onChange={handleEditChange}
+                                        required
+                                        placeholder="e.g. 3"
+                                    />
+                                </div>
+                                <div className="form-group col-span-2" style={{ gridColumn: '1 / -1' }}>
+                                    <label className="form-label">Contact Number</label>
+                                    <input
+                                        className="form-input"
+                                        name="contact"
+                                        value={memberForm.contact}
+                                        onChange={handleEditChange}
+                                        required
+                                        placeholder="Phone Number"
+                                    />
+                                </div>
                             </div>
-                            <div className="form-group">
-                                <label className="form-label">Reg No</label>
-                                <input
-                                    className="form-input"
-                                    name="regNo"
-                                    value={memberForm.regNo}
-                                    onChange={handleEditChange}
-                                    required
-                                />
-                            </div>
-                            <div className="form-group">
-                                <label className="form-label">Department</label>
-                                <input
-                                    className="form-input"
-                                    name="dept"
-                                    value={memberForm.dept}
-                                    onChange={handleEditChange}
-                                    required
-                                />
-                            </div>
-                            <div className="form-group">
-                                <label className="form-label">Year</label>
-                                <input
-                                    className="form-input"
-                                    name="year"
-                                    value={memberForm.year}
-                                    onChange={handleEditChange}
-                                    required
-                                />
-                            </div>
-                            <div className="form-group">
-                                <label className="form-label">Contact</label>
-                                <input
-                                    className="form-input"
-                                    name="contact"
-                                    value={memberForm.contact}
-                                    onChange={handleEditChange}
-                                    required
-                                />
-                            </div>
-                            <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px" }}>
-                                <button type="button" className="btn btn-danger" onClick={() => setIsModalOpen(false)}>Cancel</button>
-                                <button type="submit" className="btn btn-primary">Save Changes</button>
+
+                            <div className="flex-between pt-4 mt-2" style={{ borderTop: '1px solid var(--border-color)', paddingTop: '20px' }}>
+                                <button type="button" className="btn btn-secondary" onClick={() => setIsModalOpen(false)}>Cancel</button>
+                                <button type="submit" className="btn btn-primary">Save Member</button>
                             </div>
                         </form>
                     </div>
                 </div>
             )}
-            <h2>Add Event</h2>
-            <button className="btn btn-primary" onClick={handleAddEventClick} style={{ marginBottom: "1rem" }}>
-                Explore and Create Events Event
-            </button>
         </div>
     );
 };
