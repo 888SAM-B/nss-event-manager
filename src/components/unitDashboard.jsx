@@ -23,14 +23,15 @@ const UnitDashboard = () => {
         }
 
         const unitCode = localStorage.getItem("nssunitCode");
-        if (!unitCode) {
+        const collegeCode = localStorage.getItem("nsscollegeCode");
+        if (!unitCode || !collegeCode) {
             setError("Invalid Unit Code");
             setLoading(false);
             return;
         }
 
         axios
-            .get(`${import.meta.env.VITE_API_URL}/unit-dashboard/${unitCode}`, {
+            .get(`${import.meta.env.VITE_API_URL}/unit-dashboard/${unitCode}/${collegeCode}`, {
                 headers: {
                     Authorization: `Bearer ${token}`,
                 },
@@ -89,9 +90,11 @@ const UnitDashboard = () => {
         try {
             if (editingIndex === null) {
                 // ADD MODE
+                console.log(unit.unitNumber);
+                console.log(college.code);
                 const res = await axios.post(
                     `${import.meta.env.VITE_API_URL}/add-unit-member`,
-                    { unitCode: unit.unitNumber, member: memberForm },
+                    { unitCode: unit.unitNumber, collegeCode: college.code, member: memberForm },
                     { headers: { Authorization: `Bearer ${token}` } }
                 );
                 if (res.data.success) {
@@ -108,6 +111,7 @@ const UnitDashboard = () => {
                     `${import.meta.env.VITE_API_URL}/update-unit-members`,
                     {
                         unitCode: unit.unitNumber,
+                        collegeCode: college.code,
                         members: updatedMembers
                     },
                     { headers: { Authorization: `Bearer ${token}` } }
@@ -133,7 +137,7 @@ const UnitDashboard = () => {
                 `${import.meta.env.VITE_API_URL}/delete-unit-member`,
                 {
                     headers: { Authorization: `Bearer ${token}` },
-                    data: { unitCode: unit.unitNumber, member }
+                    data: { unitCode: unit.unitNumber, collegeCode: college.code, member }
                 }
             );
             if (res.data.success) {
@@ -149,6 +153,11 @@ const UnitDashboard = () => {
     const handleAddEventClick = () => {
         navigate('/events', { state: { unitCode: unit.unitNumber, collegeCode: college.code } });
     };
+
+    const handleExploreEventClick = () => {
+        navigate('/explore-events', { state: { unitCode: unit.unitNumber, collegeCode: college.code } })
+    }
+
 
     if (loading) return (
         <div className="flex-center" style={{ height: '100vh' }}>
@@ -168,6 +177,8 @@ const UnitDashboard = () => {
             </div>
         );
     }
+
+
 
     return (
         <div style={{ minHeight: '100vh', background: 'var(--bg-color)' }}>
@@ -218,7 +229,7 @@ const UnitDashboard = () => {
                                 <p className="text-sm text-muted">Manage events, volunteers and more from here.</p>
                             </div>
                             <div className="one">
-                                <button className="btn btn-primary btn-lg w-100 mb-3" onClick={handleAddEventClick}>
+                                <button className="btn btn-primary btn-lg w-100 mb-3" onClick={handleExploreEventClick}>
                                     Explore Events
                                 </button>
                                 <p className="text-sm text-muted">Explore events created by other units.</p>

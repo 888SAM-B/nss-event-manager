@@ -8,7 +8,8 @@ import CollegeDashboard from './components/college-dashboard.jsx'
 import { UserProvider } from './context/UserContext.jsx'
 import UnitLogin from './components/unitLogin.jsx'
 import UnitDashboard from './components/unitDashboard.jsx'
-import Events from './components/events.jsx'
+import AddEvent from './components/add-event.jsx'
+import ExploreEvents from './components/explore-event.jsx'
 
 function App() {
   return (
@@ -20,7 +21,8 @@ function App() {
           <Route path='/college-dashboard' element={<CollegeDashboard />} ></Route>
           <Route path='/unit-login' element={<UnitLogin />} ></Route>
           <Route path='/unit-dashboard' element={<UnitDashboard />} ></Route>
-          <Route path='/events' element={<Events />} ></Route>
+          <Route path='/events' element={<AddEvent />} ></Route>
+          <Route path='/explore-events' element={<ExploreEvents />} ></Route>``
           <Route path='*' element={<h1>404 Not Found</h1>} ></Route>
 
         </Routes>

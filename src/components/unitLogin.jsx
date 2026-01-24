@@ -19,6 +19,11 @@ const UnitLogin = () => {
     try {
       const res = await axios.post(`${import.meta.env.VITE_API_URL}/unit-login`, payload);
       if (res.data.success) {
+        localStorage.clear();
+        localStorage.removeItem("nsstoken");
+        localStorage.removeItem("nssunitCode");
+        localStorage.removeItem("nsscollegeCode");
+        localStorage.removeItem("unitToken");
         localStorage.setItem("unitToken", res.data.token);
         localStorage.setItem("nssunitCode", unitCode);
         localStorage.setItem("nsscollegeCode", collegeCode); // Store College code as well

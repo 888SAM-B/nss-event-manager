@@ -1,3 +1,8 @@
+:root {
+    --primary-600: #4f46e5;
+    --primary-700: #4338ca;
+}
+
 .login-page {
     min-height: 100vh;
     display: flex;
@@ -88,6 +93,14 @@
     margin-bottom: 20px;
 }
 
+input[type="file"]::file-selector-button {
+    background-color: #4338ca;
+    color: white;
+    border: none;
+    border-radius: 7px;
+    padding: 8px 14px;
+}
+
 @media screen and (max-width:500px) {
     .one {
         width: 100%;
@@ -127,5 +140,11 @@
         width: 100%;
     }
 
+    .evt-container {
+        margin-top: 160px;
+    }
 
+    .evt-imgs {
+        flex-direction: column;
+    }
 }

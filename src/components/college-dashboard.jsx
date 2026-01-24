@@ -167,7 +167,7 @@ const CollegeDashboard = () => {
                 </div>
             </header>
 
-            <main className="container">
+            <main className="container main-container">
                 <div className="flex-between mb-6">
                     <div>
                         <h2>NSS Units Management</h2>

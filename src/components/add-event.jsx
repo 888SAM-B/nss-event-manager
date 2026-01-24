@@ -351,10 +351,10 @@ const AddEvent = () => {
                         {/* Image Upload Section */}
                         <div className="form-group mb-4">
                             <label>Event Images</label>
-                            <div className="input-group">
+                            <div className="input-group evt-imgs">
                                 <input
                                     type="file"
-                                    className="form-control"
+                                    className="form-control choose-img "
                                     id="images"
                                     multiple
                                     onChange={handleFileChange}
