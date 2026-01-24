@@ -204,6 +204,7 @@ app.post('/unit-login', async (req, res) => {
         return res.status(401).json({ success: false, message: "Invalid college code" });
     }
     const unit = await Unit.findOne({ unitNumber: unitCode, collegeId: user._id });
+    console.log(unit);
     if (!unit) {
         return res.status(401).json({ success: false, message: "Invalid unit code" });
     }
@@ -214,34 +215,38 @@ app.post('/unit-login', async (req, res) => {
     res.json({ success: true, token });
 });
 
-app.get('/unit-dashboard/:unitCode', async (req, res) => {
+app.get('/unit-dashboard/:unitCode/:collegeCode', async (req, res) => {
     console.log('inside unit-dashboard');
 
     const { unitCode } = req.params; // 👈 PARAMS
     console.log("Unit Code:", unitCode);
+    const collegeObject = await User.findOne({ code: req.params.collegeCode });
+    const collegeCode = collegeObject._id;
+    console.log("College Code:", collegeCode);
 
-    if (!unitCode) {
+    if (!unitCode || !collegeCode) {
         return res.status(400).json({ success: false, message: "Unit Code is required" });
     }
 
-    const unit = await Unit.findOne({ unitNumber: unitCode });
+    const unit = await Unit.findOne({ unitNumber: unitCode, collegeId: collegeCode });
     if (!unit) {
         return res.status(401).json({ success: false, message: "Unit not found" });
     }
     console.log(unit);
-    const college = await User.findOne({ _id: unit.collegeId });
+    const college = await User.findOne({ _id: collegeCode });
 
     res.json({ success: true, unit, college });
 });
 
 app.put('/update-unit-members', async (req, res) => {
-    const { unitCode, members } = req.body;
-    if (!unitCode || !members) {
+    const { unitCode, members, collegeCode } = req.body;
+    if (!unitCode || !members || !collegeCode) {
         return res.status(400).json({ success: false, message: "Unit Code and Members are required" });
     }
-
+    const collegeObject = await User.findOne({ code: collegeCode });
+    const collegeId = collegeObject._id;
     try {
-        const unit = await Unit.findOne({ unitNumber: unitCode });
+        const unit = await Unit.findOne({ unitNumber: unitCode, collegeId: collegeId });
         if (!unit) {
             return res.status(404).json({ success: false, message: "Unit not found" });
         }
@@ -257,14 +262,19 @@ app.put('/update-unit-members', async (req, res) => {
 });
 
 app.post('/add-unit-member', async (req, res) => {
-    const { unitCode, member } = req.body;
-    if (!unitCode || !member) {
+    const { unitCode, member, collegeCode } = req.body;
+    if (!unitCode || !member || !collegeCode) {
         return res.status(400).json({ success: false, message: "Unit Code and Member details are required" });
     }
+    const collegeObject = await User.findOne({ code: collegeCode });
+    console.log("College Code:", collegeCode);
+    const collegeId = collegeObject._id;
+    console.log(collegeId);
 
     try {
-        const unit = await Unit.findOne({ unitNumber: unitCode });
+        const unit = await Unit.findOne({ unitNumber: unitCode, collegeId: collegeId });
         if (!unit) {
+            console.log("Unit not found");
             return res.status(404).json({ success: false, message: "Unit not found" });
         }
 
@@ -279,12 +289,14 @@ app.post('/add-unit-member', async (req, res) => {
 });
 
 app.delete('/delete-unit-member', async (req, res) => {
-    const { unitCode, member } = req.body;
-    if (!unitCode || !member) {
+    const { unitCode, member, collegeCode } = req.body;
+    if (!unitCode || !member || !collegeCode) {
         return res.status(400).json({ success: false, message: "Unit Code and Member     are required" });
     }
+    const collegeObject = await User.findOne({ code: collegeCode });
+    const collegeId = collegeObject._id;
     try {
-        const unit = await Unit.findOne({ unitNumber: unitCode });
+        const unit = await Unit.findOne({ unitNumber: unitCode, collegeId: collegeId });
         if (!unit) {
             return res.status(404).json({ success: false, message: "Unit not found" });
         }
@@ -305,9 +317,11 @@ app.post('/addEvent', async (req, res) => {
     if (!eventData) {
         return res.status(400).json({ success: false, message: "Event details are required" });
     }
+    const collegeObject = await User.findOne({ code: eventData.collegeCode });
+    const collegeCode = collegeObject._id;
     console.log(eventData);
     try {
-        const unit = await Unit.findOne({ unitNumber: eventData.unitCode });
+        const unit = await Unit.findOne({ unitNumber: eventData.unitCode, collegeId: collegeCode });
         if (!unit) {
             return res.status(404).json({ success: false, message: "Unit not found" });
         }
@@ -331,6 +345,26 @@ app.post('/addEvent', async (req, res) => {
         console.error("Error adding event:", error);
         res.status(500).json({ success: false, message: "Internal Server Error" });
     }
+});
+
+
+app.get('/getEvents/:collegeCode/:unitCode', async (req, res) => {
+    console.log("inside get events");
+    const { collegeCode, unitCode } = req.params;
+    console.log(collegeCode, unitCode);
+    const college = await User.findOne({ code: collegeCode });
+    if (!college) {
+        return res.status(401).json({ success: false, message: "Invalid college code" });
+    }
+    const unit = await Unit.findOne({ unitNumber: unitCode, collegeId: college._id });
+    if (!unit) {
+        return res.status(401).json({ success: false, message: "Invalid unit code" });
+    }
+    const unitEvents = await Event.find({ unitId: unit._id });
+    const collegeEvents = await Event.find({ $and: [{ collegeId: college._id }, { unitId: { $ne: unit._id } }] });
+    const otherEvents = await Event.find({ $and: [{ collegeId: { $ne: college._id } }, { unitId: { $ne: unit._id } }] });
+
+    res.json({ success: true, unitEvents, collegeEvents, otherEvents });
 });
 
 
