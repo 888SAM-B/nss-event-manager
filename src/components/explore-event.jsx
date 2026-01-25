@@ -96,6 +96,15 @@ const ExploreEvents = () => {
     }
   };
 
+  const handleAddEvent = () => {
+    navigate('/events', { state: { unitCode, collegeCode } });
+  };
+
+  const handleEditEvent = (event, e) => {
+    e.stopPropagation();
+    navigate('/events', { state: { unitCode, collegeCode, eventToEdit: event } });
+  };
+
   const handleDeleteEvent = async (eventId, e) => {
     e.stopPropagation();
     if (!window.confirm("Are you sure you want to delete this event? This action cannot be undone.")) return;
@@ -120,11 +129,12 @@ const ExploreEvents = () => {
   };
 
   const EventCard = ({ event, isOwnEvent }) => {
+    console.log("DEBUG", event)
     const borderColor = getEventStatusColor(event);
     let statusText = "";
-    if (borderColor === 'var(--danger-500)') statusText = "Completed";
-    else if (borderColor === 'var(--success-500)') statusText = "Upcoming";
-    else statusText = "Ongoing";
+    if (borderColor === 'var(--danger-500)') statusText = event.eventCode;
+    else if (borderColor === 'var(--success-500)') statusText = event.eventCode;
+    else statusText = event.eventCode;
 
     return (
       <div
@@ -173,13 +183,24 @@ const ExploreEvents = () => {
           <p className="text-xs mb-0"><strong>Venue:</strong> {event.venue}</p>
 
           {isOwnEvent && (
-            <button
-              className="btn btn-danger btn-sm mt-3 w-100"
-              onClick={(e) => handleDeleteEvent(event._id, e)}
-              style={{ fontSize: '0.8rem', padding: '0.3rem 0.5rem' }}
-            >
-              Delete Event
-            </button>
+            <div className="mt-3 d-flex gap-2">
+              {borderColor !== 'var(--danger-500)' && (
+                <button
+                  className="btn btn-primary btn-sm w-100"
+                  onClick={(e) => handleEditEvent(event, e)}
+                  style={{ fontSize: '0.8rem', padding: '0.3rem 0.5rem' }}
+                >
+                  Edit
+                </button>
+              )}
+              <button
+                className="btn btn-danger btn-sm w-100"
+                onClick={(e) => handleDeleteEvent(event._id, e)}
+                style={{ fontSize: '0.8rem', padding: '0.3rem 0.5rem' }}
+              >
+                Delete
+              </button>
+            </div>
           )}
         </div>
       </div>
@@ -188,7 +209,14 @@ const ExploreEvents = () => {
 
   const Section = ({ title, events, isOwnEvent }) => (
     <div className="mb-8">
-      <h2 className="mb-4" style={{ paddingBottom: '0.5rem', borderBottom: '1px solid var(--border-color)' }}>{title}</h2>
+      <div className="flex-between mb-4" style={{ paddingBottom: '0.5rem', borderBottom: '1px solid var(--border-color)' }}>
+        <h2 className="mb-0">{title}</h2>
+        {isOwnEvent && (
+          <button className="btn btn-primary btn-sm" onClick={handleAddEvent}>
+            + Add Event
+          </button>
+        )}
+      </div>
       {events.length > 0 ? (
         <div className="grid-cols-3">
           {events.map((event) => (
@@ -268,7 +296,7 @@ const ExploreEvents = () => {
                       <img
                         src={img}
                         alt={`${selectedEvent.name} - ${idx + 1}`}
-                        style={{ width: '100%', height: '100%', objectFit: 'cover', transition: 'transform 0.2s' }}
+                        style={{ width: '100%', height: '100%', objectFit: 'contain', transition: 'transform 0.2s' }}
                         className="gallery-thumb"
                       />
                     </div>

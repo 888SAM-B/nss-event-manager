@@ -15,19 +15,29 @@ const AddEvent = () => {
 
     const unitCode = location.state?.unitCode;
     const collegeCode = location.state?.collegeCode;
+    const eventToEdit = location.state?.eventToEdit;
+
+    const standardCategories = [
+        "Blood Donation", "Tree Plantation", "Cleanliness Drive", "Awareness Program",
+        "Conference", "Seminar", "Workshop", "Sports", "Cultural", "Health",
+        "Environmental", "Social"
+    ];
+
+    const isCustomCategory = eventToEdit && !standardCategories.includes(eventToEdit.category);
 
     const [eventForm, setEventForm] = useState({
-        name: "",
-        description: "",
-        category: "",
-        singleDay: true,
-        date: "",
-        dateFrom: "",
-        dateTo: "",
-        timeFrom: "",
-        timeTo: "",
-        venue: "",
-        images: [],
+        name: eventToEdit?.name || "",
+        description: eventToEdit?.description || "",
+        category: isCustomCategory ? "Other" : (eventToEdit?.category || ""),
+        otherCategory: isCustomCategory ? eventToEdit.category : "",
+        singleDay: eventToEdit?.singleDay ?? true,
+        date: eventToEdit?.date || "",
+        dateFrom: eventToEdit?.dateFrom || "",
+        dateTo: eventToEdit?.dateTo || "",
+        timeFrom: eventToEdit?.timeFrom || "",
+        timeTo: eventToEdit?.timeTo || "",
+        venue: eventToEdit?.venue || "",
+        images: eventToEdit?.images || [],
     });
 
     const [selectedFiles, setSelectedFiles] = useState([]);
@@ -166,13 +176,23 @@ const AddEvent = () => {
         console.log("Submitting Event Data:", eventData);
 
         try {
-            const response = await axios.post(`${import.meta.env.VITE_API_URL}/addEvent`, { eventData: eventData });
-            alert('Event created successfully!');
-            console.log('Backend Response:', response.data);
-            navigate('/unit-dashboard'); // Navigate back to dashboard instead of /events which might not exist or be relevant
+            if (eventToEdit) {
+                const response = await axios.put(`${import.meta.env.VITE_API_URL}/updateEvent`, {
+                    eventId: eventToEdit._id,
+                    eventData: eventData
+                });
+                alert('Event updated successfully!');
+                console.log('Backend Response:', response.data);
+                navigate('/explore-events', { state: { unitCode, collegeCode } }); // Go back to explore events
+            } else {
+                const response = await axios.post(`${import.meta.env.VITE_API_URL}/addEvent`, { eventData: eventData });
+                alert('Event created successfully!');
+                console.log('Backend Response:', response.data);
+                navigate('/unit-dashboard');
+            }
         } catch (error) {
-            console.error('Error creating event:', error);
-            alert('Failed to create event. Please try again.');
+            console.error('Error saving event:', error);
+            alert('Failed to save event. Please try again.');
             if (error.response) {
                 console.error('Backend Error Details:', error.response.data);
             }
@@ -183,7 +203,7 @@ const AddEvent = () => {
         <div style={{ minHeight: '100vh', background: 'var(--bg-color)' }}>
             <header className="dashboard-header">
                 <div className="container flex-between">
-                    <h2 className="mb-0">Create New Event</h2>
+                    <h2 className="mb-0">{eventToEdit ? "Edit Event" : "Create New Event"}</h2>
                     <button className="btn btn-secondary" onClick={() => navigate(-1)}>Back</button>
                 </div>
             </header>
@@ -417,7 +437,7 @@ const AddEvent = () => {
                                 Cancel
                             </button>
                             <button type="submit" className="btn btn-primary btn-lg" disabled={uploading}>
-                                Create Event
+                                {eventToEdit ? "Update Event" : "Create Event"}
                             </button>
                         </div>
                     </form>
