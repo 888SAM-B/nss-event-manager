@@ -18,6 +18,8 @@ const CollegeDashboard = () => {
     const [newUnitContact, setNewUnitContact] = useState("");
     const [newUnitMail, setNewUnitMail] = useState("");
 
+    const [loading, setLoading] = useState(true);
+
     const handleAddMember = () => {
         setNewMembers([...newMembers, { name: "", dept: "", year: "", contact: "" }]);
     };
@@ -46,7 +48,8 @@ const CollegeDashboard = () => {
 
         const prefix = (insName || "INS").replace(/\s+/g, '').substring(0, 3).toUpperCase();
         const serial = units.length + 1;
-        const unitNumber = `${prefix}${String(serial).padStart(2, '0')}`;
+        const unitNumber = `${prefix}${insCode}${String(serial).padStart(2, '0')}`;
+        console.log(unitNumber);
         const createdDate = new Date().toISOString().split('T')[0];
 
         const payload = {
@@ -136,6 +139,7 @@ const CollegeDashboard = () => {
                     setinsName(res.data.user.insName);
                     setinsCode(res.data.user.code);
                     setUnits(res.data.user.units || []); // Ensure units is array
+                    setLoading(false);
                 } else {
                     navigate("/");
                 }
@@ -146,6 +150,13 @@ const CollegeDashboard = () => {
         };
         fetchDashboard();
     }, [username, navigate]);
+
+    if (loading) return (
+        <div className="flex-center" style={{ height: '100vh' }}>
+            <div className="loading"></div>
+            <h2 className="ms-2">Loading College Dashboard...</h2>
+        </div>
+    );
 
     return (
         <div style={{ minHeight: '100vh', background: 'var(--bg-color)' }}>
@@ -195,6 +206,8 @@ const CollegeDashboard = () => {
                                 className="unit-card"
                                 onClick={() => {
                                     localStorage.setItem("nssunitCode", unit.unitNumber);
+                                    localStorage.setItem("unitToken", "college-admin");
+                                    localStorage.setItem("nsscollegeCode", insCode);
                                     navigate('/unit-dashboard')
                                 }}
                                 style={{ width: '100%', margin: 0 }}

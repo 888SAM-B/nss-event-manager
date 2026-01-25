@@ -101,6 +101,18 @@ input[type="file"]::file-selector-button {
     padding: 8px 14px;
 }
 
+.selected-evt::-webkit-scrollbar {
+    display: none;
+}
+
+.gaps {
+    margin-bottom: 20px;
+}
+
+.evt-cat {
+    margin-top: -15px;
+}
+
 @media screen and (max-width:500px) {
     .one {
         width: 100%;
