@@ -53,6 +53,7 @@ const eventSchema = new mongoose.Schema({
     timeTo: String,
     venue: String,
     images: Array,
+    eventCode: String,
     unitId: { type: mongoose.Schema.Types.ObjectId, ref: 'Unit' },
     collegeId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' }
 });
@@ -325,21 +326,26 @@ app.post('/addEvent', async (req, res) => {
         if (!unit) {
             return res.status(404).json({ success: false, message: "Unit not found" });
         }
-        const college = await User.findOne({ code: eventData.collegeCode });
-        if (!college) {
+        if (!collegeCode) {
             return res.status(404).json({ success: false, message: "College not found" });
         }
+
+        const eventCount = await Event.countDocuments({ unitId: unit._id });
+        const eventNumber = eventCount + 1;
+        const eventCode = `${eventData.collegeCode}${eventData.unitCode}${eventNumber}`;
+
         const newEvent = new Event({
             ...eventData,
+            eventCode,
             unitId: unit._id,
-            collegeId: college._id
+            collegeId: collegeCode
         });
         await newEvent.save();
         console.log(newEvent._id, "id");
         unit.events.push(newEvent._id);
+        collegeObject.events.push(newEvent._id)
         await unit.save();
-        college.events.push(newEvent._id);
-        await college.save();
+        await collegeObject.save();
         res.json({ success: true, message: "Event added successfully", event: newEvent });
     } catch (error) {
         console.error("Error adding event:", error);
@@ -366,6 +372,54 @@ app.get('/getEvents/:collegeCode/:unitCode', async (req, res) => {
 
     res.json({ success: true, unitEvents, collegeEvents, otherEvents });
 });
+
+app.post('/deleteEvent', async (req, res) => {
+    console.log("inside delete event");
+    const { eventId, unitCode, collegeCode } = req.body;
+    console.log(eventId, unitCode, collegeCode);
+
+    if (!eventId || !unitCode || !collegeCode) {
+        return res.status(400).json({ success: false, message: "Missing required fields" });
+    }
+
+    try {
+        const college = await User.findOne({ code: collegeCode });
+        if (!college) {
+            return res.status(404).json({ success: false, message: "College not found" });
+        }
+
+        const unit = await Unit.findOne({ unitNumber: unitCode, collegeId: college._id });
+        if (!unit) {
+            return res.status(404).json({ success: false, message: "Unit not found" });
+        }
+
+        const event = await Event.findOne({ _id: eventId, unitId: unit._id });
+        if (!event) {
+            return res.status(404).json({ success: false, message: "Event not found or unauthorized" });
+        }
+
+        // Delete the event
+        await Event.findByIdAndDelete(eventId);
+
+        // Remove from Unit's events array
+        await Unit.updateOne(
+            { _id: unit._id },
+            { $pull: { events: new mongoose.Types.ObjectId(eventId) } }
+        );
+
+        // Remove from College's events array
+        await User.updateOne(
+            { _id: college._id },
+            { $pull: { events: new mongoose.Types.ObjectId(eventId) } }
+        );
+
+        res.json({ success: true, message: "Event deleted successfully" });
+    } catch (error) {
+        console.error("Error deleting event:", error);
+        res.status(500).json({ success: false, message: "Internal Server Error" });
+    }
+});
+
 
 
 app.listen(PORT, () => {
