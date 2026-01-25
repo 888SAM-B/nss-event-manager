@@ -332,7 +332,8 @@ app.post('/addEvent', async (req, res) => {
 
         const eventCount = await Event.countDocuments({ unitId: unit._id });
         const eventNumber = eventCount + 1;
-        const eventCode = `${eventData.collegeCode}${eventData.unitCode}${eventNumber}`;
+        console.log(eventNumber, "eventNumber");
+        const eventCode = `${eventData.collegeCode}${eventData.unitCode}${String(eventNumber).padStart(3, '0')}`;
 
         const newEvent = new Event({
             ...eventData,
@@ -416,6 +417,35 @@ app.post('/deleteEvent', async (req, res) => {
         res.json({ success: true, message: "Event deleted successfully" });
     } catch (error) {
         console.error("Error deleting event:", error);
+        res.status(500).json({ success: false, message: "Internal Server Error" });
+    }
+});
+
+app.put('/updateEvent', async (req, res) => {
+    console.log("inside update event");
+    const { eventId, eventData } = req.body;
+
+    if (!eventId || !eventData) {
+        return res.status(400).json({ success: false, message: "Event ID and details are required" });
+    }
+
+    try {
+        const event = await Event.findById(eventId);
+        if (!event) {
+            return res.status(404).json({ success: false, message: "Event not found" });
+        }
+
+        // Optional: Verify unit/college ownership if strictly needed, 
+        // but assuming logged-in unit context from frontend is sufficient for now alongside ID check.
+
+        // Update fields
+        Object.assign(event, eventData);
+
+        await event.save();
+        res.json({ success: true, message: "Event updated successfully", event });
+
+    } catch (error) {
+        console.error("Error updating event:", error);
         res.status(500).json({ success: false, message: "Internal Server Error" });
     }
 });
