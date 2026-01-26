@@ -58,10 +58,54 @@ const eventSchema = new mongoose.Schema({
     images: Array,
     eventCode: String,
     unitId: { type: mongoose.Schema.Types.ObjectId, ref: 'Unit' },
-    collegeId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' }
+    collegeId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+    report: {
+        conductedOnDate: Boolean,
+        participantsCount: Number,
+        collegesCount: Number,
+        outcome: String,
+        reportFile: String, // PDF URL
+        reportPhotos: Array, // Array of Image URLs
+        submittedAt: { type: Date, default: Date.now }
+    }
 });
 
 const Event = mongoose.model('Event', eventSchema);
+
+// ... existing code ...
+
+app.post('/submitReport', verifyToken, async (req, res) => {
+    const { eventId, reportData } = req.body;
+
+    if (!eventId || !reportData) {
+        return res.status(400).json({ success: false, message: "Event ID and report data are required" });
+    }
+
+    try {
+        const event = await Event.findById(eventId);
+        if (!event) {
+            return res.status(404).json({ success: false, message: "Event not found" });
+        }
+
+        // Authorization check
+        if (req.user.role === 'unit') {
+            const unit = await Unit.findById(event.unitId);
+            if (req.user.unitNumber !== unit.unitNumber) {
+                return res.status(403).json({ success: false, message: "Unauthorized to submit report for this event" });
+            }
+        } else if (req.user.role !== 'college' && req.user.role !== 'admin') {
+            return res.status(403).json({ success: false, message: "Unauthorized" });
+        }
+
+        event.report = reportData;
+        await event.save();
+
+        res.json({ success: true, message: "Report submitted successfully", event });
+    } catch (error) {
+        console.error("Error submitting report:", error);
+        res.status(500).json({ success: false, message: "Internal Server Error" });
+    }
+});
 
 // Helper for Password Verification with Migration
 const comparePassword = async (candidate, target, doc) => {
