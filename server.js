@@ -3,6 +3,9 @@ const mongoose = require('mongoose');
 require('dotenv').config();
 const jwt = require('jsonwebtoken');
 const cors = require("cors");
+const bcrypt = require('bcryptjs');
+const verifyToken = require('./middleware/auth');
+
 const app = express();
 app.use(cors());
 app.use(express.json());
@@ -17,7 +20,7 @@ mongoose.connect(mongoURI, { useNewUrlParser: true, useUnifiedTopology: true })
 const unitSchema = new mongoose.Schema({
     name: String,
     head: String,
-    password: String,
+    password: String, // Hashed
     contact: String,
     mail: String,
     members: Array,
@@ -31,7 +34,7 @@ const Unit = mongoose.model('Unit', unitSchema);
 
 const insLoginScheme = new mongoose.Schema({
     userName: String,
-    password: String,
+    password: String, // Hashed
     insName: String,
     events: { type: Array, default: [] },
     code: String,
@@ -60,6 +63,22 @@ const eventSchema = new mongoose.Schema({
 
 const Event = mongoose.model('Event', eventSchema);
 
+// Helper for Password Verification with Migration
+const comparePassword = async (candidate, target, doc) => {
+    // If target looks like a bcrypt hash
+    if (target && target.startsWith('$2')) {
+        return await bcrypt.compare(candidate, target);
+    } else {
+        // Plain text fallback + Migration
+        if (candidate === target) {
+            const salt = await bcrypt.genSalt(10);
+            doc.password = await bcrypt.hash(candidate, salt);
+            await doc.save();
+            return true;
+        }
+        return false;
+    }
+}
 
 app.get('/', (_req, res) => {
     res.send('Hello, World!');
@@ -68,31 +87,49 @@ app.get('/', (_req, res) => {
 app.post('/login', async (req, res) => {
     console.log('inside login');
     const { username, password } = req.body;
-    console.log(username, password);
-    console.log(await User.find())
-    const user = await User.findOne({ userName: username, password });
-    if (!user) {
-        return res.status(401).json({
-            success: false,
-            message: "Invalid username or password"
+
+    try {
+        const user = await User.findOne({ userName: username });
+        if (!user) {
+            return res.status(401).json({
+                success: false,
+                message: "Invalid username or password"
+            });
+        }
+
+        const isMatch = await comparePassword(password, user.password, user);
+
+        if (!isMatch) {
+            return res.status(401).json({
+                success: false,
+                message: "Invalid username or password"
+            });
+        }
+
+        const token = jwt.sign(
+            { userName: username, userId: user._id, role: 'college' },
+            process.env.JWT_SECRET,
+            { expiresIn: "1d" }
+        );
+
+        res.json({
+            success: true,
+            token
         });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ success: false, message: "Server error" });
     }
-    const token = jwt.sign(
-        { userName: username },
-        process.env.JWT_SECRET,
-        { expiresIn: "1d" }
-    );
-
-    res.json({
-        success: true,
-        token
-    });
 });
-app.get('/college-dashboard', async (req, res) => {
-    console.log('inside college-dashboard');
 
+// Protected: College Dashboard
+app.get('/college-dashboard', verifyToken, async (req, res) => {
     const { username } = req.query;
-    console.log(username);
+
+    // Security Check: Ensure token owner matches requested username OR user is admin
+    if (req.user.role !== 'admin' && req.user.userName !== username) {
+        return res.status(403).json({ success: false, message: "Unauthorized access to this dashboard" });
+    }
 
     if (!username) {
         return res.status(400).json({
@@ -116,9 +153,13 @@ app.get('/college-dashboard', async (req, res) => {
     });
 });
 
-app.post('/addUnit', async (req, res) => {
-    console.log('inside addUnit');
+// Protected: Add Unit
+app.post('/addUnit', verifyToken, async (req, res) => {
     const { username, name, password, head, contact, mail, members, unitNumber, createdDate } = req.body;
+
+    if (req.user.userName !== username) {
+        return res.status(403).json({ success: false, message: "Unauthorized" });
+    }
 
     if (!username) {
         return res.status(400).json({ success: false, message: "Username is required" });
@@ -130,14 +171,18 @@ app.post('/addUnit', async (req, res) => {
             return res.status(404).json({ success: false, message: "User not found" });
         }
 
-        if (user.units.length > 6) {
+        if (user.units.length >= 6) {
             return res.status(400).json({ success: false, message: "Maximum 6 units allowed" });
         }
+
+        // Hash the new unit password
+        const salt = await bcrypt.genSalt(10);
+        const hashedPassword = await bcrypt.hash(password, salt);
 
         const newUnit = new Unit({
             name,
             head,
-            password,
+            password: hashedPassword,
             contact,
             mail: mail,
             members,
@@ -145,7 +190,7 @@ app.post('/addUnit', async (req, res) => {
             createdDate,
             collegeId: user._id
         });
-        console.log(newUnit);
+
         await newUnit.save();
 
         user.units.push(newUnit._id);
@@ -162,11 +207,12 @@ app.post('/addUnit', async (req, res) => {
     }
 });
 
-app.delete('/deleteUnit', async (req, res) => {
+// Protected: Delete Unit
+app.delete('/deleteUnit', verifyToken, async (req, res) => {
     const { username, unitNumber } = req.body;
 
-    if (!username || !unitNumber) {
-        return res.status(400).json({ success: false, message: "Username and Unit Number are required" });
+    if (req.user.userName !== username) {
+        return res.status(403).json({ success: false, message: "Unauthorized" });
     }
 
     try {
@@ -197,53 +243,71 @@ app.delete('/deleteUnit', async (req, res) => {
 });
 
 app.post('/unit-login', async (req, res) => {
-    console.log('inside unit-login');
     const { collegeCode, unitCode, unitPassword } = req.body;
-    console.log(collegeCode, unitCode, unitPassword);
-    const user = await User.findOne({ code: collegeCode });
-    if (!user) {
-        return res.status(401).json({ success: false, message: "Invalid college code" });
+
+    try {
+        const user = await User.findOne({ code: collegeCode });
+        if (!user) {
+            return res.status(401).json({ success: false, message: "Invalid college code" });
+        }
+        const unit = await Unit.findOne({ unitNumber: unitCode, collegeId: user._id });
+        if (!unit) {
+            return res.status(401).json({ success: false, message: "Invalid unit code" });
+        }
+
+        const isMatch = await comparePassword(unitPassword, unit.password, unit);
+        if (!isMatch) {
+            return res.status(401).json({ success: false, message: "Invalid unit password" });
+        }
+
+        const token = jwt.sign({ unitNumber: unitCode, role: 'unit' }, process.env.JWT_SECRET, { expiresIn: "1d" });
+        res.json({ success: true, token });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ success: false, message: "Server error" });
     }
-    const unit = await Unit.findOne({ unitNumber: unitCode, collegeId: user._id });
-    console.log(unit);
-    if (!unit) {
-        return res.status(401).json({ success: false, message: "Invalid unit code" });
-    }
-    if (unit.password !== unitPassword) {
-        return res.status(401).json({ success: false, message: "Invalid unit password" });
-    }
-    const token = jwt.sign({ unitNumber: unitCode }, process.env.JWT_SECRET, { expiresIn: "1d" });
-    res.json({ success: true, token });
 });
 
-app.get('/unit-dashboard/:unitCode/:collegeCode', async (req, res) => {
-    console.log('inside unit-dashboard');
+// Protected: Unit Dashboard
+app.get('/unit-dashboard/:unitCode/:collegeCode', verifyToken, async (req, res) => {
+    const { unitCode, collegeCode } = req.params;
 
-    const { unitCode } = req.params; // 👈 PARAMS
-    console.log("Unit Code:", unitCode);
-    const collegeObject = await User.findOne({ code: req.params.collegeCode });
-    const collegeCode = collegeObject._id;
-    console.log("College Code:", collegeCode);
-
-    if (!unitCode || !collegeCode) {
-        return res.status(400).json({ success: false, message: "Unit Code is required" });
+    // Verification: token must belong to this unit OR be the college admin
+    // Current token for unit has { unitNumber: unitCode }
+    if (req.user.unitNumber && req.user.unitNumber !== unitCode) {
+        return res.status(403).json({ success: false, message: "Unauthorized unit access" });
     }
 
-    const unit = await Unit.findOne({ unitNumber: unitCode, collegeId: collegeCode });
+
+    const collegeObject = await User.findOne({ code: collegeCode });
+    if (!collegeObject) return res.status(404).json({ success: false, message: "College not found" });
+
+    // Check Auth
+    if (req.user.role === 'college') {
+        // Verify this college owns the unit
+        if (collegeObject.userName !== req.user.userName) {
+            return res.status(403).json({ success: false, message: "Unauthorized college access" });
+        }
+    } else if (req.user.role === 'unit') {
+        if (req.user.unitNumber !== unitCode) {
+            return res.status(403).json({ success: false, message: "Unauthorized unit access" });
+        }
+    }
+
+    const unit = await Unit.findOne({ unitNumber: unitCode, collegeId: collegeObject._id });
     if (!unit) {
         return res.status(401).json({ success: false, message: "Unit not found" });
     }
-    console.log(unit);
-    const college = await User.findOne({ _id: collegeCode });
 
-    res.json({ success: true, unit, college });
+    res.json({ success: true, unit, college: collegeObject });
 });
 
-app.put('/update-unit-members', async (req, res) => {
+app.put('/update-unit-members', verifyToken, async (req, res) => {
     const { unitCode, members, collegeCode } = req.body;
-    if (!unitCode || !members || !collegeCode) {
-        return res.status(400).json({ success: false, message: "Unit Code and Members are required" });
-    }
+
+    // Validation
+    if (req.user.unitNumber && req.user.unitNumber !== unitCode) return res.status(403).json({ message: "Unauthorized" });
+
     const collegeObject = await User.findOne({ code: collegeCode });
     const collegeId = collegeObject._id;
     try {
@@ -262,20 +326,17 @@ app.put('/update-unit-members', async (req, res) => {
     }
 });
 
-app.post('/add-unit-member', async (req, res) => {
+app.post('/add-unit-member', verifyToken, async (req, res) => {
     const { unitCode, member, collegeCode } = req.body;
-    if (!unitCode || !member || !collegeCode) {
-        return res.status(400).json({ success: false, message: "Unit Code and Member details are required" });
-    }
+
+    if (req.user.unitNumber && req.user.unitNumber !== unitCode) return res.status(403).json({ message: "Unauthorized" });
+
     const collegeObject = await User.findOne({ code: collegeCode });
-    console.log("College Code:", collegeCode);
     const collegeId = collegeObject._id;
-    console.log(collegeId);
 
     try {
         const unit = await Unit.findOne({ unitNumber: unitCode, collegeId: collegeId });
         if (!unit) {
-            console.log("Unit not found");
             return res.status(404).json({ success: false, message: "Unit not found" });
         }
 
@@ -289,11 +350,11 @@ app.post('/add-unit-member', async (req, res) => {
     }
 });
 
-app.delete('/delete-unit-member', async (req, res) => {
+app.delete('/delete-unit-member', verifyToken, async (req, res) => {
     const { unitCode, member, collegeCode } = req.body;
-    if (!unitCode || !member || !collegeCode) {
-        return res.status(400).json({ success: false, message: "Unit Code and Member     are required" });
-    }
+
+    if (req.user.unitNumber && req.user.unitNumber !== unitCode) return res.status(403).json({ message: "Unauthorized" });
+
     const collegeObject = await User.findOne({ code: collegeCode });
     const collegeId = collegeObject._id;
     try {
@@ -311,28 +372,29 @@ app.delete('/delete-unit-member', async (req, res) => {
 });
 
 
-app.post('/addEvent', async (req, res) => {
-    console.log("inside add event")
+app.post('/addEvent', verifyToken, async (req, res) => {
     const { eventData } = req.body;
-    console.log(eventData)
     if (!eventData) {
         return res.status(400).json({ success: false, message: "Event details are required" });
     }
+
+    // Auth Check
+    // Events can be added by Unit (usually).
+    if (req.user.role === 'unit') {
+        if (req.user.unitNumber !== eventData.unitCode) return res.status(403).json({ message: "Unauthorized" });
+    }
+
     const collegeObject = await User.findOne({ code: eventData.collegeCode });
     const collegeCode = collegeObject._id;
-    console.log(eventData);
+
     try {
         const unit = await Unit.findOne({ unitNumber: eventData.unitCode, collegeId: collegeCode });
         if (!unit) {
             return res.status(404).json({ success: false, message: "Unit not found" });
         }
-        if (!collegeCode) {
-            return res.status(404).json({ success: false, message: "College not found" });
-        }
 
         const eventCount = await Event.countDocuments({ unitId: unit._id });
         const eventNumber = eventCount + 1;
-        console.log(eventNumber, "eventNumber");
         const eventCode = `${eventData.collegeCode}${eventData.unitCode}${String(eventNumber).padStart(3, '0')}`;
 
         const newEvent = new Event({
@@ -342,7 +404,6 @@ app.post('/addEvent', async (req, res) => {
             collegeId: collegeCode
         });
         await newEvent.save();
-        console.log(newEvent._id, "id");
         unit.events.push(newEvent._id);
         collegeObject.events.push(newEvent._id)
         await unit.save();
@@ -356,9 +417,13 @@ app.post('/addEvent', async (req, res) => {
 
 
 app.get('/getEvents/:collegeCode/:unitCode', async (req, res) => {
-    console.log("inside get events");
+    // This might be public? Or protected? 
+    // Assuming public for "Explore" functionality, but let's check frontend.
+    // 'explore-event.jsx' uses it.
+    // If it's public, I won't add verifiedToken, OR make it optional.
+    // I'll leave it public for now as "Explore" usually implies public visibility.
+
     const { collegeCode, unitCode } = req.params;
-    console.log(collegeCode, unitCode);
     const college = await User.findOne({ code: collegeCode });
     if (!college) {
         return res.status(401).json({ success: false, message: "Invalid college code" });
@@ -374,13 +439,15 @@ app.get('/getEvents/:collegeCode/:unitCode', async (req, res) => {
     res.json({ success: true, unitEvents, collegeEvents, otherEvents });
 });
 
-app.post('/deleteEvent', async (req, res) => {
-    console.log("inside delete event");
+app.post('/deleteEvent', verifyToken, async (req, res) => {
     const { eventId, unitCode, collegeCode } = req.body;
-    console.log(eventId, unitCode, collegeCode);
 
     if (!eventId || !unitCode || !collegeCode) {
         return res.status(400).json({ success: false, message: "Missing required fields" });
+    }
+
+    if (req.user.role === 'unit' && req.user.unitNumber !== unitCode) {
+        return res.status(403).json({ message: "Unauthorized" });
     }
 
     try {
@@ -399,16 +466,13 @@ app.post('/deleteEvent', async (req, res) => {
             return res.status(404).json({ success: false, message: "Event not found or unauthorized" });
         }
 
-        // Delete the event
         await Event.findByIdAndDelete(eventId);
 
-        // Remove from Unit's events array
         await Unit.updateOne(
             { _id: unit._id },
             { $pull: { events: new mongoose.Types.ObjectId(eventId) } }
         );
 
-        // Remove from College's events array
         await User.updateOne(
             { _id: college._id },
             { $pull: { events: new mongoose.Types.ObjectId(eventId) } }
@@ -421,8 +485,7 @@ app.post('/deleteEvent', async (req, res) => {
     }
 });
 
-app.put('/updateEvent', async (req, res) => {
-    console.log("inside update event");
+app.put('/updateEvent', verifyToken, async (req, res) => {
     const { eventId, eventData } = req.body;
 
     if (!eventId || !eventData) {
@@ -435,10 +498,12 @@ app.put('/updateEvent', async (req, res) => {
             return res.status(404).json({ success: false, message: "Event not found" });
         }
 
-        // Optional: Verify unit/college ownership if strictly needed, 
-        // but assuming logged-in unit context from frontend is sufficient for now alongside ID check.
+        // Check ownership via unit
+        const unit = await Unit.findById(event.unitId);
+        if (req.user.role === 'unit' && req.user.unitNumber !== unit.unitNumber) {
+            return res.status(403).json({ message: "Unauthorized" });
+        }
 
-        // Update fields
         Object.assign(event, eventData);
 
         await event.save();
@@ -446,6 +511,84 @@ app.put('/updateEvent', async (req, res) => {
 
     } catch (error) {
         console.error("Error updating event:", error);
+        res.status(500).json({ success: false, message: "Internal Server Error" });
+    }
+});
+
+// --- ADMIN ROUTES ---
+
+// Admin Login
+app.post('/admin/login', (req, res) => {
+    const { username, password } = req.body;
+    // Simple environment variable check
+    console.log(process.env.ADMIN_USERNAME, process.env.ADMIN_PASSWORD);
+    if (username === process.env.ADMIN_USERNAME && password === process.env.ADMIN_PASSWORD) {
+        const token = jwt.sign({ role: 'admin', username: 'admin' }, process.env.JWT_SECRET, { expiresIn: '1d' });
+        res.json({ success: true, token });
+    } else {
+        res.status(401).json({ success: false, message: "Invalid Admin Credentials" });
+    }
+});
+
+// Admin Stats for Dashboard
+app.get('/admin/stats', verifyToken, async (req, res) => {
+    if (req.user.role !== 'admin') {
+        return res.status(403).json({ success: false, message: "Unauthorized: Admin access required" });
+    }
+
+    try {
+        const totalColleges = await User.countDocuments();
+        const totalUnits = await Unit.countDocuments();
+        const totalEvents = await Event.countDocuments();
+
+        // Group events by category for chart
+        const eventsByCategory = await Event.aggregate([
+            { $group: { _id: "$category", count: { $sum: 1 } } }
+        ]);
+
+        // Get events with dates for calendar view
+        const allEvents = await Event.find({}, 'name date dateFrom dateTo singleDay category eventCode')
+            .populate('collegeId', 'insName code')
+            .populate('unitId', 'name unitNumber');
+
+        // Get list of colleges with their unit counts for a table
+        const colleges = await User.find({}, 'insName code events userName').populate('units', 'unitNumber name');
+
+        res.json({
+            success: true,
+            stats: {
+                totalColleges,
+                totalUnits,
+                totalEvents,
+                eventsByCategory,
+                colleges,
+                allEvents
+            }
+        });
+    } catch (error) {
+        console.error("Error fetching admin stats:", error);
+        res.status(500).json({ success: false, message: "Internal Server Error" });
+    }
+});
+
+// Admin: Get All Events with Details
+app.get('/admin/events', verifyToken, async (req, res) => {
+    if (req.user.role !== 'admin') {
+        return res.status(403).json({ success: false, message: "Unauthorized: Admin access required" });
+    }
+
+    try {
+        const events = await Event.find({})
+            .populate('collegeId', 'insName code')
+            .populate('unitId', 'name unitNumber head')
+            .sort({ createdAt: -1 });
+
+        res.json({
+            success: true,
+            events
+        });
+    } catch (error) {
+        console.error("Error fetching events:", error);
         res.status(500).json({ success: false, message: "Internal Server Error" });
     }
 });
