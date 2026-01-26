@@ -272,6 +272,64 @@ const AdminAllEvents = () => {
                                     </div>
                                 </div>
                             )}
+
+                            {selectedEvent.report && (
+                                <div className="mt-6 p-4 rounded" style={{ background: 'var(--dark-bg-secondary)', borderLeft: '4px solid var(--success-500)', marginTop: '20px' }}>
+                                    <div className="flex-between mb-3">
+                                        <h3 className="mb-0" style={{ fontSize: '1.1rem', color: 'var(--success-500)' }}>Event Report</h3>
+                                        {selectedEvent.report.reportFile && (
+                                            <a
+                                                href={selectedEvent.report.reportFile}
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                className="btn btn-sm btn-success"
+                                                download={selectedEvent.report.reportFile}
+                                            >
+                                                Download PDF Report
+                                            </a>
+
+                                        )}
+                                    </div>
+                                    <div className="grid-cols-3 mb-3">
+                                        <div>
+                                            <p className="text-xs text-muted mb-1">STATUS</p>
+                                            <p className="fw-bold">{selectedEvent.report.conductedOnDate ? "On Schedule" : "Delayed/Rescheduled"}</p>
+                                        </div>
+                                        <div>
+                                            <p className="text-xs text-muted mb-1">PARTICIPANTS</p>
+                                            <p className="fw-bold">{selectedEvent.report.participantsCount}</p>
+                                        </div>
+                                        <div>
+                                            <p className="text-xs text-muted mb-1">COLLEGES</p>
+                                            <p className="fw-bold">{selectedEvent.report.collegesCount}</p>
+                                        </div>
+                                    </div>
+                                    <div className="mb-3">
+                                        <p className="text-xs text-muted mb-1">OUTCOME</p>
+                                        <p className="mb-0" style={{ lineHeight: '1.5' }}>{selectedEvent.report.outcome}</p>
+                                    </div>
+                                    {selectedEvent.report.reportPhotos && selectedEvent.report.reportPhotos.length > 0 && (
+                                        <div>
+                                            <p className="text-xs text-muted mb-2">REPORT PHOTOS</p>
+                                            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                                                {selectedEvent.report.reportPhotos.map((img, idx) => (
+                                                    <img
+                                                        key={idx}
+                                                        src={img}
+                                                        alt={`Report Photo ${idx + 1}`}
+                                                        style={{
+                                                            width: '80px',
+                                                            height: '80px',
+                                                            objectFit: 'cover',
+                                                            borderRadius: '6px'
+                                                        }}
+                                                    />
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                            )}
                         </div>
 
                         <div className="flex-between pt-4" style={{ borderTop: '1px solid var(--border-color)' }}>

@@ -218,9 +218,52 @@ const EventsCalendar = ({ events }) => {
                                     )}
 
                                     {event.description && (
-                                        <div>
+                                        <div className="mb-3">
                                             <p className="text-xs text-muted mb-1">DESCRIPTION</p>
                                             <p className="mb-0">{event.description}</p>
+                                        </div>
+                                    )}
+
+                                    {event.report && (
+                                        <div className="mt-4 p-3 rounded" style={{ background: 'var(--dark-bg-secondary)', borderLeft: '3px solid var(--success-500)' }}>
+                                            <div className="flex-between mb-2">
+                                                <h4 className="mb-0" style={{ fontSize: '0.9rem', color: 'var(--success-500)' }}>Event Report</h4>
+                                                {event.report.reportFile && (
+                                                    <a
+                                                        href={event.report.reportFile.replace('/upload/', '/upload/fl_attachment/')}
+                                                        target="_blank"
+                                                        rel="noopener noreferrer"
+                                                        className="btn btn-sm btn-primary"
+                                                        style={{ fontSize: '0.7rem' }}
+                                                    >
+                                                        Download PDF Report
+                                                    </a>
+                                                )}
+                                            </div>
+                                            <div className="grid-cols-2 gap-2 mb-2" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr' }}>
+                                                <div>
+                                                    <p className="text-xs text-muted mb-0">PARTICIPANTS</p>
+                                                    <p className="fw-bold mb-0" style={{ fontSize: '0.85rem' }}>{event.report.participantsCount}</p>
+                                                </div>
+                                                <div>
+                                                    <p className="text-xs text-muted mb-0">COLLEGES</p>
+                                                    <p className="fw-bold mb-0" style={{ fontSize: '0.85rem' }}>{event.report.collegesCount}</p>
+                                                </div>
+                                            </div>
+                                            <div>
+                                                <p className="text-xs text-muted mb-0">OUTCOME</p>
+                                                <p className="mb-0" style={{ fontSize: '0.85rem' }}>{event.report.outcome}</p>
+                                            </div>
+                                            {event.report.reportPhotos && event.report.reportPhotos.length > 0 && (
+                                                <div className="mt-2">
+                                                    <p className="text-xs text-muted mb-1">PHOTOS</p>
+                                                    <div style={{ display: 'flex', gap: '5px', flexWrap: 'wrap' }}>
+                                                        {event.report.reportPhotos.map((img, i) => (
+                                                            <img key={i} src={img} alt="Report" style={{ width: '40px', height: '40px', objectFit: 'cover', borderRadius: '4px' }} />
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                            )}
                                         </div>
                                     )}
                                 </div>

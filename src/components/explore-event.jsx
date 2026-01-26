@@ -19,6 +19,26 @@ const ExploreEvents = () => {
   // State for gallery modal
   const [galleryIndex, setGalleryIndex] = useState(-1);
 
+  // --- Report Modal State ---
+  const [showReportModal, setShowReportModal] = useState(false);
+  const [reportingEvent, setReportingEvent] = useState(null);
+  const [reportForm, setReportForm] = useState({
+    conductedOnDate: true,
+    participantsCount: "",
+    collegesCount: "",
+    outcome: "",
+    reportFile: "", // For PDF
+    reportPhotos: [] // Up to 5
+  });
+  const [reportFiles, setReportFiles] = useState({ pdf: null, photos: [] });
+  const [isSubmittingReport, setIsSubmittingReport] = useState(false);
+
+
+  const CLOUDINARY_CLOUD_NAME = import.meta.env.VITE_CLOUD_NAME;
+  const CLOUDINARY_PDF_CLOUD_NAME = import.meta.env.VITE_PDF_CLOUD_NAME;
+  const CLOUDINARY_PDF_UPLOAD_PRESET = import.meta.env.VITE_PDF_UPLOAD_PRESET;
+  const CLOUDINARY_UPLOAD_PRESET = import.meta.env.VITE_UPLOAD_PRESET;
+
   useEffect(() => {
     if (!collegeCode || !unitCode) {
       setError("Missing college or unit information");
@@ -132,13 +152,110 @@ const ExploreEvents = () => {
     }
   };
 
+  // --- Report Handlers ---
+  const openReportModal = (event, e) => {
+    e.stopPropagation();
+    setReportingEvent(event);
+    setReportForm({
+      conductedOnDate: event.report?.conductedOnDate ?? true,
+      participantsCount: event.report?.participantsCount || "",
+      collegesCount: event.report?.collegesCount || "",
+      outcome: event.report?.outcome || "",
+      reportFile: event.report?.reportFile || "",
+      reportPhotos: event.report?.reportPhotos || []
+    });
+    setReportFiles({ pdf: null, photos: [] });
+    setShowReportModal(true);
+  };
+
+  const handleReportInputChange = (e) => {
+    const { name, value, type, checked } = e.target;
+    setReportForm(prev => ({
+      ...prev,
+      [name]: type === 'checkbox' ? checked : value
+    }));
+  };
+
+  const handleReportFileChange = (e, type) => {
+    if (type === 'pdf') {
+      setReportFiles(prev => ({ ...prev, pdf: e.target.files[0] }));
+    } else {
+      const files = Array.from(e.target.files).slice(0, 5); // Max 5 photos
+      setReportFiles(prev => ({ ...prev, photos: files }));
+    }
+  };
+
+  const uploadToCloudinary = async (file, resourceType = 'image', isPdf = false) => {
+    const formData = new FormData();
+    formData.append('file', file);
+
+    // Use PDF-specific variables if isPdf is true, otherwise use default ones
+    const uploadPreset = isPdf ? CLOUDINARY_PDF_UPLOAD_PRESET : CLOUDINARY_UPLOAD_PRESET;
+    const cloudName = isPdf ? CLOUDINARY_PDF_CLOUD_NAME : CLOUDINARY_CLOUD_NAME;
+    const resourceType1 = isPdf ? 'raw' : 'image';
+    formData.append('upload_preset', uploadPreset);
+    console.log(resourceType1, "resourceType1");
+    const response = await axios.post(
+      `https://api.cloudinary.com/v1_1/${cloudName}/${resourceType1}/upload`,
+      formData
+    );
+    return response.data.secure_url;
+  };
+
+  const handleReportSubmit = async (e) => {
+    e.preventDefault();
+    setIsSubmittingReport(true);
+
+    try {
+      let pdfUrl = reportForm.reportFile;
+      let photoUrls = [...reportForm.reportPhotos];
+
+      // Upload PDF if selected
+      if (reportFiles.pdf) {
+        pdfUrl = await uploadToCloudinary(reportFiles.pdf, 'image', true);
+      }
+
+      // Upload photos if selected
+      if (reportFiles.photos.length > 0) {
+        const uploadedPhotos = await Promise.all(
+          reportFiles.photos.map(file => uploadToCloudinary(file, 'image', false))
+        );
+        photoUrls = [...photoUrls.slice(0, 5 - uploadedPhotos.length), ...uploadedPhotos].slice(0, 5);
+      }
+
+      const finalReportData = {
+        ...reportForm,
+        reportFile: pdfUrl,
+        reportPhotos: photoUrls,
+        submittedAt: new Date()
+      };
+
+      const res = await axios.post(`${import.meta.env.VITE_API_URL}/submitReport`, {
+        eventId: reportingEvent._id,
+        reportData: finalReportData
+      }, {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem("unitToken")}`
+        }
+      });
+
+      if (res.data.success) {
+        alert("Report submitted successfully!");
+        setUnitEvents(prev => prev.map(ev => ev._id === reportingEvent._id ? res.data.event : ev));
+        setShowReportModal(false);
+      }
+    } catch (err) {
+      console.error("Report submisson error:", err);
+      alert("Failed to submit report. Ensure cloud configuration is correct.");
+    } finally {
+      setIsSubmittingReport(false);
+    }
+  };
+
   const EventCard = ({ event, isOwnEvent }) => {
-    console.log("DEBUG", event)
     const borderColor = getEventStatusColor(event);
-    let statusText = "";
-    if (borderColor === 'var(--danger-500)') statusText = event.eventCode;
-    else if (borderColor === 'var(--success-500)') statusText = event.eventCode;
-    else statusText = event.eventCode;
+    const isCompleted = borderColor === 'var(--danger-500)';
+    let statusText = event.eventCode;
 
     return (
       <div
@@ -187,23 +304,34 @@ const ExploreEvents = () => {
           <p className="text-xs mb-0"><strong>Venue:</strong> {event.venue}</p>
 
           {isOwnEvent && (
-            <div className="mt-3 d-flex gap-2">
-              {borderColor !== 'var(--danger-500)' && (
+            <div className="mt-3">
+              <div className="d-flex gap-2 mb-2">
+                {!isCompleted && (
+                  <button
+                    className="btn btn-primary btn-sm w-100"
+                    onClick={(e) => handleEditEvent(event, e)}
+                    style={{ fontSize: '0.8rem', padding: '0.3rem 0.5rem' }}
+                  >
+                    Edit
+                  </button>
+                )}
                 <button
-                  className="btn btn-primary btn-sm w-100"
-                  onClick={(e) => handleEditEvent(event, e)}
+                  className="btn btn-danger btn-sm w-100"
+                  onClick={(e) => handleDeleteEvent(event._id, e)}
                   style={{ fontSize: '0.8rem', padding: '0.3rem 0.5rem' }}
                 >
-                  Edit
+                  Delete
+                </button>
+              </div>
+              {isCompleted && (
+                <button
+                  className="btn btn-success btn-sm w-100"
+                  onClick={(e) => openReportModal(event, e)}
+                  style={{ fontSize: '0.8rem', padding: '0.3rem 0.5rem' }}
+                >
+                  {event.report ? "Edit Report" : "Generate Report"}
                 </button>
               )}
-              <button
-                className="btn btn-danger btn-sm w-100"
-                onClick={(e) => handleDeleteEvent(event._id, e)}
-                style={{ fontSize: '0.8rem', padding: '0.3rem 0.5rem' }}
-              >
-                Delete
-              </button>
             </div>
           )}
         </div>
@@ -266,19 +394,119 @@ const ExploreEvents = () => {
         <Section title="Other Events" events={otherEvents} />
       </main>
 
-      {/* Event Details Modal */}
-      {selectedEvent && (
-        <div className="modal-overlay ">
-          <div className="modal-content selected-evt " style={{ maxWidth: '800px', width: '90%' }}>
+      {/* Report Form Modal */}
+      {showReportModal && reportingEvent && (
+        <div className="modal-overlay">
+          <div className="modal-content" style={{ maxWidth: '600px', width: '95%', maxHeight: '90vh', overflowY: 'auto' }}>
             <div className="flex-between mb-4">
-              <div className="" >
+              <h2 className="mb-0">Event Report: {reportingEvent.name}</h2>
+              <button className="btn btn-sm btn-secondary" onClick={() => setShowReportModal(false)}>&times;</button>
+            </div>
+
+            <form onSubmit={handleReportSubmit}>
+              <div className="form-group mb-4 p-3" style={{ background: 'var(--dark-bg-secondary)', borderRadius: 'var(--radius-md)' }}>
+                <label className="d-flex align-items-center cursor-pointer">
+                  <input
+                    type="checkbox"
+                    name="conductedOnDate"
+                    checked={reportForm.conductedOnDate}
+                    onChange={handleReportInputChange}
+                    className="form-check-input"
+                  />
+                  <span className="ms-2">Was the event conducted on the scheduled date?</span>
+                </label>
+              </div>
+
+              <div className="grid-cols-2 mb-3">
+                <div className="form-group">
+                  <label>Total Participants <span className="text-danger">*</span></label>
+                  <input
+                    type="number"
+                    name="participantsCount"
+                    className="form-control"
+                    value={reportForm.participantsCount}
+                    onChange={handleReportInputChange}
+                    required
+                    placeholder="e.g. 50"
+                  />
+                </div>
+                <div className="form-group">
+                  <label>Colleges Participated <span className="text-danger">*</span></label>
+                  <input
+                    type="number"
+                    name="collegesCount"
+                    className="form-control"
+                    value={reportForm.collegesCount}
+                    onChange={handleReportInputChange}
+                    required
+                    placeholder="e.g. 1"
+                  />
+                </div>
+              </div>
+
+              <div className="form-group mb-3">
+                <label>Outcome of the Event <span className="text-danger">*</span></label>
+                <textarea
+                  name="outcome"
+                  className="form-control"
+                  rows="3"
+                  value={reportForm.outcome}
+                  onChange={handleReportInputChange}
+                  required
+                  placeholder="Describe the impact/outcome for students..."
+                ></textarea>
+              </div>
+
+              <div className="form-group mb-3">
+                <label>Attach Report (PDF) <span className="text-danger">*</span></label>
+                <input
+                  type="file"
+                  accept=".pdf"
+                  className="form-control"
+                  onChange={(e) => handleReportFileChange(e, 'pdf')}
+                />
+                {reportForm.reportFile && <small className="text-success d-block mt-1">✓ PDF Report already attached</small>}
+              </div>
+
+              <div className="form-group mb-4">
+                <label>Event Photos (Max: 5)</label>
+                <input
+                  type="file"
+                  accept="image/*"
+                  multiple
+                  className="form-control"
+                  onChange={(e) => handleReportFileChange(e, 'photo')}
+                />
+                <small className="text-muted d-block mt-1">Select up to 5 best photos of the event.</small>
+                {(reportForm.reportPhotos && reportForm.reportPhotos.length > 0) && (
+                  <small className="text-success d-block">✓ {reportForm.reportPhotos.length} photos already attached</small>
+                )}
+              </div>
+
+              <div className="flex-between pt-4" style={{ borderTop: '1px solid var(--border-color)' }}>
+                <button type="button" className="btn btn-secondary" onClick={() => setShowReportModal(false)} disabled={isSubmittingReport}>Cancel</button>
+                <button type="submit" className="btn btn-primary" disabled={isSubmittingReport}>
+                  {isSubmittingReport ? "Submitting..." : "Submit Report"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Event Details Modal */}
+      {selectedEvent && !showReportModal && (
+        <div className="modal-overlay">
+          <div className="modal-content selected-evt" style={{ maxWidth: '800px', width: '90%' }}>
+            <div className="flex-between mb-4">
+              <div>
                 <h2 className="gaps">{selectedEvent.name}</h2>
                 <span className="badge badge-primary">{selectedEvent.category}</span>
               </div>
               <button className="btn btn-sm btn-secondary" onClick={() => setSelectedEvent(null)}>&times;</button>
             </div>
 
-            <div className="mb-6">
+            <div className="mb-6 text-sm">
               <div className="flex-between mb-2">
                 <p className="mb-0"><strong>Date:</strong> {selectedEvent.singleDay ? selectedEvent.date : `${selectedEvent.dateFrom} to ${selectedEvent.dateTo}`}</p>
                 <p className="mb-0"><strong>Time:</strong> {selectedEvent.timeFrom} - {selectedEvent.timeTo}</p>
@@ -291,22 +519,47 @@ const ExploreEvents = () => {
               <p style={{ whiteSpace: 'pre-wrap', lineHeight: '1.6' }}>{selectedEvent.description}</p>
             </div>
 
-            {selectedEvent.images && selectedEvent.images.length > 0 && (
-              <div  >
-                <h3 className="text-lg mb-3">Event Gallery</h3>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '1rem' }}>
-                  {selectedEvent.images.map((img, idx) => (
-                    <div key={idx} style={{ height: '200px', borderRadius: 'var(--radius-md)', overflow: 'hidden', border: '1px solid var(--border-color)', cursor: 'pointer' }} onClick={() => openGallery(idx)}>
-                      <img
-                        src={img}
-                        alt={`${selectedEvent.name} - ${idx + 1}`}
-                        style={{ width: '100%', height: '100%', objectFit: 'contain', transition: 'transform 0.2s' }}
-                        className="gallery-thumb"
-                      />
+            {selectedEvent.report && (
+              <div className="mb-6 p-4 rounded" style={{ background: 'var(--dark-bg-secondary)', border: '1px solid var(--primary-500)' }}>
+                <h3 className="text-lg mb-3">Event Report</h3>
+                <div className="grid-cols-2 gap-4">
+                  <p><strong>Status:</strong> {selectedEvent.report.conductedOnDate ? "Conducted on time" : "Delayed/Rescheduled"}</p>
+                  <p><strong>Participants:</strong> {selectedEvent.report.participantsCount}</p>
+                  <p><strong>Colleges:</strong> {selectedEvent.report.collegesCount}</p>
+                  {selectedEvent.report.reportFile && (
+                    <p><strong>Report:</strong> <a href={selectedEvent.report.reportFile} target="_blank" rel="noopener noreferrer" className="text-primary">View PDF</a></p>
+                  )}
+                </div>
+                <div className="mt-2">
+                  <p><strong>Outcome:</strong> {selectedEvent.report.outcome}</p>
+                </div>
+              </div>
+            )}
+
+            {selectedEvent.report?.reportPhotos?.length > 0 ? (
+              <div className="mb-6">
+                <h3 className="text-lg mb-3">Event Photos (From Report)</h3>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: '1rem' }}>
+                  {selectedEvent.report.reportPhotos.map((img, idx) => (
+                    <div key={idx} style={{ height: '150px', borderRadius: '4px', overflow: 'hidden', cursor: 'pointer' }} onClick={() => { setSelectedEvent({ ...selectedEvent, images: selectedEvent.report.reportPhotos }); openGallery(idx); }}>
+                      <img src={img} alt="Report" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                     </div>
                   ))}
                 </div>
               </div>
+            ) : (
+              selectedEvent.images && selectedEvent.images.length > 0 && (
+                <div className="mb-6">
+                  <h3 className="text-lg mb-3">Event Gallery</h3>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '1rem' }}>
+                    {selectedEvent.images.map((img, idx) => (
+                      <div key={idx} style={{ height: '200px', borderRadius: 'var(--radius-md)', overflow: 'hidden', border: '1px solid var(--border-color)', cursor: 'pointer' }} onClick={() => openGallery(idx)}>
+                        <img src={img} alt="Gallery" style={{ width: '100%', height: '100%', objectFit: 'contain' }} className="gallery-thumb" />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )
             )}
 
             <div className="flex-center mt-6 pt-4" style={{ borderTop: '1px solid var(--border-color)' }}>
@@ -318,114 +571,14 @@ const ExploreEvents = () => {
 
       {/* Full Screen Image Gallery Modal */}
       {galleryIndex >= 0 && selectedEvent && (
-        <div
-          className="modal-overlay"
-          style={{
-            zIndex: 2000,
-            backgroundColor: 'rgba(0,0,0,0.95)',
-            display: 'flex',
-            flexDirection: 'column',
-            padding: 0
-          }}
-          onClick={closeGallery}
-        >
-          <button
-            onClick={closeGallery}
-            style={{
-              position: 'absolute',
-              top: '20px',
-              right: '30px',
-              background: 'transparent',
-              border: 'none',
-              color: 'white',
-              fontSize: '2rem',
-              cursor: 'pointer',
-              zIndex: 2001
-            }}
-          >
-            &times;
-          </button>
-
-          <div
-            style={{
-              flex: 1,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              position: 'relative',
-              width: '100%',
-              height: '100%'
-            }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            {selectedEvent.images.length > 1 && (
-              <button
-                onClick={prevImage}
-                style={{
-                  position: 'absolute',
-                  left: '20px',
-                  background: 'rgba(255,255,255,0.1)',
-                  border: 'none',
-                  color: 'white',
-                  fontSize: '2rem',
-                  padding: '1rem',
-                  cursor: 'pointer',
-                  borderRadius: '50%',
-                  width: '60px',
-                  height: '60px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  transition: 'background 0.2s'
-                }}
-                className="gallery-nav-btn"
-              >
-                &#10094;
-              </button>
-            )}
-
-            <img
-              src={selectedEvent.images[galleryIndex]}
-              alt={`Gallery view ${galleryIndex + 1}`}
-              style={{
-                maxWidth: '90%',
-                maxHeight: '90vh',
-                objectFit: 'contain',
-                borderRadius: '4px',
-                boxShadow: '0 0 20px rgba(0,0,0,0.5)'
-              }}
-            />
-
-            {selectedEvent.images.length > 1 && (
-              <button
-                onClick={nextImage}
-                style={{
-                  position: 'absolute',
-                  right: '20px',
-                  background: 'rgba(255,255,255,0.1)',
-                  border: 'none',
-                  color: 'white',
-                  fontSize: '2rem',
-                  padding: '1rem',
-                  cursor: 'pointer',
-                  borderRadius: '50%',
-                  width: '60px',
-                  height: '60px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  transition: 'background 0.2s'
-                }}
-                className="gallery-nav-btn"
-              >
-                &#10095;
-              </button>
-            )}
+        <div className="modal-overlay" style={{ zIndex: 2000, backgroundColor: 'rgba(0,0,0,0.95)', display: 'flex', flexDirection: 'column', padding: 0 }} onClick={closeGallery}>
+          <button onClick={closeGallery} style={{ position: 'absolute', top: '20px', right: '30px', background: 'transparent', border: 'none', color: 'white', fontSize: '2rem', cursor: 'pointer', zIndex: 2001 }}>&times;</button>
+          <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative', width: '100%', height: '100%' }} onClick={(e) => e.stopPropagation()}>
+            <button onClick={prevImage} style={{ position: 'absolute', left: '20px', background: 'rgba(255,255,255,0.1)', border: 'none', color: 'white', fontSize: '2rem', padding: '1rem', cursor: 'pointer', borderRadius: '50%', width: '60px', height: '60px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>&#10094;</button>
+            <img src={selectedEvent.images[galleryIndex]} alt="Full view" style={{ maxWidth: '90%', maxHeight: '90vh', objectFit: 'contain', borderRadius: '4px' }} />
+            <button onClick={nextImage} style={{ position: 'absolute', right: '20px', background: 'rgba(255,255,255,0.1)', border: 'none', color: 'white', fontSize: '2rem', padding: '1rem', cursor: 'pointer', borderRadius: '50%', width: '60px', height: '60px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>&#10095;</button>
           </div>
-
-          <div style={{ textAlign: 'center', padding: '10px', color: 'white', fontSize: '1rem' }}>
-            {galleryIndex + 1} / {selectedEvent.images.length}
-          </div>
+          <div style={{ textAlign: 'center', padding: '10px', color: 'white' }}>{galleryIndex + 1} / {selectedEvent.images.length}</div>
         </div>
       )}
     </div>
