@@ -160,3 +160,82 @@ input[type="file"]::file-selector-button {
         flex-direction: column;
     }
 }
+
+/* Mobile responsive styles for admin dashboard */
+@media screen and (max-width: 768px) {
+
+    /* Make grid layouts stack vertically on mobile */
+    .grid-cols-2,
+    .grid-cols-3 {
+        grid-template-columns: 1fr !important;
+    }
+
+    /* Admin charts container */
+    .admin-charts-container {
+        display: flex;
+        flex-direction: column;
+        gap: 1.5rem;
+    }
+
+    /* Adjust chart card heights for mobile */
+    .admin-chart-card {
+        height: auto !important;
+        min-height: 350px;
+    }
+
+    /* Ensure chart wrappers are responsive */
+    .chart-wrapper {
+        height: 280px !important;
+    }
+
+    /* Calendar and quick actions section */
+    .grid-cols-2[style*="gridTemplateColumns"] {
+        grid-template-columns: 1fr !important;
+    }
+
+    /* Adjust button text on mobile */
+    .flex-between {
+        flex-wrap: wrap;
+        gap: 0.5rem;
+    }
+
+    /* Keep calendar header buttons on sides */
+    .calendar-header {
+        flex-wrap: nowrap !important;
+        justify-content: space-between !important;
+        align-items: center !important;
+        gap: 1rem !important;
+    }
+
+    .calendar-header h4 {
+        font-size: 1.1rem;
+        white-space: nowrap;
+    }
+
+    .calendar-header .btn {
+        width: auto !important;
+        padding: 0.5rem 1rem !important;
+        flex-shrink: 0;
+    }
+
+    /* Make modal content fit mobile screens */
+    .modal-content {
+        max-width: 95% !important;
+        margin: 1rem;
+        padding: 1rem !important;
+    }
+
+    /* Adjust calendar for mobile */
+    .admin-dashboard .card {
+        padding: 1rem;
+    }
+
+    /* Stats cards text size adjustment */
+    .card.text-center h3 {
+        font-size: 0.9rem;
+    }
+
+    .card.text-center p[style*="fontSize: '2rem'"] {
+        font-size: 1.5rem !important;
+    }
+}

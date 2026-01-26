@@ -15,6 +15,9 @@ const UnitDashboard = () => {
     const [memberForm, setMemberForm] = useState({ name: "", dept: "", year: "", contact: "", regNo: "" });
     const [editingIndex, setEditingIndex] = useState(null);
 
+    // Check if accessed from college dashboard (admin or college user)
+    const isAccessedFromCollege = localStorage.getItem("nsstoken") !== null;
+
     useEffect(() => {
         const token = localStorage.getItem("unitToken");
         if (!token) {
@@ -56,7 +59,7 @@ const UnitDashboard = () => {
         localStorage.removeItem("unitToken");
         localStorage.removeItem("nssunitCode");
         localStorage.removeItem("nsscollegeCode");
-        navigate("/unit-login");
+        navigate("/");
     };
 
     const filteredMembers = unit?.members?.filter((m) =>
@@ -188,7 +191,16 @@ const UnitDashboard = () => {
                         <span className="badge badge-primary">Unit Dashboard</span>
                         <h1 className="mb-0" style={{ fontSize: '1.5rem', marginTop: '1rem', marginBottom: '0.3rem' }}>{college?.code} - {college?.insName} </h1>
                     </div>
-                    <button onClick={handleLogout} className="btn btn-danger">Logout</button>
+                    {isAccessedFromCollege ? (
+                        <button
+                            onClick={() => navigate("/college-dashboard")}
+                            className="btn btn-secondary"
+                        >
+                            ← Back to College Dashboard
+                        </button>
+                    ) : (
+                        <button onClick={handleLogout} className="btn btn-danger">Logout</button>
+                    )}
                 </div>
             </header>
 

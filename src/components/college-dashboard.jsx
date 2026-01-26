@@ -20,6 +20,9 @@ const CollegeDashboard = () => {
 
     const [loading, setLoading] = useState(true);
 
+    // Check if admin is viewing this dashboard
+    const isAdminViewing = localStorage.getItem("adminToken") !== null;
+
     const handleAddMember = () => {
         setNewMembers([...newMembers, { name: "", dept: "", year: "", contact: "" }]);
     };
@@ -166,15 +169,26 @@ const CollegeDashboard = () => {
                         <h1 className="mb-0" style={{ fontSize: '1.5rem' }}>{insName || 'College Dashboard'}</h1>
                         <span className="badge badge-primary">{insCode}</span>
                     </div>
-                    <button
-                        className="btn btn-danger"
-                        onClick={() => {
-                            localStorage.removeItem("nsstoken");
-                            navigate("/");
-                        }}
-                    >
-                        Logout
-                    </button>
+                    {isAdminViewing ? (
+                        <button
+                            className="btn btn-secondary"
+                            onClick={() => {
+                                navigate("/admin-dashboard");
+                            }}
+                        >
+                            ← Back to Admin Dashboard
+                        </button>
+                    ) : (
+                        <button
+                            className="btn btn-danger"
+                            onClick={() => {
+                                localStorage.removeItem("nsstoken");
+                                navigate("/");
+                            }}
+                        >
+                            Logout
+                        </button>
+                    )}
                 </div>
             </header>
 
@@ -206,7 +220,7 @@ const CollegeDashboard = () => {
                                 className="unit-card"
                                 onClick={() => {
                                     localStorage.setItem("nssunitCode", unit.unitNumber);
-                                    localStorage.setItem("unitToken", "college-admin");
+                                    localStorage.setItem("unitToken", localStorage.getItem("nsstoken"));
                                     localStorage.setItem("nsscollegeCode", insCode);
                                     navigate('/unit-dashboard')
                                 }}

@@ -30,6 +30,7 @@ const Login = () => {
             console.log(data);
             if (data.success) {
                 localStorage.setItem("nsstoken", data.token);
+                console.log(data.token);
                 setUsername(username);
                 localStorage.setItem("nss_username", username);
                 navigate("/college-dashboard");

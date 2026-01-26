@@ -176,16 +176,22 @@ const AddEvent = () => {
         console.log("Submitting Event Data:", eventData);
 
         try {
+            const config = {
+                headers: {
+                    Authorization: `Bearer ${localStorage.getItem("unitToken")}`
+                }
+            };
+
             if (eventToEdit) {
                 const response = await axios.put(`${import.meta.env.VITE_API_URL}/updateEvent`, {
                     eventId: eventToEdit._id,
                     eventData: eventData
-                });
+                }, config);
                 alert('Event updated successfully!');
                 console.log('Backend Response:', response.data);
                 navigate('/explore-events', { state: { unitCode, collegeCode } }); // Go back to explore events
             } else {
-                const response = await axios.post(`${import.meta.env.VITE_API_URL}/addEvent`, { eventData: eventData });
+                const response = await axios.post(`${import.meta.env.VITE_API_URL}/addEvent`, { eventData: eventData }, config);
                 alert('Event created successfully!');
                 console.log('Backend Response:', response.data);
                 navigate('/unit-dashboard');

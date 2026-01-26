@@ -114,6 +114,10 @@ const ExploreEvents = () => {
         eventId,
         unitCode,
         collegeCode
+      }, {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem("unitToken")}`
+        }
       });
 
       if (res.data.success) {
