@@ -34,6 +34,9 @@ const Login = () => {
                 localStorage.setItem("nss_username", username);
                 navigate("/college-dashboard");
             }
+            else {
+                alert(data.message)
+            }
         }
         catch (error) {
             console.log(error)

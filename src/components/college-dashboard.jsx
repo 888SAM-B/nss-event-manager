@@ -43,16 +43,30 @@ const CollegeDashboard = () => {
         <>
             <h1>College Dashboard: {insName} {insCode}</h1>
 
-            <button
-                onClick={() => {
-                    localStorage.removeItem("nsstoken");
-                    navigate("/");
-                }}
-            >
-                Logout
+            <button onClick={() => {
+                localStorage.removeItem("nsstoken");
+                navigate("/");
+            }}>Logout
             </button>
+            <div>
+                {units.map((unit) => (
+                    <div key={unit.no} style={{ border: '1px solid #000' }}>
+                        <h3>{unit.name}</h3>
+                        <p><strong>No:</strong> {unit.no}</p>
+                        <p><strong>Head:</strong> {unit.head}</p>
+                        <p><strong>Members:</strong> {unit.members}</p>
+                        <p><strong>Member Details:</strong> {unit.mDetails.length > 0 ? unit.mDetails.join(', ') : 'None'}</p>
+                        <p><strong>Staffs:</strong> {unit.staffs.length > 0 ? unit.staffs.join(', ') : 'None'}</p>
+                    </div>
+                ))}
+            </div>
+
+
 
             <h2>Welcome to the NSS Event Manager</h2>
+            <h1>Units</h1>
+
+
         </>
     );
 };
