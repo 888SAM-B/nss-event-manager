@@ -11,6 +11,10 @@ import UnitDashboard from './components/unitDashboard.jsx'
 import AddEvent from './components/add-event.jsx'
 import ExploreEvents from './components/explore-event.jsx'
 
+import AdminLogin from './components/AdminLogin.jsx'
+import AdminDashboard from './components/AdminDashboard.jsx'
+import AdminAllEvents from './components/AdminAllEvents.jsx'
+
 function App() {
   return (
     <UserProvider>
@@ -22,7 +26,10 @@ function App() {
           <Route path='/unit-login' element={<UnitLogin />} ></Route>
           <Route path='/unit-dashboard' element={<UnitDashboard />} ></Route>
           <Route path='/events' element={<AddEvent />} ></Route>
-          <Route path='/explore-events' element={<ExploreEvents />} ></Route>``
+          <Route path='/explore-events' element={<ExploreEvents />} ></Route>
+          <Route path='/admin-login' element={<AdminLogin />} ></Route>
+          <Route path='/admin-dashboard' element={<AdminDashboard />} ></Route>
+          <Route path='/admin/all-events' element={<AdminAllEvents />} ></Route>
           <Route path='*' element={<h1>404 Not Found</h1>} ></Route>
 
         </Routes>

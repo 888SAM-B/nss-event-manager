@@ -18,7 +18,7 @@ const Home = () => {
                 <div className="container flex-between">
                     <h2 style={{ margin: 0, color: 'var(--primary-400)', letterSpacing: '-0.5px' }}>NSS Event Manager</h2>
                     <div className="d-flex gap-2">
-                        <button className="btn btn-secondary" onClick={() => navigate("/login")}>Admin Login</button>
+                        <button className="btn btn-secondary" onClick={() => navigate("/admin-login")}>Admin Login</button>
                     </div>
                 </div>
             </nav>
