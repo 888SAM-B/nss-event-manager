@@ -167,6 +167,40 @@ app.post('/login', async (req, res) => {
     }
 });
 
+app.post('/add-organization', async (req, res) => {
+    const { insName, code, username, password } = req.body;
+    console.log("Add Organization Request:", req.body);
+    try {
+        const existingCode = await User.findOne({ code: code });
+        if (existingCode) { 
+            return res.status(400).json({ success: false, message: "Organization code already exists" });
+        }
+        const existingUser = await User.findOne({ userName: username });
+        if (existingUser) {
+            return res.status(400).json({ success: false, message: "Username already exists" });
+        }
+
+        const salt = await bcrypt.genSalt(10);
+        const hashedPassword = await bcrypt.hash(password, salt);
+
+        const newUser = new User({
+            insName,
+            code,
+            userName: username,
+            password: hashedPassword
+        });
+        await newUser.save();
+        res.json({
+            success: true,
+            message: "Organization added successfully",
+            user: newUser
+        });
+    } catch (error) {
+        console.error("Error adding organization:", error);
+        res.status(500).json({ success: false, message: "Internal Server Error" });
+    }
+});
+
 // Protected: College Dashboard
 app.get('/college-dashboard', verifyToken, async (req, res) => {
     const { username } = req.query;
