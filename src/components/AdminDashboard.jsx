@@ -379,15 +379,19 @@ const AdminDashboard = () => {
             }
         ]
     };
-
+    const handleAddOrg = () => {
+        navigate('/add-org', { state: { admin:import.meta.env.VITE_ADMIN_TOKEN } });
+        // console.log("Hello",import.meta.env.VITE_ADMIN_TOKEN)
+    }
     return (
         <div className="admin-dashboard" style={{ minHeight: '100vh', background: 'var(--bg-color)' }}>
             <header className="dashboard-header">
                 <div className="container flex-between">
                     <div>
-                        <span className="badge badge-primary">System Administrator</span>
+                        <span className="badge  badge-primary" style={{marginBottom:'10px'}} >System Administrator</span>
                         <h1 className="mb-0">Admin Dashboard</h1>
                     </div>
+                    <button  className='btn' onClick={handleAddOrg} >+ Add an Organization</button>
                     <button className="btn btn-danger" onClick={handleLogout}>Logout</button>
                 </div>
             </header>
@@ -398,6 +402,7 @@ const AdminDashboard = () => {
                     <div className="card text-center">
                         <h3 className="text-secondary mb-2">Total Colleges</h3>
                         <p className="fw-bold" style={{ fontSize: '2rem' }}>{stats.totalColleges}</p>
+
                     </div>
                     <div className="card text-center">
                         <h3 className="text-secondary mb-2">Total Units</h3>
@@ -408,7 +413,6 @@ const AdminDashboard = () => {
                         <p className="fw-bold" style={{ fontSize: '2rem' }}>{stats.totalEvents}</p>
                     </div>
                 </div>
-
                 {/* Charts */}
                 <div className="grid-cols-2 mb-6 admin-charts-container">
                     <div className="card admin-chart-card" style={{ height: '400px' }}>

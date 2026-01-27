@@ -10,7 +10,7 @@ import UnitLogin from './components/unitLogin.jsx'
 import UnitDashboard from './components/unitDashboard.jsx'
 import AddEvent from './components/add-event.jsx'
 import ExploreEvents from './components/explore-event.jsx'
-
+import AddOrg from './components/addOrg.jsx'
 import AdminLogin from './components/AdminLogin.jsx'
 import AdminDashboard from './components/AdminDashboard.jsx'
 import AdminAllEvents from './components/AdminAllEvents.jsx'
@@ -25,8 +25,9 @@ function App() {
           <Route path='/college-dashboard' element={<CollegeDashboard />} ></Route>
           <Route path='/unit-login' element={<UnitLogin />} ></Route>
           <Route path='/unit-dashboard' element={<UnitDashboard />} ></Route>
-          <Route path='/events' element={<AddEvent />} ></Route>
           <Route path='/explore-events' element={<ExploreEvents />} ></Route>
+          <Route path='/events' element={<AddEvent />} ></Route>
+          <Route path='/add-org' element={<AddOrg />} ></Route>
           <Route path='/admin-login' element={<AdminLogin />} ></Route>
           <Route path='/admin-dashboard' element={<AdminDashboard />} ></Route>
           <Route path='/admin/all-events' element={<AdminAllEvents />} ></Route>

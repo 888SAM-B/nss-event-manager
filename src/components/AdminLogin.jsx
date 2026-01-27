@@ -38,7 +38,7 @@ const AdminLogin = () => {
                     <h1 className="mb-2">Admin Portal</h1>
                     <p className="text-muted">Secure Access for System Administrators</p>
                 </div>
-
+    
                 {error && <div className="alert alert-danger mb-4">{error}</div>}
 
                 <form onSubmit={handleLogin}>
