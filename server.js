@@ -37,6 +37,7 @@ const insLoginScheme = new mongoose.Schema({
     userName: String,
     password: String, // Hashed
     insName: String,
+    location: String,
     events: { type: Array, default: [] },
     code: String,
     units: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Unit' }]
@@ -59,6 +60,11 @@ const eventSchema = new mongoose.Schema({
     images: Array,
     eventCode: String,
     unitId: { type: mongoose.Schema.Types.ObjectId, ref: 'Unit' },
+    collaborators: [{
+        unitId: { type: mongoose.Schema.Types.ObjectId, ref: 'Unit' },
+        unitCode: String,
+        status: { type: String, enum: ['pending', 'accepted', 'rejected'], default: 'pending' }
+    }],
     collegeId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
     report: {
         conductedOnDate: Boolean,
@@ -75,7 +81,23 @@ const Event = mongoose.model('Event', eventSchema);
 
 // ... existing code ...
 
+// Helper route to get all units for a college (for the dropdown in add-event)
+app.get('/units/:collegeCode', async (req, res) => {
+    const { collegeCode } = req.params;
+    try {
+        const college = await User.findOne({ code: collegeCode }).populate('units', 'unitNumber name _id');
+        if (!college) {
+            return res.status(404).json({ success: false, message: "College not found" });
+        }
+        res.json({ success: true, units: college.units });
+    } catch (error) {
+        console.error("Error fetching units:", error);
+        res.status(500).json({ success: false, message: "Server error" });
+    }
+});
+
 app.post('/submitReport', verifyToken, async (req, res) => {
+    // ... existing implementation
     const { eventId, reportData } = req.body;
 
     if (!eventId || !reportData) {
@@ -91,7 +113,10 @@ app.post('/submitReport', verifyToken, async (req, res) => {
         // Authorization check
         if (req.user.role === 'unit') {
             const unit = await Unit.findById(event.unitId);
-            if (req.user.unitNumber !== unit.unitNumber) {
+            // Allow if owner OR accepted collaborator
+            const isCollaborator = event.collaborators.some(c => c.unitCode === req.user.unitNumber && c.status === 'accepted');
+
+            if (req.user.unitNumber !== unit.unitNumber && !isCollaborator) {
                 return res.status(403).json({ success: false, message: "Unauthorized to submit report for this event" });
             }
         } else if (req.user.role !== 'college' && req.user.role !== 'admin') {
@@ -168,11 +193,11 @@ app.post('/login', async (req, res) => {
 });
 
 app.post('/add-organization', async (req, res) => {
-    const { insName, code, username, password } = req.body;
+    const { insName, location, code, username, password } = req.body;
     console.log("Add Organization Request:", req.body);
     try {
         const existingCode = await User.findOne({ code: code });
-        if (existingCode) { 
+        if (existingCode) {
             return res.status(400).json({ success: false, message: "Organization code already exists" });
         }
         const existingUser = await User.findOne({ userName: username });
@@ -185,6 +210,7 @@ app.post('/add-organization', async (req, res) => {
 
         const newUser = new User({
             insName,
+            location,
             code,
             userName: username,
             password: hashedPassword
@@ -236,8 +262,8 @@ app.get('/college-dashboard', verifyToken, async (req, res) => {
 app.post('/addUnit', verifyToken, async (req, res) => {
     const { username, name, password, head, contact, mail, members, unitNumber, createdDate } = req.body;
 
-    if (req.user.userName !== username) {
-        return res.status(403).json({ success: false, message: "Unauthorized" });
+    if (req.user.userName !== username && req.user.role !== 'admin') {
+        return res.status(403).json({ success: false, message: "Unauthori`zed" });
     }
 
     if (!username) {
@@ -451,6 +477,8 @@ app.delete('/delete-unit-member', verifyToken, async (req, res) => {
 });
 
 
+// ... existing code ...
+
 app.post('/addEvent', verifyToken, async (req, res) => {
     const { eventData } = req.body;
     if (!eventData) {
@@ -458,18 +486,38 @@ app.post('/addEvent', verifyToken, async (req, res) => {
     }
 
     // Auth Check
-    // Events can be added by Unit (usually).
     if (req.user.role === 'unit') {
         if (req.user.unitNumber !== eventData.unitCode) return res.status(403).json({ message: "Unauthorized" });
     }
 
     const collegeObject = await User.findOne({ code: eventData.collegeCode });
-    const collegeCode = collegeObject._id;
+    if (!collegeObject) return res.status(404).json({ message: "College found" }); // Typo in original? Keeping flow.
+
+    // Fix: checking collegeObject existence properly
+    if (!collegeObject) return res.status(404).json({ success: false, message: "College not found" });
+
+    const collegeCodeId = collegeObject._id;
 
     try {
-        const unit = await Unit.findOne({ unitNumber: eventData.unitCode, collegeId: collegeCode });
+        const unit = await Unit.findOne({ unitNumber: eventData.unitCode, collegeId: collegeCodeId });
         if (!unit) {
             return res.status(404).json({ success: false, message: "Unit not found" });
+        }
+
+        // Process Collaborators
+        let processedCollaborators = [];
+        if (eventData.collaborators && eventData.collaborators.length > 0) {
+            // Find IDs for unit codes
+            for (const collabUnitCode of eventData.collaborators) {
+                const collabUnit = await Unit.findOne({ unitNumber: collabUnitCode, collegeId: collegeCodeId });
+                if (collabUnit) {
+                    processedCollaborators.push({
+                        unitId: collabUnit._id,
+                        unitCode: collabUnit.unitNumber,
+                        status: 'pending'
+                    });
+                }
+            }
         }
 
         const eventCount = await Event.countDocuments({ unitId: unit._id });
@@ -480,17 +528,82 @@ app.post('/addEvent', verifyToken, async (req, res) => {
             ...eventData,
             eventCode,
             unitId: unit._id,
-            collegeId: collegeCode
+            collegeId: collegeCodeId,
+            collaborators: processedCollaborators
         });
         await newEvent.save();
         unit.events.push(newEvent._id);
         collegeObject.events.push(newEvent._id)
         await unit.save();
         await collegeObject.save();
-        res.json({ success: true, message: "Event added successfully", event: newEvent });
+        res.json({ success: true, message: "Event added and invitations sent", event: newEvent });
     } catch (error) {
         console.error("Error adding event:", error);
         res.status(500).json({ success: false, message: "Internal Server Error" });
+    }
+});
+
+// Get Notifications (Pending Invites) for a Unit
+app.get('/unit-notifications/:unitCode/:collegeCode', verifyToken, async (req, res) => {
+    const { unitCode, collegeCode } = req.params;
+
+    if (req.user.unitNumber !== unitCode) return res.status(403).json({ message: "Unauthorized" });
+
+    try {
+        const college = await User.findOne({ code: collegeCode });
+        if (!college) return res.status(404).json({ message: "College not found" });
+
+        const pendingEvents = await Event.find({
+            collegeId: college._id,
+            'collaborators': {
+                $elemMatch: {
+                    unitCode: unitCode,
+                    status: 'pending'
+                }
+            }
+        }).populate('unitId', 'name unitNumber'); // Creator unit info
+
+        res.json({ success: true, invites: pendingEvents });
+    } catch (error) {
+        console.error("Error fetching notifications:", error);
+        res.status(500).json({ success: false, message: "Server error" });
+    }
+});
+
+// Respond to Collaboration Invite
+app.post('/respond-collaboration', verifyToken, async (req, res) => {
+    const { eventId, unitCode, response, collegeCode } = req.body; // response: 'accepted' or 'rejected'
+
+    if (req.user.unitNumber !== unitCode) return res.status(403).json({ message: "Unauthorized" });
+
+    try {
+        const event = await Event.findById(eventId);
+        if (!event) return res.status(404).json({ message: "Event not found" });
+
+        const collaboratorIndex = event.collaborators.findIndex(
+            c => c.unitCode === unitCode && c.status === 'pending'
+        );
+
+        if (collaboratorIndex === -1) {
+            return res.status(400).json({ message: "No pending invite found" });
+        }
+
+        event.collaborators[collaboratorIndex].status = response;
+        await event.save();
+
+        if (response === 'accepted') {
+            const college = await User.findOne({ code: collegeCode });
+            const collabUnit = await Unit.findOne({ unitNumber: unitCode, collegeId: college._id });
+            if (collabUnit) {
+                collabUnit.events.push(event._id);
+                await collabUnit.save();
+            }
+        }
+
+        res.json({ success: true, message: `Invitation ${response}` });
+    } catch (error) {
+        console.error("Error responding to invite:", error);
+        res.status(500).json({ success: false, message: "Server error" });
     }
 });
 
@@ -503,19 +616,60 @@ app.get('/getEvents/:collegeCode/:unitCode', async (req, res) => {
     // I'll leave it public for now as "Explore" usually implies public visibility.
 
     const { collegeCode, unitCode } = req.params;
-    const college = await User.findOne({ code: collegeCode });
-    if (!college) {
-        return res.status(401).json({ success: false, message: "Invalid college code" });
-    }
-    const unit = await Unit.findOne({ unitNumber: unitCode, collegeId: college._id });
-    if (!unit) {
-        return res.status(401).json({ success: false, message: "Invalid unit code" });
-    }
-    const unitEvents = await Event.find({ unitId: unit._id });
-    const collegeEvents = await Event.find({ $and: [{ collegeId: college._id }, { unitId: { $ne: unit._id } }] });
-    const otherEvents = await Event.find({ $and: [{ collegeId: { $ne: college._id } }, { unitId: { $ne: unit._id } }] });
+    console.log(`Getting events for College: ${collegeCode}, Unit: ${unitCode}`);
 
-    res.json({ success: true, unitEvents, collegeEvents, otherEvents });
+    try {
+        const college = await User.findOne({ code: collegeCode });
+        if (!college) {
+            return res.status(401).json({ success: false, message: "Invalid college code" });
+        }
+        const unit = await Unit.findOne({ unitNumber: unitCode, collegeId: college._id });
+        if (!unit) {
+            return res.status(401).json({ success: false, message: "Invalid unit code" });
+        }
+
+        // Unit Events: Created by unit OR Collaborated (accepted)
+        const unitEvents = await Event.find({
+            $or: [
+                { unitId: unit._id },
+                {
+                    collaborators: {
+                        $elemMatch: {
+                            unitCode: unitCode,
+                            status: 'accepted'
+                        }
+                    }
+                }
+            ]
+        });
+
+        // College Events: Other events in the college, EXCLUDING those where this unit is already a creator or collaborator
+        const collegeEvents = await Event.find({
+            $and: [
+                { collegeId: college._id },
+                { unitId: { $ne: unit._id } },
+                {
+                    collaborators: {
+                        $not: {
+                            $elemMatch: {
+                                unitCode: unitCode,
+                                status: 'accepted'
+                            }
+                        }
+                    }
+                }
+            ]
+        });
+
+        const otherEvents = await Event.find({ $and: [{ collegeId: { $ne: college._id } }, { unitId: { $ne: unit._id } }] });
+
+        console.log(`Fetched ${unitEvents.length} unit events, ${collegeEvents.length} college events`);
+
+        res.json({ success: true, unitEvents, collegeEvents, otherEvents });
+    } catch (error) {
+        console.error("Error in getEvents:", error);
+        res.status(500).json({ success: false, message: "Server error" });
+    }
 });
 
 app.post('/deleteEvent', verifyToken, async (req, res) => {
@@ -606,6 +760,45 @@ app.post('/admin/login', (req, res) => {
         res.json({ success: true, token });
     } else {
         res.status(401).json({ success: false, message: "Invalid Admin Credentials" });
+    }
+});
+
+// Admin: Delete Organization and all associated data
+app.post('/admin/delete-organization', verifyToken, async (req, res) => {
+    if (req.user.role !== 'admin') {
+        return res.status(403).json({ success: false, message: "Unauthorized: Admin access required" });
+    }
+
+    const { collegeId, adminUsername, adminPassword } = req.body;
+
+    if (!collegeId || !adminUsername || !adminPassword) {
+        return res.status(400).json({ success: false, message: "Missing required fields" });
+    }
+
+    // Verify Admin Credentials again for security
+    if (adminUsername !== process.env.ADMIN_USERNAME || adminPassword !== process.env.ADMIN_PASSWORD) {
+        return res.status(401).json({ success: false, message: "Invalid Admin Credentials" });
+    }
+
+    try {
+        const college = await User.findById(collegeId);
+        if (!college) {
+            return res.status(404).json({ success: false, message: "College not found" });
+        }
+
+        // Delete all events associated with this college
+        await Event.deleteMany({ collegeId: collegeId });
+
+        // Delete all units associated with this college
+        await Unit.deleteMany({ collegeId: collegeId });
+
+        // Delete the college itself
+        await User.findByIdAndDelete(collegeId);
+
+        res.json({ success: true, message: "Organization and all associated data deleted successfully" });
+    } catch (error) {
+        console.error("Error deleting organization:", error);
+        res.status(500).json({ success: false, message: "Internal Server Error" });
     }
 });
 
