@@ -1,5 +1,8 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
+import { faBell } from '@fortawesome/free-solid-svg-icons'
+
 import axios from "axios";
 
 const UnitDashboard = () => {
@@ -14,6 +17,9 @@ const UnitDashboard = () => {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [memberForm, setMemberForm] = useState({ name: "", dept: "", year: "", contact: "", regNo: "" });
     const [editingIndex, setEditingIndex] = useState(null);
+    const [invites, setInvites] = useState([]);
+    const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
+
 
     // Check if accessed from college dashboard (admin or college user)
     const isAccessedFromCollege = localStorage.getItem("nsstoken") !== null;
@@ -53,7 +59,46 @@ const UnitDashboard = () => {
                     navigate("/unit-login");
                 }
             });
+
+        // Fetch Notifications (Invites)
+        axios.get(`${import.meta.env.VITE_API_URL}/unit-notifications/${unitCode}/${collegeCode}`, {
+            headers: { Authorization: `Bearer ${token}` }
+        })
+            .then(res => {
+                if (res.data.success) {
+                    setInvites(res.data.invites);
+                }
+            })
+            .catch(err => console.error("Error fetching notifications:", err));
+
     }, [navigate]);
+
+    const handleRespondInvite = async (eventId, response) => {
+        const token = localStorage.getItem("unitToken");
+        const unitCode = localStorage.getItem("nssunitCode");
+        const collegeCode = localStorage.getItem("nsscollegeCode");
+
+        try {
+            const res = await axios.post(`${import.meta.env.VITE_API_URL}/respond-collaboration`, {
+                eventId,
+                unitCode,
+                response,
+                collegeCode
+            }, {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+
+            if (res.data.success) {
+                alert(`Invitation ${response}`);
+                // Remove from list
+                setInvites(invites.filter(i => i._id !== eventId));
+            }
+        } catch (error) {
+            console.error(error);
+            alert("Failed to respond");
+        }
+    };
+
 
     const handleLogout = () => {
         localStorage.removeItem("unitToken");
@@ -199,7 +244,17 @@ const UnitDashboard = () => {
                             ← Back to College Dashboard
                         </button>
                     ) : (
-                        <button onClick={handleLogout} className="btn btn-danger">Logout</button>
+                        <div className="d-flex align-items-center gap-3">
+                            <div className="position-relative" style={{ cursor: 'pointer', marginRight: '5rem' }} onClick={() => setIsInviteModalOpen(true)}>
+                                <span style={{ fontSize: '1.5rem' }}><FontAwesomeIcon icon={faBell} /></span>
+                                {invites.length > 0 && (
+                                    <span className="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" style={{ fontSize: '0.7rem' }}>
+                                        {invites.length}
+                                    </span>
+                                )}
+                            </div>
+                            <button onClick={handleLogout} className="btn btn-danger">Logout</button>
+                        </div>
                     )}
                 </div>
             </header>
@@ -397,6 +452,40 @@ const UnitDashboard = () => {
                                 <button type="submit" className="btn btn-primary">Save Member</button>
                             </div>
                         </form>
+                    </div>
+                </div>
+            )}
+
+            {/* Notifications Modal */}
+            {isInviteModalOpen && (
+                <div className="modal-overlay" onClick={() => setIsInviteModalOpen(false)}>
+                    <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '600px' }}>
+                        <div className="flex-between mb-4">
+                            <h2 className="mb-0">Collaboration Invites</h2>
+                            <button className="btn btn-sm btn-secondary" onClick={() => setIsInviteModalOpen(false)}>&times;</button>
+                        </div>
+
+                        {invites.length === 0 ? (
+                            <p className="text-center text-muted">No pending invitations.</p>
+                        ) : (
+                            <div className="d-flex flex-column gap-3">
+                                {invites.map(invite => (
+                                    <div key={invite._id} className="card p-3 mb-0" style={{ background: 'var(--dark-bg-secondary)' }}>
+                                        <div className="flex-between mb-2">
+                                            <h4 className="mb-0">{invite.name}</h4>
+                                            <span className="badge badge-primary">{invite.category}</span>
+                                        </div>
+                                        <p className="text-sm mb-1"><strong>Invited by:</strong> Unit {invite.unitId?.unitNumber} ({invite.unitId?.name})</p>
+                                        <p className="text-sm mb-3 text-muted">{invite.description.substring(0, 100)}...</p>
+
+                                        <div className="d-flex gap-2 justify-content-end">
+                                            <button className="btn btn-sm btn-success" onClick={() => handleRespondInvite(invite._id, 'accepted')}>Accept</button>
+                                            <button className="btn btn-sm btn-danger" onClick={() => handleRespondInvite(invite._id, 'rejected')}>Decline</button>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
                     </div>
                 </div>
             )}

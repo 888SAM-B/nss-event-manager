@@ -298,6 +298,11 @@ const AdminDashboard = () => {
     const navigate = useNavigate();
     const [stats, setStats] = useState(null);
     const [loading, setLoading] = useState(true);
+    const [collegeToDelete, setCollegeToDelete] = useState(null);
+    const [adminUser, setAdminUser] = useState("");
+    const [adminPass, setAdminPass] = useState("");
+    const [deleteError, setDeleteError] = useState("");
+    const [isDeleting, setIsDeleting] = useState(false);
 
     useEffect(() => {
         const fetchStats = async () => {
@@ -380,18 +385,60 @@ const AdminDashboard = () => {
         ]
     };
     const handleAddOrg = () => {
-        navigate('/add-org', { state: { admin:import.meta.env.VITE_ADMIN_TOKEN } });
+        navigate('/add-org', { state: { admin: import.meta.env.VITE_ADMIN_TOKEN } });
         // console.log("Hello",import.meta.env.VITE_ADMIN_TOKEN)
     }
+
+    const handleCollegeRedirect = (college) => {
+        localStorage.setItem('nss_username', college.userName);
+        localStorage.setItem('nsstoken', localStorage.getItem('adminToken'));
+        navigate(`/college-dashboard?username=${college.userName}`);
+    };
+
+    const handleDeleteCollege = async (e) => {
+        e.preventDefault();
+        setDeleteError("");
+        setIsDeleting(true);
+
+        try {
+            const token = localStorage.getItem("adminToken");
+            const res = await axios.post(`${import.meta.env.VITE_API_URL}/admin/delete-organization`, {
+                collegeId: collegeToDelete._id,
+                adminUsername: adminUser,
+                adminPassword: adminPass
+            }, {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+
+            if (res.data.success) {
+                alert("College and all associated data removed successfully");
+                setCollegeToDelete(null);
+                setAdminUser("");
+                setAdminPass("");
+                // Refresh data
+                const statsRes = await axios.get(`${import.meta.env.VITE_API_URL}/admin/stats`, {
+                    headers: { Authorization: `Bearer ${token}` }
+                });
+                if (statsRes.data.success) {
+                    setStats(statsRes.data.stats);
+                }
+            }
+        } catch (err) {
+            console.error(err);
+            setDeleteError(err.response?.data?.message || "Failed to delete college");
+        } finally {
+            setIsDeleting(false);
+        }
+    };
     return (
         <div className="admin-dashboard" style={{ minHeight: '100vh', background: 'var(--bg-color)' }}>
             <header className="dashboard-header">
                 <div className="container flex-between">
                     <div>
-                        <span className="badge  badge-primary" style={{marginBottom:'10px'}} >System Administrator</span>
+                        <span className="badge  badge-primary" style={{ marginBottom: '10px' }} >System Administrator</span>
                         <h1 className="mb-0">Admin Dashboard</h1>
                     </div>
-                    <button  className='btn' onClick={handleAddOrg} >+ Add an Organization</button>
+                    <button className='btn' onClick={handleAddOrg} >+ Add an Organization</button>
                     <button className="btn btn-danger" onClick={handleLogout}>Logout</button>
                 </div>
             </header>
@@ -491,26 +538,81 @@ const AdminDashboard = () => {
                                     <th>Institute Name</th>
                                     <th>Units</th>
                                     <th>Total Events</th>
+                                    <th>Actions</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 {stats.colleges.map((college) => (
-                                    <tr key={college._id} onClick={() => {
-                                        console.log(college);
-                                        localStorage.setItem('nss_username', college.userName);
-                                        localStorage.setItem('nsstoken', localStorage.getItem('adminToken'));
-                                        navigate(`/college-dashboard?username=${college.userName}`)
-                                    }} style={{ cursor: 'pointer' }} >
-                                        <td><span className="badge badge-secondary">{college.code}</span></td>
-                                        <td>{college.insName}</td>
-                                        <td>{college.units.length}</td>
-                                        <td>{college.events.length}</td>
+                                    <tr key={college._id} style={{ cursor: 'pointer' }} >
+                                        <td onClick={() => handleCollegeRedirect(college)}><span className="badge badge-secondary">{college.code}</span></td>
+                                        <td onClick={() => handleCollegeRedirect(college)}>{college.insName}</td>
+                                        <td onClick={() => handleCollegeRedirect(college)}>{college.units.length}</td>
+                                        <td onClick={() => handleCollegeRedirect(college)}>{college.events.length}</td>
+                                        <td>
+                                            <button
+                                                className="btn btn-sm btn-danger"
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    setCollegeToDelete(college);
+                                                }}
+                                            >
+                                                Remove
+                                            </button>
+                                        </td>
                                     </tr>
                                 ))}
                             </tbody>
                         </table>
                     </div>
                 </div>
+
+                {/* Confirm Delete Modal */}
+                {collegeToDelete && (
+                    <div className="modal-overlay" onClick={() => setCollegeToDelete(null)}>
+                        <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '450px' }}>
+                            <div className="text-center mb-6">
+                                <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>⚠️</div>
+                                <h3>Confirm Deletion</h3>
+                                <p>Are you sure you want to delete <strong>{collegeToDelete.insName}</strong>?</p>
+                                <p className="text-danger text-sm">This will permanently remove all associated units and events.</p>
+                            </div>
+
+                            <form onSubmit={handleDeleteCollege}>
+                                <div className="form-group">
+                                    <label className="form-label">Admin Username</label>
+                                    <input
+                                        type="text"
+                                        className="form-input"
+                                        placeholder="Confirm admin username"
+                                        value={adminUser}
+                                        onChange={(e) => setAdminUser(e.target.value)}
+                                        required
+                                    />
+                                </div>
+                                <div className="form-group">
+                                    <label className="form-label">Admin Password</label>
+                                    <input
+                                        type="password"
+                                        className="form-input"
+                                        placeholder="Confirm admin password"
+                                        value={adminPass}
+                                        onChange={(e) => setAdminPass(e.target.value)}
+                                        required
+                                    />
+                                </div>
+
+                                {deleteError && <div className="text-danger mb-4 text-center">{deleteError}</div>}
+
+                                <div className="flex-between">
+                                    <button type="button" className="btn btn-secondary" onClick={() => setCollegeToDelete(null)}>Cancel</button>
+                                    <button type="submit" className="btn btn-danger" disabled={isDeleting}>
+                                        {isDeleting ? "Deleting..." : "Confirm Delete"}
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                )}
             </main>
         </div>
     );

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import axios from 'axios';
 
@@ -44,6 +44,38 @@ const AddEvent = () => {
     const [uploading, setUploading] = useState(false);
     const [uploadError, setUploadError] = useState(null);
     const [fileSizeError, setFileSizeError] = useState(null); // New state for file size error
+
+    // Collaboration State
+    const [availableUnits, setAvailableUnits] = useState([]);
+    const [collaborators, setCollaborators] = useState([]);
+    const [selectedCollaborator, setSelectedCollaborator] = useState("");
+
+    useEffect(() => {
+        // Fetch all units for dropdown
+        if (collegeCode) {
+            axios.get(`${import.meta.env.VITE_API_URL}/units/${collegeCode}`)
+                .then(res => {
+                    if (res.data.success) {
+                        // Filter out current unit
+                        const otherUnits = res.data.units.filter(u => u.unitNumber !== unitCode);
+                        setAvailableUnits(otherUnits);
+                    }
+                })
+                .catch(err => console.error("Error fetching units:", err));
+        }
+    }, [collegeCode, unitCode]);
+
+    const handleAddCollaborator = () => {
+        if (selectedCollaborator && !collaborators.includes(selectedCollaborator)) {
+            setCollaborators([...collaborators, selectedCollaborator]);
+            setSelectedCollaborator("");
+        }
+    };
+
+    const handleRemoveCollaborator = (unitToRemove) => {
+        setCollaborators(collaborators.filter(c => c !== unitToRemove));
+    };
+
 
     const handleChange = (e) => {
         const { id, value, type, checked } = e.target;
@@ -170,7 +202,10 @@ const AddEvent = () => {
             venue: eventForm.venue,
             images: eventForm.images,
             unitCode: unitCode,
-            collegeCode: collegeCode
+            unitCode: unitCode,
+            collegeCode: collegeCode,
+            collaborators: collaborators
+
         };
 
         console.log("Submitting Event Data:", eventData);
@@ -436,6 +471,47 @@ const AddEvent = () => {
                             {eventForm.images.length === 0 && selectedFiles.length === 0 && !fileSizeError && !uploadError && (
                                 <small className="text-muted d-block mt-2">No images selected or uploaded yet.</small>
                             )}
+                        </div>
+
+                        {/* Collaborating Units Section */}
+                        <div className="form-group mb-4 p-3" style={{ border: '1px dashed var(--border-color)', borderRadius: 'var(--radius-md)' }}>
+                            <label className="mb-2 fw-bold">Collaborating Units (Optional)</label>
+                            <div className="d-flex gap-2 mb-2">
+                                <select
+                                    className="form-control"
+                                    value={selectedCollaborator}
+                                    onChange={(e) => setSelectedCollaborator(e.target.value)}
+                                >
+                                    <option value="">Select a Unit to Invite</option>
+                                    {availableUnits.map(unit => (
+                                        <option key={unit.unitNumber} value={unit.unitNumber} disabled={collaborators.includes(unit.unitNumber)}>
+                                            {unit.unitNumber} - {unit.name}
+                                        </option>
+                                    ))}
+                                </select>
+                                <button type="button" className="btn btn-primary" onClick={handleAddCollaborator} disabled={!selectedCollaborator}>
+                                    Add
+                                </button>
+                            </div>
+
+                            {collaborators.length > 0 && (
+                                <div className="d-flex flex-wrap gap-2 mt-2">
+                                    {collaborators.map(cCode => (
+                                        <span key={cCode} className="badge badge-secondary d-flex align-items-center gap-2" style={{ padding: '0.5rem 1rem' }}>
+                                            Unit {cCode}
+                                            <button
+                                                type="button"
+                                                className="btn-close btn-close-white"
+                                                style={{ fontSize: '0.6rem', marginLeft: '5px', cursor: 'pointer', background: 'none', border: 'none', color: 'white' }}
+                                                onClick={() => handleRemoveCollaborator(cCode)}
+                                            >
+                                                ✕
+                                            </button>
+                                        </span>
+                                    ))}
+                                </div>
+                            )}
+                            <small className="text-muted">Selected units will receive an invitation to collaborate on this event.</small>
                         </div>
 
                         <div className="flex-between">
