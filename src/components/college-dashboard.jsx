@@ -169,26 +169,35 @@ const CollegeDashboard = () => {
                         <h1 className="mb-0" style={{ fontSize: '1.5rem' }}>{insName || 'College Dashboard'}</h1>
                         <span className="badge badge-primary">{insCode}</span>
                     </div>
-                    {isAdminViewing ? (
+                    <div className="d-flex gap-3 align-items-center">
                         <button
-                            className="btn btn-secondary"
-                            onClick={() => {
-                                navigate("/admin-dashboard");
-                            }}
+                            style={{ marginRight: '1.5rem' }}
+                            className="btn btn-primary"
+                            onClick={() => navigate('/explore-events', { state: { collegeCode: insCode, unitCode: 'COLLEGE', fromRole: 'college' } })}
                         >
-                            ← Back to Admin Dashboard
+                            Explore Events
                         </button>
-                    ) : (
-                        <button
-                            className="btn btn-danger"
-                            onClick={() => {
-                                localStorage.removeItem("nsstoken");
-                                navigate("/");
-                            }}
-                        >
-                            Logout
-                        </button>
-                    )}
+                        {isAdminViewing ? (
+                            <button
+                                className="btn btn-secondary"
+                                onClick={() => {
+                                    navigate("/admin-dashboard");
+                                }}
+                            >
+                                ← Back to Admin Dashboard
+                            </button>
+                        ) : (
+                            <button
+                                className="btn btn-danger"
+                                onClick={() => {
+                                    localStorage.removeItem("nsstoken");
+                                    navigate("/");
+                                }}
+                            >
+                                Logout
+                            </button>
+                        )}
+                    </div>
                 </div>
             </header>
 

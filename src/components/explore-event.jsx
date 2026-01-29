@@ -389,9 +389,11 @@ const ExploreEvents = () => {
       </header>
 
       <main className="container main-container pb-6">
-        <Section title="My Unit Events" events={unitEvents} isOwnEvent={true} />
-        <Section title="College Events" events={collegeEvents} />
-        <Section title="Other Events" events={otherEvents} />
+        {location.state?.fromRole !== 'college' && (
+          <Section title="My Unit Events" events={unitEvents} isOwnEvent={true} />
+        )}
+        <Section title="College Events" events={collegeEvents} isOwnEvent={false} />
+        <Section title="Other Events" events={otherEvents} isOwnEvent={false} />
       </main>
 
       {/* Report Form Modal */}
@@ -523,7 +525,7 @@ const ExploreEvents = () => {
               <div className="mb-6 p-4 rounded" style={{ background: 'var(--dark-bg-secondary)', border: '1px solid var(--primary-500)' }}>
                 <h3 className="text-lg mb-3">Event Report</h3>
                 <div className="grid-cols-2 gap-4">
-                  <p><strong>Status:</strong> {selectedEvent.report.conductedOnDate ? "Conducted on time" : "Delayed/Rescheduled"}</p>
+                  <p><strong>Status:</strong> {selectedEvent.report.participantsCount ? (selectedEvent.report.conductedOnDate ? "Conducted on time" : "Delayed/Rescheduled") : "Yet to be updated"}</p>
                   <p><strong>Participants:</strong> {selectedEvent.report.participantsCount}</p>
                   <p><strong>Colleges:</strong> {selectedEvent.report.collegesCount}</p>
                   {selectedEvent.report.reportFile && (

@@ -202,7 +202,6 @@ const AddEvent = () => {
             venue: eventForm.venue,
             images: eventForm.images,
             unitCode: unitCode,
-            unitCode: unitCode,
             collegeCode: collegeCode,
             collaborators: collaborators
 
