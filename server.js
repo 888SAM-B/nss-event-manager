@@ -5,6 +5,15 @@ const jwt = require('jsonwebtoken');
 const cors = require("cors");
 const bcrypt = require('bcryptjs');
 const verifyToken = require('./middleware/auth');
+const nodemailer = require('nodemailer');
+
+const transporter = nodemailer.createTransport({
+    service: 'gmail',
+    auth: {
+        user: process.env.EMAIL_USER,
+        pass: process.env.EMAIL_PASS
+    }
+});
 
 const app = express();
 app.use(cors());
@@ -536,6 +545,49 @@ app.post('/addEvent', verifyToken, async (req, res) => {
         collegeObject.events.push(newEvent._id)
         await unit.save();
         await collegeObject.save();
+
+        // Send Email Notification to ALL Unit Heads
+        try {
+            const allUnits = await Unit.find({}, 'mail head');
+            const recipientEmails = allUnits.map(u => u.mail).filter(email => email);
+
+            if (recipientEmails.length > 0) {
+                const mailOptions = {
+                    from: process.env.EMAIL_USER,
+                    bcc: recipientEmails, // Use BCC to hide other emails
+                    subject: `New NSS Event: ${newEvent.name}`,
+                    html: `
+                        <div style="font-family: Arial, sans-serif; padding: 20px; border: 1px solid #ddd; border-radius: 10px;">
+                            <h2 style="color: #2c3e50;">${newEvent.name}</h2>
+                            <p>Dear <strong>NSS Unit Heads</strong>,</p>
+                            <p>A new NSS event has been registered in the system.</p>
+                            <div style="background-color: #f9f9f9; padding: 15px; border-radius: 5px; margin: 20px 0;">
+                                <p><strong>Event Name:</strong> ${newEvent.name}</p>
+                                <p><strong>Event Code:</strong> ${newEvent.eventCode}</p>
+                                <p><strong>Category:</strong> ${newEvent.category}</p>
+                                <p><strong>Date:</strong> ${newEvent.singleDay ? newEvent.date : `${newEvent.dateFrom} to ${newEvent.dateTo}`}</p>
+                                <p><strong>Venue:</strong> ${newEvent.venue}</p>
+                                <p><strong>Organized By:</strong> Unit ${unit.unitNumber} (${unit.name})</p>
+                            </div>
+                            <p>For more details, please visit the NSS Event Management Portal.</p>
+                            <br/>
+                            <p>Regards,<br/>NSS Management System</p>
+                        </div>
+                    `
+                };
+
+                transporter.sendMail(mailOptions, (error, info) => {
+                    if (error) {
+                        console.error("Error sending bulk email:", error);
+                    } else {
+                        console.log("Bulk event email sent: " + info.response);
+                    }
+                });
+            }
+        } catch (emailErr) {
+            console.error("Failed to fetch units for email notification:", emailErr);
+        }
+
         res.json({ success: true, message: "Event added and invitations sent", event: newEvent });
     } catch (error) {
         console.error("Error adding event:", error);
@@ -623,45 +675,56 @@ app.get('/getEvents/:collegeCode/:unitCode', async (req, res) => {
         if (!college) {
             return res.status(401).json({ success: false, message: "Invalid college code" });
         }
-        const unit = await Unit.findOne({ unitNumber: unitCode, collegeId: college._id });
-        if (!unit) {
-            return res.status(401).json({ success: false, message: "Invalid unit code" });
-        }
 
-        // Unit Events: Created by unit OR Collaborated (accepted)
-        const unitEvents = await Event.find({
-            $or: [
-                { unitId: unit._id },
-                {
-                    collaborators: {
-                        $elemMatch: {
-                            unitCode: unitCode,
-                            status: 'accepted'
-                        }
-                    }
-                }
-            ]
-        });
+        let unitEvents = [];
+        let collegeEvents = [];
 
-        // College Events: Other events in the college, EXCLUDING those where this unit is already a creator or collaborator
-        const collegeEvents = await Event.find({
-            $and: [
-                { collegeId: college._id },
-                { unitId: { $ne: unit._id } },
-                {
-                    collaborators: {
-                        $not: {
-                            $elemMatch: {
-                                unitCode: unitCode,
-                                status: 'accepted'
+        // Check if unitCode is valid or should be skipped (for college-level view)
+        if (unitCode && unitCode !== 'null' && unitCode !== 'undefined' && unitCode !== 'COLLEGE') {
+            const unit = await Unit.findOne({ unitNumber: unitCode, collegeId: college._id });
+            if (unit) {
+                // Unit Events: Created by unit OR Collaborated (accepted)
+                unitEvents = await Event.find({
+                    $or: [
+                        { unitId: unit._id },
+                        {
+                            collaborators: {
+                                $elemMatch: {
+                                    unitCode: unitCode,
+                                    status: 'accepted'
+                                }
                             }
                         }
-                    }
-                }
-            ]
-        });
+                    ]
+                });
 
-        const otherEvents = await Event.find({ $and: [{ collegeId: { $ne: college._id } }, { unitId: { $ne: unit._id } }] });
+                // College Events: Other events in the college, EXCLUDING those where this unit is already a creator or collaborator
+                collegeEvents = await Event.find({
+                    $and: [
+                        { collegeId: college._id },
+                        { unitId: { $ne: unit._id } },
+                        {
+                            collaborators: {
+                                $not: {
+                                    $elemMatch: {
+                                        unitCode: unitCode,
+                                        status: 'accepted'
+                                    }
+                                }
+                            }
+                        }
+                    ]
+                });
+            } else {
+                // If unitCode provided but not found, return empty unitEvents and show all college events
+                collegeEvents = await Event.find({ collegeId: college._id });
+            }
+        } else {
+            // College Level View: No specific unit
+            collegeEvents = await Event.find({ collegeId: college._id });
+        }
+
+        const otherEvents = await Event.find({ $and: [{ collegeId: { $ne: college._id } }] });
 
         console.log(`Fetched ${unitEvents.length} unit events, ${collegeEvents.length} college events`);
 
@@ -726,20 +789,72 @@ app.put('/updateEvent', verifyToken, async (req, res) => {
     }
 
     try {
-        const event = await Event.findById(eventId);
+        const event = await Event.findById(eventId).populate('unitId');
         if (!event) {
             return res.status(404).json({ success: false, message: "Event not found" });
         }
 
         // Check ownership via unit
-        const unit = await Unit.findById(event.unitId);
+        const unit = event.unitId;
         if (req.user.role === 'unit' && req.user.unitNumber !== unit.unitNumber) {
             return res.status(403).json({ message: "Unauthorized" });
         }
 
-        Object.assign(event, eventData);
+        // Detect major changes (date/time) for email notification
+        const isMajorUpdate =
+            event.date !== eventData.date ||
+            event.dateFrom !== eventData.dateFrom ||
+            event.dateTo !== eventData.dateTo ||
+            event.timeFrom !== eventData.timeFrom ||
+            event.timeTo !== eventData.timeTo;
 
+        Object.assign(event, eventData);
         await event.save();
+
+        // Send Email Notification to ALL Unit Heads if major details updated
+        if (isMajorUpdate) {
+            try {
+                const allUnits = await Unit.find({}, 'mail');
+                const recipientEmails = allUnits.map(u => u.mail).filter(email => email);
+
+                if (recipientEmails.length > 0) {
+                    const mailOptions = {
+                        from: process.env.EMAIL_USER,
+                        bcc: recipientEmails,
+                        subject: `EVENT UPDATE: ${event.name}`,
+                        html: `
+                            <div style="font-family: Arial, sans-serif; padding: 20px; border: 1 solid #ffcc00; border-radius: 10px;">
+                                <h2 style="color: #d35400;">Event Update: ${event.name}</h2>
+                                <p>Dear <strong>NSS Unit Heads</strong>,</p>
+                                <p>This is to inform you that the schedule for the following NSS event has been updated:</p>
+                                <div style="background-color: #fff9e6; padding: 15px; border-radius: 5px; margin: 20px 0; border-left: 5px solid #ffcc00;">
+                                    <p><strong>Event Name:</strong> ${event.name}</p>
+                                    <p><strong>Event Code:</strong> ${event.eventCode}</p>
+                                    <p><strong>New Date:</strong> ${event.singleDay ? event.date : `${event.dateFrom} to ${event.dateTo}`}</p>
+                                    <p><strong>New Time:</strong> ${event.timeFrom} - ${event.timeTo}</p>
+                                    <p><strong>Venue:</strong> ${event.venue}</p>
+                                    <p><strong>Organized By:</strong> Unit ${unit.unitNumber} (${unit.name})</p>
+                                </div>
+                                <p>Please review the updated details on the NSS Portal.</p>
+                                <br/>
+                                <p>Regards,<br/>NSS Management System</p>
+                            </div>
+                        `
+                    };
+
+                    transporter.sendMail(mailOptions, (error, info) => {
+                        if (error) {
+                            console.error("Error sending bulk update email:", error);
+                        } else {
+                            console.log("Bulk update email sent: " + info.response);
+                        }
+                    });
+                }
+            } catch (emailErr) {
+                console.error("Failed to fetch units for update notification:", emailErr);
+            }
+        }
+
         res.json({ success: true, message: "Event updated successfully", event });
 
     } catch (error) {
