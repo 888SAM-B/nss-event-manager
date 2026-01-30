@@ -27,13 +27,30 @@ mongoose.connect(mongoURI, { useNewUrlParser: true, useUnifiedTopology: true })
     .then(() => console.log('Connected to MongoDB'))
     .catch(err => console.error('Failed to connect to MongoDB', err));
 
+const memberSchema = new mongoose.Schema({
+    name: String,
+    regNo: String,
+    dept: String,
+    course: String,
+    community: String,
+    contact: String,
+    bloodGroup: String,
+    dob: String,
+    batchFrom: String,
+    batchTo: String,
+    unitId: { type: mongoose.Schema.Types.ObjectId, ref: 'Unit' },
+    collegeId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' }
+});
+
+const Member = mongoose.model('Member', memberSchema);
+
 const unitSchema = new mongoose.Schema({
     name: String,
     head: String,
     password: String, // Hashed
     contact: String,
     mail: String,
-    members: Array,
+    members: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Member' }],
     unitNumber: String,
     createdDate: String,
     events: { type: Array, default: [] },
@@ -67,8 +84,10 @@ const eventSchema = new mongoose.Schema({
     timeTo: String,
     venue: String,
     images: Array,
+    brochure: String,
     eventCode: String,
     unitId: { type: mongoose.Schema.Types.ObjectId, ref: 'Unit' },
+    attendees: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Member' }],
     collaborators: [{
         unitId: { type: mongoose.Schema.Types.ObjectId, ref: 'Unit' },
         unitCode: String,
@@ -132,7 +151,12 @@ app.post('/submitReport', verifyToken, async (req, res) => {
             return res.status(403).json({ success: false, message: "Unauthorized" });
         }
 
-        event.report = reportData;
+        const { attendees, ...reportDataWithoutAttendees } = reportData;
+
+        event.report = reportDataWithoutAttendees;
+        if (attendees) {
+            event.attendees = attendees;
+        }
         await event.save();
 
         res.json({ success: true, message: "Report submitted successfully", event });
@@ -299,7 +323,7 @@ app.post('/addUnit', verifyToken, async (req, res) => {
             password: hashedPassword,
             contact,
             mail: mail,
-            members,
+            members: [], // Initialize with empty, will push IDs below
             unitNumber,
             createdDate,
             collegeId: user._id
@@ -307,13 +331,27 @@ app.post('/addUnit', verifyToken, async (req, res) => {
 
         await newUnit.save();
 
+        // Create Member documents if initial members are provided
+        if (members && members.length > 0) {
+            const memberDocs = members.map(m => ({
+                ...m,
+                unitId: newUnit._id,
+                collegeId: user._id
+            }));
+            const createdMembers = await Member.insertMany(memberDocs);
+            newUnit.members = createdMembers.map(m => m._id);
+            await newUnit.save();
+        }
+
         user.units.push(newUnit._id);
         await user.save();
+
+        const populatedUnit = await Unit.findById(newUnit._id).populate('members');
 
         res.json({
             success: true,
             message: "Unit added successfully",
-            unit: newUnit
+            unit: populatedUnit
         });
     } catch (error) {
         console.error("Error adding unit:", error);
@@ -408,7 +446,7 @@ app.get('/unit-dashboard/:unitCode/:collegeCode', verifyToken, async (req, res) 
         }
     }
 
-    const unit = await Unit.findOne({ unitNumber: unitCode, collegeId: collegeObject._id });
+    const unit = await Unit.findOne({ unitNumber: unitCode, collegeId: collegeObject._id }).populate('members');
     if (!unit) {
         return res.status(401).json({ success: false, message: "Unit not found" });
     }
@@ -416,26 +454,94 @@ app.get('/unit-dashboard/:unitCode/:collegeCode', verifyToken, async (req, res) 
     res.json({ success: true, unit, college: collegeObject });
 });
 
-app.put('/update-unit-members', verifyToken, async (req, res) => {
-    const { unitCode, members, collegeCode } = req.body;
+app.put('/update-unit-member', verifyToken, async (req, res) => {
+    const { memberId, memberData } = req.body;
 
-    // Validation
+    try {
+        const updatedMember = await Member.findByIdAndUpdate(memberId, memberData, { new: true });
+        if (!updatedMember) {
+            return res.status(404).json({ success: false, message: "Member not found" });
+        }
+
+        res.json({ success: true, message: "Member updated successfully", member: updatedMember });
+    } catch (error) {
+        console.error("Error updating member:", error);
+        res.status(500).json({ success: false, message: "Internal Server Error" });
+    }
+});
+
+app.get('/college-members/:collegeCode', verifyToken, async (req, res) => {
+    const { collegeCode } = req.params;
+
+    try {
+        const college = await User.findOne({ code: collegeCode });
+        if (!college) {
+            return res.status(404).json({ success: false, message: "College not found" });
+        }
+
+        const members = await Member.find({ collegeId: college._id }).populate('unitId', 'unitNumber name');
+        res.json({ success: true, members });
+    } catch (error) {
+        console.error("Error fetching college members:", error);
+        res.status(500).json({ success: false, message: "Internal Server Error" });
+    }
+});
+
+app.delete('/bulk-delete-members', verifyToken, async (req, res) => {
+    const { unitCode, memberIds, collegeCode } = req.body;
+
     if (req.user.unitNumber && req.user.unitNumber !== unitCode) return res.status(403).json({ message: "Unauthorized" });
 
     const collegeObject = await User.findOne({ code: collegeCode });
+    if (!collegeObject) return res.status(404).json({ success: false, message: "College not found" });
     const collegeId = collegeObject._id;
+
     try {
         const unit = await Unit.findOne({ unitNumber: unitCode, collegeId: collegeId });
         if (!unit) {
             return res.status(404).json({ success: false, message: "Unit not found" });
         }
 
-        unit.members = members;
+        await Member.deleteMany({ _id: { $in: memberIds } });
+        unit.members.pull(...memberIds);
         await unit.save();
 
-        res.json({ success: true, message: "Members updated successfully", unit });
+        const updatedUnit = await Unit.findById(unit._id).populate('members');
+        res.json({ success: true, message: "Members deleted successfully", unit: updatedUnit });
     } catch (error) {
-        console.error("Error updating members:", error);
+        console.error("Error bulk deleting members:", error);
+        res.status(500).json({ success: false, message: "Internal Server Error" });
+    }
+});
+
+app.post('/bulk-add-members', verifyToken, async (req, res) => {
+    const { unitCode, collegeCode, members } = req.body;
+
+    if (req.user.unitNumber && req.user.unitNumber !== unitCode) return res.status(403).json({ message: "Unauthorized" });
+
+    try {
+        const college = await User.findOne({ code: collegeCode });
+        if (!college) return res.status(404).json({ success: false, message: "College not found" });
+
+        const unit = await Unit.findOne({ unitNumber: unitCode, collegeId: college._id });
+        if (!unit) return res.status(404).json({ success: false, message: "Unit not found" });
+
+        const memberDocs = members.map(m => ({
+            ...m,
+            unitId: unit._id,
+            collegeId: college._id
+        }));
+
+        const createdMembers = await Member.insertMany(memberDocs);
+        const memberIds = createdMembers.map(m => m._id);
+
+        unit.members.push(...memberIds);
+        await unit.save();
+
+        const updatedUnit = await Unit.findById(unit._id).populate('members');
+        res.json({ success: true, message: `${createdMembers.length} members added successfully`, unit: updatedUnit });
+    } catch (error) {
+        console.error("Error bulk adding members:", error);
         res.status(500).json({ success: false, message: "Internal Server Error" });
     }
 });
@@ -446,6 +552,7 @@ app.post('/add-unit-member', verifyToken, async (req, res) => {
     if (req.user.unitNumber && req.user.unitNumber !== unitCode) return res.status(403).json({ message: "Unauthorized" });
 
     const collegeObject = await User.findOne({ code: collegeCode });
+    if (!collegeObject) return res.status(404).json({ success: false, message: "College not found" });
     const collegeId = collegeObject._id;
 
     try {
@@ -454,10 +561,19 @@ app.post('/add-unit-member', verifyToken, async (req, res) => {
             return res.status(404).json({ success: false, message: "Unit not found" });
         }
 
-        unit.members.push(member);
+        const newMember = new Member({
+            ...member,
+            unitId: unit._id,
+            collegeId: collegeId
+        });
+        await newMember.save();
+
+        unit.members.push(newMember._id);
         await unit.save();
 
-        res.json({ success: true, message: "Member added successfully", unit });
+        const updatedUnit = await Unit.findById(unit._id).populate('members');
+
+        res.json({ success: true, message: "Member added successfully", unit: updatedUnit });
     } catch (error) {
         console.error("Error adding member:", error);
         res.status(500).json({ success: false, message: "Internal Server Error" });
@@ -465,20 +581,26 @@ app.post('/add-unit-member', verifyToken, async (req, res) => {
 });
 
 app.delete('/delete-unit-member', verifyToken, async (req, res) => {
-    const { unitCode, member, collegeCode } = req.body;
+    const { unitCode, memberId, collegeCode } = req.body;
 
     if (req.user.unitNumber && req.user.unitNumber !== unitCode) return res.status(403).json({ message: "Unauthorized" });
 
     const collegeObject = await User.findOne({ code: collegeCode });
+    if (!collegeObject) return res.status(404).json({ success: false, message: "College not found" });
     const collegeId = collegeObject._id;
+
     try {
         const unit = await Unit.findOne({ unitNumber: unitCode, collegeId: collegeId });
         if (!unit) {
             return res.status(404).json({ success: false, message: "Unit not found" });
         }
-        unit.members = unit.members.filter(m => m.regNo !== member.regNo);
+
+        await Member.findByIdAndDelete(memberId);
+        unit.members.pull(memberId);
         await unit.save();
-        res.json({ success: true, message: "Member deleted successfully", unit });
+
+        const updatedUnit = await Unit.findById(unit._id).populate('members');
+        res.json({ success: true, message: "Member deleted successfully", unit: updatedUnit });
     } catch (error) {
         console.error("Error deleting member:", error);
         res.status(500).json({ success: false, message: "Internal Server Error" });
@@ -696,7 +818,7 @@ app.get('/getEvents/:collegeCode/:unitCode', async (req, res) => {
                             }
                         }
                     ]
-                });
+                }).populate('attendees');
 
                 // College Events: Other events in the college, EXCLUDING those where this unit is already a creator or collaborator
                 collegeEvents = await Event.find({
@@ -714,17 +836,17 @@ app.get('/getEvents/:collegeCode/:unitCode', async (req, res) => {
                             }
                         }
                     ]
-                });
+                }).populate('attendees');
             } else {
                 // If unitCode provided but not found, return empty unitEvents and show all college events
-                collegeEvents = await Event.find({ collegeId: college._id });
+                collegeEvents = await Event.find({ collegeId: college._id }).populate('attendees');
             }
         } else {
             // College Level View: No specific unit
-            collegeEvents = await Event.find({ collegeId: college._id });
+            collegeEvents = await Event.find({ collegeId: college._id }).populate('attendees');
         }
 
-        const otherEvents = await Event.find({ $and: [{ collegeId: { $ne: college._id } }] });
+        const otherEvents = await Event.find({ $and: [{ collegeId: { $ne: college._id } }] }).populate('attendees');
 
         console.log(`Fetched ${unitEvents.length} unit events, ${collegeEvents.length} college events`);
 
