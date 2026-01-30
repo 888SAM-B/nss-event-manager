@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import { faBell } from '@fortawesome/free-solid-svg-icons'
+
 
 import axios from "axios";
 import * as XLSX from "xlsx";
@@ -396,7 +395,7 @@ const UnitDashboard = () => {
                     ) : (
                         <div className="d-flex align-items-center gap-3">
                             <div className="position-relative" style={{ cursor: 'pointer', marginRight: '5rem' }} onClick={() => setIsInviteModalOpen(true)}>
-                                <span style={{ fontSize: '1.5rem' }}><FontAwesomeIcon icon={faBell} /></span>
+                                <span style={{ fontSize: '1.5rem' }}>🔔</span>
                                 {invites.length > 0 && (
                                     <span className="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" style={{ fontSize: '0.7rem' }}>
                                         {invites.length}
