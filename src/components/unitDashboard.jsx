@@ -4,6 +4,7 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faBell } from '@fortawesome/free-solid-svg-icons'
 
 import axios from "axios";
+import * as XLSX from "xlsx";
 
 const UnitDashboard = () => {
     const navigate = useNavigate();
@@ -15,10 +16,22 @@ const UnitDashboard = () => {
 
     const [search, setSearch] = useState("");
     const [isModalOpen, setIsModalOpen] = useState(false);
-    const [memberForm, setMemberForm] = useState({ name: "", dept: "", year: "", contact: "", regNo: "" });
+    const [memberForm, setMemberForm] = useState({
+        name: "",
+        regNo: "",
+        dept: "",
+        course: "",
+        community: "",
+        bloodGroup: "",
+        dob: "",
+        batchFrom: "",
+        batchTo: "",
+        contact: ""
+    });
     const [editingIndex, setEditingIndex] = useState(null);
     const [invites, setInvites] = useState([]);
     const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
+    const [selectedMemberIds, setSelectedMemberIds] = useState([]);
 
 
     // Check if accessed from college dashboard (admin or college user)
@@ -73,6 +86,28 @@ const UnitDashboard = () => {
 
     }, [navigate]);
 
+    const handleExportExcel = () => {
+        if (!filteredMembers) return;
+
+        const dataToExport = filteredMembers.map((m, index) => ({
+            "S.No": index + 1,
+            "Name": m.name,
+            "Reg No": m.regNo,
+            "Dept": m.dept,
+            "Course": m.course,
+            "Community": m.community,
+            "Blood Group": m.bloodGroup,
+            "DOB": m.dob,
+            "Batch": `${m.batchFrom} - ${m.batchTo}`,
+            "Contact": m.contact
+        }));
+
+        const worksheet = XLSX.utils.json_to_sheet(dataToExport);
+        const workbook = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(workbook, worksheet, "Unit Members");
+        XLSX.writeFile(workbook, `Unit_${unit.unitNumber}_Members.xlsx`);
+    };
+
     const handleRespondInvite = async (eventId, response) => {
         const token = localStorage.getItem("unitToken");
         const unitCode = localStorage.getItem("nssunitCode");
@@ -108,14 +143,25 @@ const UnitDashboard = () => {
     };
 
     const filteredMembers = unit?.members?.filter((m) =>
-        `${m.name} ${m.dept} ${m.year} ${m.regNo}`
+        `${m.name} ${m.dept} ${m.regNo} ${m.course} ${m.batchFrom} ${m.batchTo}`
             .toLowerCase()
             .includes(search.toLowerCase())
     );
 
     const handleAddClick = () => {
         setEditingIndex(null);
-        setMemberForm({ name: "", dept: "", year: "", contact: "", regNo: "" });
+        setMemberForm({
+            name: "",
+            regNo: "",
+            dept: "",
+            course: "",
+            community: "",
+            bloodGroup: "",
+            dob: "",
+            batchFrom: "",
+            batchTo: "",
+            contact: ""
+        });
         setIsModalOpen(true);
     };
 
@@ -131,6 +177,74 @@ const UnitDashboard = () => {
         setMemberForm({ ...memberForm, [e.target.name]: e.target.value });
     };
 
+    const handleBulkUpload = (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = async (event) => {
+            try {
+                const data = new Uint8Array(event.target.result);
+                const workbook = XLSX.read(data, { type: 'array' });
+                const sheetName = workbook.SheetNames[0];
+                const worksheet = workbook.Sheets[sheetName];
+                const jsonData = XLSX.utils.sheet_to_json(worksheet);
+
+                // Map Excel headers to schema fields
+                const mappedMembers = jsonData.map(row => {
+                    let batchFrom = "", batchTo = "";
+                    if (row["Batch"]) {
+                        const parts = String(row["Batch"]).split("-");
+                        batchFrom = parts[0]?.trim() || "";
+                        batchTo = parts[1]?.trim() || "";
+                    }
+
+                    return {
+                        name: row["Name"] || "",
+                        regNo: row["Reg No"] || "",
+                        dept: row["Dept"] || "",
+                        course: row["Course"] || "",
+                        community: row["Community"] || "",
+                        bloodGroup: row["Blood Group"] || "",
+                        dob: row["DOB"] || "",
+                        batchFrom: batchFrom || row["BatchFrom"] || "",
+                        batchTo: batchTo || row["BatchTo"] || "",
+                        contact: row["Contact"] || ""
+                    };
+                });
+
+                if (mappedMembers.length === 0) {
+                    alert("No valid data found in the Excel file.");
+                    return;
+                }
+
+                if (!window.confirm(`Are you sure you want to upload ${mappedMembers.length} members?`)) return;
+
+                const token = localStorage.getItem("unitToken");
+                const res = await axios.post(
+                    `${import.meta.env.VITE_API_URL}/bulk-add-members`,
+                    {
+                        unitCode: unit.unitNumber,
+                        collegeCode: college.code,
+                        members: mappedMembers
+                    },
+                    { headers: { Authorization: `Bearer ${token}` } }
+                );
+
+                if (res.data.success) {
+                    setUnit(res.data.unit);
+                    alert(res.data.message);
+                }
+            } catch (error) {
+                console.error("Error processing bulk upload:", error);
+                alert("Failed to process Excel file. Please ensure it matches the export format.");
+            }
+        };
+        reader.readAsArrayBuffer(file);
+        // Reset input
+        e.target.value = null;
+    };
+
     const handleSaveMember = async (e) => {
         e.preventDefault();
         const token = localStorage.getItem("unitToken");
@@ -138,33 +252,30 @@ const UnitDashboard = () => {
         try {
             if (editingIndex === null) {
                 // ADD MODE
-                console.log(unit.unitNumber);
-                console.log(college.code);
                 const res = await axios.post(
                     `${import.meta.env.VITE_API_URL}/add-unit-member`,
                     { unitCode: unit.unitNumber, collegeCode: college.code, member: memberForm },
                     { headers: { Authorization: `Bearer ${token}` } }
                 );
                 if (res.data.success) {
-                    setUnit(res.data.unit); // Server returns updated unit
+                    setUnit(res.data.unit); // Server returns updated unit populated with members
                     setIsModalOpen(false);
                     alert("Member added successfully!");
                 }
             } else {
                 // EDIT MODE
-                const updatedMembers = [...unit.members];
-                updatedMembers[editingIndex] = memberForm;
-
+                const memberId = memberForm._id;
                 const res = await axios.put(
-                    `${import.meta.env.VITE_API_URL}/update-unit-members`,
+                    `${import.meta.env.VITE_API_URL}/update-unit-member`,
                     {
-                        unitCode: unit.unitNumber,
-                        collegeCode: college.code,
-                        members: updatedMembers
+                        memberId: memberId,
+                        memberData: memberForm
                     },
                     { headers: { Authorization: `Bearer ${token}` } }
                 );
                 if (res.data.success) {
+                    const updatedMembers = [...unit.members];
+                    updatedMembers[editingIndex] = res.data.member;
                     setUnit({ ...unit, members: updatedMembers });
                     setIsModalOpen(false);
                     alert("Member updated successfully!");
@@ -185,7 +296,7 @@ const UnitDashboard = () => {
                 `${import.meta.env.VITE_API_URL}/delete-unit-member`,
                 {
                     headers: { Authorization: `Bearer ${token}` },
-                    data: { unitCode: unit.unitNumber, collegeCode: college.code, member }
+                    data: { unitCode: unit.unitNumber, collegeCode: college.code, memberId: member._id }
                 }
             );
             if (res.data.success) {
@@ -195,6 +306,45 @@ const UnitDashboard = () => {
         } catch (err) {
             console.error(err);
             alert("Failed to delete member");
+        }
+    };
+
+    const toggleSelectAll = () => {
+        if (selectedMemberIds.length === filteredMembers.length) {
+            setSelectedMemberIds([]);
+        } else {
+            setSelectedMemberIds(filteredMembers.map(m => m._id));
+        }
+    };
+
+    const toggleSelectMember = (memberId) => {
+        if (selectedMemberIds.includes(memberId)) {
+            setSelectedMemberIds(selectedMemberIds.filter(id => id !== memberId));
+        } else {
+            setSelectedMemberIds([...selectedMemberIds, memberId]);
+        }
+    };
+
+    const handleBulkDelete = async () => {
+        if (!window.confirm(`Are you sure you want to delete ${selectedMemberIds.length} selected members?`)) return;
+        const token = localStorage.getItem("unitToken");
+
+        try {
+            const res = await axios.delete(
+                `${import.meta.env.VITE_API_URL}/bulk-delete-members`,
+                {
+                    headers: { Authorization: `Bearer ${token}` },
+                    data: { unitCode: unit.unitNumber, collegeCode: college.code, memberIds: selectedMemberIds }
+                }
+            );
+            if (res.data.success) {
+                setUnit(res.data.unit);
+                setSelectedMemberIds([]);
+                alert("Selected members deleted successfully!");
+            }
+        } catch (err) {
+            console.error(err);
+            alert("Failed to delete selected members");
         }
     };
 
@@ -318,6 +468,23 @@ const UnitDashboard = () => {
                             value={search}
                             onChange={(e) => setSearch(e.target.value)}
                         />
+                        {selectedMemberIds.length > 0 && (
+                            <button className="btn btn-danger" onClick={handleBulkDelete}>
+                                Delete Selected ({selectedMemberIds.length})
+                            </button>
+                        )}
+                        <button className="btn btn-success" onClick={handleExportExcel} style={{ marginRight: '10px' }}>
+                            Excel Export
+                        </button>
+                        <label className="btn btn-secondary" style={{ marginRight: '10px', cursor: 'pointer', marginBottom: 0 }}>
+                            Bulk Upload
+                            <input
+                                type="file"
+                                accept=".xlsx, .xls"
+                                onChange={handleBulkUpload}
+                                style={{ display: 'none' }}
+                            />
+                        </label>
                         <button className="btn add-btn btn-primary" onClick={handleAddClick}>
                             + Add Member
                         </button>
@@ -330,23 +497,37 @@ const UnitDashboard = () => {
                             <table className="styled-table" style={{ margin: 0, boxShadow: 'none' }}>
                                 <thead>
                                     <tr>
+                                        <th>
+                                            <input
+                                                type="checkbox"
+                                                checked={filteredMembers.length > 0 && selectedMemberIds.length === filteredMembers.length}
+                                                onChange={toggleSelectAll}
+                                            />
+                                        </th>
                                         <th>S.No</th>
                                         <th>Name</th>
                                         <th>Reg No</th>
                                         <th>Department</th>
-                                        <th>Year</th>
+                                        <th>Batch</th>
                                         <th>Contact</th>
                                         <th>Action</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     {filteredMembers.map((member, index) => (
-                                        <tr key={index}>
+                                        <tr key={member._id}>
+                                            <td>
+                                                <input
+                                                    type="checkbox"
+                                                    checked={selectedMemberIds.includes(member._id)}
+                                                    onChange={() => toggleSelectMember(member._id)}
+                                                />
+                                            </td>
                                             <td>{index + 1}</td>
                                             <td>{member.name}</td>
                                             <td><span className="badge badge-secondary">{member.regNo}</span></td>
                                             <td>{member.dept}</td>
-                                            <td>{member.year}</td>
+                                            <td>{member.batchFrom} - {member.batchTo}</td>
                                             <td>{member.contact}</td>
                                             <td>
                                                 <div className="d-flex ed gap-2">
@@ -421,17 +602,80 @@ const UnitDashboard = () => {
                                     />
                                 </div>
                                 <div className="form-group">
-                                    <label className="form-label">Year of Study</label>
+                                    <label className="form-label">Course</label>
+                                    <input
+                                        className="form-input"
+                                        name="course"
+                                        value={memberForm.course}
+                                        onChange={handleEditChange}
+                                        required
+                                        placeholder="e.g. B.E. / B.Tech"
+                                    />
+                                </div>
+                                <div className="form-group">
+                                    <label className="form-label">Community</label>
+                                    <input
+                                        className="form-input"
+                                        name="community"
+                                        value={memberForm.community}
+                                        onChange={handleEditChange}
+                                        required
+                                        placeholder="e.g. BC/MBC/SC/ST"
+                                    />
+                                </div>
+                                <div className="form-group">
+                                    <label className="form-label">Blood Group</label>
+                                    <select
+                                        className="form-input"
+                                        name="bloodGroup"
+                                        value={memberForm.bloodGroup}
+                                        onChange={handleEditChange}
+                                        required
+                                    >
+                                        <option value="">Select Blood Group</option>
+                                        <option value="A+">A+</option>
+                                        <option value="A-">A-</option>
+                                        <option value="B+">B+</option>
+                                        <option value="B-">B-</option>
+                                        <option value="O+">O+</option>
+                                        <option value="O-">O-</option>
+                                        <option value="AB+">AB+</option>
+                                        <option value="AB-">AB-</option>
+                                    </select>
+                                </div>
+                                <div className="form-group">
+                                    <label className="form-label">Date of Birth</label>
+                                    <input
+                                        className="form-input"
+                                        type="date"
+                                        name="dob"
+                                        value={memberForm.dob}
+                                        onChange={handleEditChange}
+                                        required
+                                    />
+                                </div>
+                                <div className="form-group">
+                                    <label className="form-label">Batch From (Year)</label>
                                     <input
                                         className="form-input"
                                         type="number"
-                                        min="1"
-                                        max={5}
-                                        name="year"
-                                        value={memberForm.year}
+                                        name="batchFrom"
+                                        value={memberForm.batchFrom}
                                         onChange={handleEditChange}
                                         required
-                                        placeholder="e.g. 3"
+                                        placeholder="e.g. 2022"
+                                    />
+                                </div>
+                                <div className="form-group">
+                                    <label className="form-label">Batch To (Year)</label>
+                                    <input
+                                        className="form-input"
+                                        type="number"
+                                        name="batchTo"
+                                        value={memberForm.batchTo}
+                                        onChange={handleEditChange}
+                                        required
+                                        placeholder="e.g. 2026"
                                     />
                                 </div>
                                 <div className="form-group col-span-2" style={{ gridColumn: '1 / -1' }}>

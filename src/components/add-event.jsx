@@ -5,6 +5,8 @@ import axios from 'axios';
 // Cloudinary Configuration (Replace with your actual values)
 const CLOUDINARY_CLOUD_NAME = import.meta.env.VITE_CLOUD_NAME;
 const CLOUDINARY_UPLOAD_PRESET = import.meta.env.VITE_UPLOAD_PRESET;
+const CLOUDINARY_PDF_CLOUD_NAME = import.meta.env.VITE_PDF_CLOUD_NAME;
+const CLOUDINARY_PDF_UPLOAD_PRESET = import.meta.env.VITE_PDF_UPLOAD_PRESET;
 
 // Define max file size in bytes (250KB)
 const MAX_FILE_SIZE = 250 * 1024; // 250KB in bytes
@@ -38,12 +40,15 @@ const AddEvent = () => {
         timeTo: eventToEdit?.timeTo || "",
         venue: eventToEdit?.venue || "",
         images: eventToEdit?.images || [],
+        brochure: eventToEdit?.brochure || "",
     });
 
     const [selectedFiles, setSelectedFiles] = useState([]);
     const [uploading, setUploading] = useState(false);
     const [uploadError, setUploadError] = useState(null);
     const [fileSizeError, setFileSizeError] = useState(null); // New state for file size error
+    const [brochureFile, setBrochureFile] = useState(null);
+    const [uploadingBrochure, setUploadingBrochure] = useState(false);
 
     // Collaboration State
     const [availableUnits, setAvailableUnits] = useState([]);
@@ -164,6 +169,30 @@ const AddEvent = () => {
         }
     };
 
+    const uploadBrochureToCloudinary = async () => {
+        if (!brochureFile) return;
+
+        setUploadingBrochure(true);
+        try {
+            const formData = new FormData();
+            formData.append('file', brochureFile);
+            formData.append('upload_preset', CLOUDINARY_PDF_UPLOAD_PRESET);
+
+            const response = await axios.post(
+                `https://api.cloudinary.com/v1_1/${CLOUDINARY_PDF_CLOUD_NAME}/raw/upload`,
+                formData
+            );
+            setEventForm(prev => ({ ...prev, brochure: response.data.secure_url }));
+            setBrochureFile(null);
+            alert("Brochure uploaded successfully!");
+        } catch (error) {
+            console.error("Error uploading brochure:", error);
+            alert("Failed to upload brochure.");
+        } finally {
+            setUploadingBrochure(false);
+        }
+    };
+
     const handleImageRemove = (indexToRemove) => {
         setEventForm(prevForm => ({
             ...prevForm,
@@ -201,6 +230,7 @@ const AddEvent = () => {
             timeTo: eventForm.timeTo,
             venue: eventForm.venue,
             images: eventForm.images,
+            brochure: eventForm.brochure,
             unitCode: unitCode,
             collegeCode: collegeCode,
             collaborators: collaborators
@@ -469,6 +499,34 @@ const AddEvent = () => {
                             </div>
                             {eventForm.images.length === 0 && selectedFiles.length === 0 && !fileSizeError && !uploadError && (
                                 <small className="text-muted d-block mt-2">No images selected or uploaded yet.</small>
+                            )}
+                        </div>
+
+                        {/* Brochure Upload Section */}
+                        <div className="form-group mb-4">
+                            <label>Event Brochure (PDF)</label>
+                            <div className="input-group">
+                                <input
+                                    type="file"
+                                    className="form-control"
+                                    accept=".pdf"
+                                    onChange={(e) => setBrochureFile(e.target.files[0])}
+                                />
+                                <button
+                                    type="button"
+                                    className="btn btn-secondary"
+                                    onClick={uploadBrochureToCloudinary}
+                                    disabled={!brochureFile || uploadingBrochure}
+                                >
+                                    {uploadingBrochure ? 'Uploading...' : 'Upload Brochure'}
+                                </button>
+                            </div>
+                            {eventForm.brochure && (
+                                <div className="mt-2 p-2 border rounded d-flex justify-content-between align-items-center" style={{ background: 'var(--dark-bg-secondary)' }}>
+                                    <span className="text-sm text-success">✓ Brochure uploaded</span>
+                                    <a href={eventForm.brochure} target="_blank" rel="noopener noreferrer" className="btn btn-sm btn-link text-primary">View</a>
+                                    <button type="button" className="btn btn-sm btn-danger" onClick={() => setEventForm(prev => ({ ...prev, brochure: "" }))}>Remove</button>
+                                </div>
                             )}
                         </div>
 

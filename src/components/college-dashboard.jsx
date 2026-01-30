@@ -3,6 +3,7 @@ import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import { useEffect } from "react";
 import { useState } from "react";
+import * as XLSX from "xlsx";
 
 const CollegeDashboard = () => {
     const username = localStorage.getItem("nss_username");
@@ -19,12 +20,28 @@ const CollegeDashboard = () => {
     const [newUnitMail, setNewUnitMail] = useState("");
 
     const [loading, setLoading] = useState(true);
+    const [showMembersList, setShowMembersList] = useState(false);
+    const [allMembers, setAllMembers] = useState([]);
+    const [memberSearch, setMemberSearch] = useState("");
+    const [filterUnit, setFilterUnit] = useState("");
+    const [filterBatch, setFilterBatch] = useState("");
 
     // Check if admin is viewing this dashboard
     const isAdminViewing = localStorage.getItem("adminToken") !== null;
 
     const handleAddMember = () => {
-        setNewMembers([...newMembers, { name: "", dept: "", year: "", contact: "" }]);
+        setNewMembers([...newMembers, {
+            name: "",
+            regNo: "",
+            dept: "",
+            course: "",
+            community: "",
+            bloodGroup: "",
+            dob: "",
+            batchFrom: "",
+            batchTo: "",
+            contact: ""
+        }]);
     };
 
     const handleMemberChange = (index, field, value) => {
@@ -154,6 +171,48 @@ const CollegeDashboard = () => {
         fetchDashboard();
     }, [username, navigate]);
 
+    const fetchAllMembers = async () => {
+        try {
+            const res = await axios.get(`${import.meta.env.VITE_API_URL}/college-members/${insCode}`, {
+                headers: { Authorization: `Bearer ${localStorage.getItem("nsstoken")}` }
+            });
+            if (res.data.success) {
+                setAllMembers(res.data.members);
+                setShowMembersList(true);
+            }
+        } catch (error) {
+            console.error("Error fetching members:", error);
+            alert("Failed to fetch members list");
+        }
+    };
+
+    const handleExportExcel = (data, fileName) => {
+        const worksheet = XLSX.utils.json_to_sheet(data.map((m, index) => ({
+            "S.No": index + 1,
+            "Name": m.name,
+            "Reg No": m.regNo,
+            "Unit": m.unitId?.unitNumber || "N/A",
+            "Dept": m.dept,
+            "Course": m.course,
+            "Community": m.community,
+            "Blood Group": m.bloodGroup,
+            "DOB": m.dob,
+            "Batch": `${m.batchFrom} - ${m.batchTo}`,
+            "Contact": m.contact
+        })));
+        const workbook = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(workbook, worksheet, "Members");
+        XLSX.writeFile(workbook, `${fileName}.xlsx`);
+    };
+
+    const filteredAllMembers = allMembers.filter(m => {
+        const matchesSearch = m.name.toLowerCase().includes(memberSearch.toLowerCase()) ||
+            m.regNo.toLowerCase().includes(memberSearch.toLowerCase());
+        const matchesUnit = filterUnit === "" || m.unitId?.unitNumber === filterUnit;
+        const matchesBatch = filterBatch === "" || m.batchFrom === filterBatch || m.batchTo === filterBatch;
+        return matchesSearch && matchesUnit && matchesBatch;
+    });
+
     if (loading) return (
         <div className="flex-center" style={{ height: '100vh' }}>
             <div className="loading"></div>
@@ -207,15 +266,97 @@ const CollegeDashboard = () => {
                         <h2>NSS Units Management</h2>
                         <p>Manage your college NSS units and members</p>
                     </div>
-                    <button
-                        className="btn btn-primary"
-                        onClick={() => setShowUnitModal(true)}
-                        disabled={units.length >= 6}
-                        title={units.length >= 6 ? "Maximum limit of 6 units reached" : ""}
-                    >
-                        + Create New Unit
-                    </button>
+                    <div className="d-flex gap-2">
+                        <button
+                            className="btn btn-secondary"
+                            onClick={fetchAllMembers}
+                        >
+                            📊 View All Members
+                        </button>
+                        <button
+                            className="btn btn-primary"
+                            onClick={() => setShowUnitModal(true)}
+                            disabled={units.length >= 6}
+                            title={units.length >= 6 ? "Maximum limit of 6 units reached" : ""}
+                        >
+                            + Create New Unit
+                        </button>
+                    </div>
                 </div>
+
+                {showMembersList ? (
+                    <div className="card mb-6">
+                        <div className="flex-between mb-4">
+                            <h3>College Students List</h3>
+                            <div className="d-flex gap-2">
+                                <button className="btn btn-success btn-sm" onClick={() => handleExportExcel(filteredAllMembers, `${insCode}_members`)}>Export to Excel</button>
+                                <button className="btn btn-secondary btn-sm" onClick={() => setShowMembersList(false)}>Close List</button>
+                            </div>
+                        </div>
+
+                        <div className="grid-cols-4 gap-3 mb-4">
+                            <div className="form-group">
+                                <label className="text-xs">Search (Name/RegNo)</label>
+                                <input
+                                    className="form-input"
+                                    placeholder="Search..."
+                                    value={memberSearch}
+                                    onChange={(e) => setMemberSearch(e.target.value)}
+                                />
+                            </div>
+                            <div className="form-group">
+                                <label className="text-xs">Filter by Unit</label>
+                                <select className="form-input" value={filterUnit} onChange={(e) => setFilterUnit(e.target.value)}>
+                                    <option value="">All Units</option>
+                                    {units.map(u => (
+                                        <option key={u.unitNumber} value={u.unitNumber}>{u.unitNumber}</option>
+                                    ))}
+                                </select>
+                            </div>
+                            <div className="form-group">
+                                <label className="text-xs">Filter by Batch (Year)</label>
+                                <input
+                                    className="form-input"
+                                    placeholder="e.g. 2022"
+                                    value={filterBatch}
+                                    onChange={(e) => setFilterBatch(e.target.value)}
+                                />
+                            </div>
+                        </div>
+
+                        <div style={{ overflowX: 'auto' }}>
+                            <table className="styled-table" style={{ margin: 0, boxShadow: 'none' }}>
+                                <thead>
+                                    <tr>
+                                        <th>S.No</th>
+                                        <th>Name</th>
+                                        <th>Reg No</th>
+                                        <th>Unit</th>
+                                        <th>Dept</th>
+                                        <th>Batch</th>
+                                        <th>Contact</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {filteredAllMembers.map((m, index) => (
+                                        <tr key={m._id}>
+                                            <td>{index + 1}</td>
+                                            <td>{m.name}</td>
+                                            <td><span className="badge badge-secondary">{m.regNo}</span></td>
+                                            <td>{m.unitId?.unitNumber || "N/A"}</td>
+                                            <td>{m.dept}</td>
+                                            <td>{m.batchFrom} - {m.batchTo}</td>
+                                            <td>{m.contact}</td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                            {filteredAllMembers.length === 0 && (
+                                <p className="text-center p-4">No members found.</p>
+                            )}
+                        </div>
+                    </div>
+                ) : null}
 
                 <div className="units-list grid-cols-3">
                     {units.length === 0 ? (
@@ -314,10 +455,47 @@ const CollegeDashboard = () => {
                                         <button className="text-danger" style={{ background: 'none', border: 'none' }} onClick={() => handleRemoveMember(index)}>Remove</button>
                                     </div>
                                     <div className="grid-cols-2">
-                                        <input className="form-input mb-2" placeholder="Name" value={member.name} onChange={(e) => handleMemberChange(index, "name", e.target.value)} />
+                                        <input className="form-input mb-2" placeholder="Full Name" value={member.name} onChange={(e) => handleMemberChange(index, "name", e.target.value)} />
                                         <input className="form-input mb-2" placeholder="Reg No" value={member.regNo} onChange={(e) => handleMemberChange(index, "regNo", e.target.value)} />
-                                        <input className="form-input mb-2" placeholder="Dept" value={member.dept} onChange={(e) => handleMemberChange(index, "dept", e.target.value)} />
-                                        <input className="form-input mb-2" placeholder="Year" value={member.year} onChange={(e) => handleMemberChange(index, "year", e.target.value)} />
+                                        <input className="form-input mb-2" placeholder="Dept (e.g. CSE)" value={member.dept} onChange={(e) => handleMemberChange(index, "dept", e.target.value)} />
+                                        <input className="form-input mb-2" placeholder="Course" value={member.course} onChange={(e) => handleMemberChange(index, "course", e.target.value)} />
+                                        <input className="form-input mb-2" placeholder="Community" value={member.community} onChange={(e) => handleMemberChange(index, "community", e.target.value)} />
+                                        <select
+                                            className="form-input mb-2"
+                                            value={member.bloodGroup}
+                                            onChange={(e) => handleMemberChange(index, "bloodGroup", e.target.value)}
+                                        >
+                                            <option value="">Blood Group</option>
+                                            <option value="A+">A+</option>
+                                            <option value="A-">A-</option>
+                                            <option value="B+">B+</option>
+                                            <option value="B-">B-</option>
+                                            <option value="O+">O+</option>
+                                            <option value="O-">O-</option>
+                                            <option value="AB+">AB+</option>
+                                            <option value="AB-">AB-</option>
+                                        </select>
+                                        <input
+                                            className="form-input mb-2"
+                                            type="date"
+                                            placeholder="DOB"
+                                            value={member.dob}
+                                            onChange={(e) => handleMemberChange(index, "dob", e.target.value)}
+                                        />
+                                        <input
+                                            className="form-input mb-2"
+                                            type="number"
+                                            placeholder="Batch From"
+                                            value={member.batchFrom}
+                                            onChange={(e) => handleMemberChange(index, "batchFrom", e.target.value)}
+                                        />
+                                        <input
+                                            className="form-input mb-2"
+                                            type="number"
+                                            placeholder="Batch To"
+                                            value={member.batchTo}
+                                            onChange={(e) => handleMemberChange(index, "batchTo", e.target.value)}
+                                        />
                                         <input className="form-input mb-2" placeholder="Contact" value={member.contact} onChange={(e) => handleMemberChange(index, "contact", e.target.value)} />
                                     </div>
                                 </div>

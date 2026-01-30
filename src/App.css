@@ -113,6 +113,20 @@ input[type="file"]::file-selector-button {
     margin-top: -15px;
 }
 
+.select-all {
+    margin-bottom: 10px;
+    margin-top: 10px;
+    color: #10B96C;
+}
+
+input[type="checkbox"] {
+    scale: 0.7;
+    border: none;
+    outline: none;
+
+    cursor: pointer;
+}
+
 @media screen and (max-width:500px) {
     .one {
         width: 100%;

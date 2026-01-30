@@ -32,6 +32,8 @@ const ExploreEvents = () => {
   });
   const [reportFiles, setReportFiles] = useState({ pdf: null, photos: [] });
   const [isSubmittingReport, setIsSubmittingReport] = useState(false);
+  const [unitMembers, setUnitMembers] = useState([]);
+  const [attendeeSearch, setAttendeeSearch] = useState("");
 
 
   const CLOUDINARY_CLOUD_NAME = import.meta.env.VITE_CLOUD_NAME;
@@ -64,7 +66,22 @@ const ExploreEvents = () => {
       }
     };
 
+    const fetchUnitMembers = async () => {
+      try {
+        const token = localStorage.getItem("unitToken") || localStorage.getItem("nsstoken");
+        const res = await axios.get(`${import.meta.env.VITE_API_URL}/unit-dashboard/${unitCode}/${collegeCode}`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        if (res.data.success) {
+          setUnitMembers(res.data.unit.members || []);
+        }
+      } catch (err) {
+        console.error("Error fetching unit members:", err);
+      }
+    };
+
     fetchEvents();
+    fetchUnitMembers();
   }, [collegeCode, unitCode]);
 
   const openGallery = (index) => {
@@ -162,7 +179,8 @@ const ExploreEvents = () => {
       collegesCount: event.report?.collegesCount || "",
       outcome: event.report?.outcome || "",
       reportFile: event.report?.reportFile || "",
-      reportPhotos: event.report?.reportPhotos || []
+      reportPhotos: event.report?.reportPhotos || [],
+      attendees: event.attendees || []
     });
     setReportFiles({ pdf: null, photos: [] });
     setShowReportModal(true);
@@ -399,7 +417,7 @@ const ExploreEvents = () => {
       {/* Report Form Modal */}
       {showReportModal && reportingEvent && (
         <div className="modal-overlay">
-          <div className="modal-content" style={{ maxWidth: '600px', width: '95%', maxHeight: '90vh', overflowY: 'auto' }}>
+          <div className="modal-content" style={{ maxWidth: '850px', width: '95%', maxHeight: '90vh', overflowY: 'auto' }}>
             <div className="flex-between mb-4">
               <h2 className="mb-0">Event Report: {reportingEvent.name}</h2>
               <button className="btn btn-sm btn-secondary" onClick={() => setShowReportModal(false)}>&times;</button>
@@ -471,6 +489,74 @@ const ExploreEvents = () => {
               </div>
 
               <div className="form-group mb-4">
+                <div className="d-flex justify-content-between align-items-center mb-2">
+                  <label className="d-block mb-0">Mark Attendance (Select Volunteers) <span className="text-danger">*</span></label>
+
+                </div>
+                <div style={{ background: 'var(--dark-bg-tertiary)', padding: '10px', borderRadius: '4px', border: '1px solid var(--border-color)' }}>
+
+                  <input
+                    type="text"
+                    className="form-control mb-2"
+                    placeholder="Search volunteers..."
+                    value={attendeeSearch}
+                    onChange={(e) => setAttendeeSearch(e.target.value)}
+                  />
+                  <label className="d-flex align-items-center select-all cursor-pointer" style={{ fontSize: '0.8rem', gap: '8px' }}>
+                    <input
+                      type="checkbox"
+                      className="form-check-input "
+                      checked={unitMembers.filter(m => m.name.toLowerCase().includes(attendeeSearch.toLowerCase()) || m.regNo.toLowerCase().includes(attendeeSearch.toLowerCase()))
+                        .length > 0 && unitMembers.filter(m => m.name.toLowerCase().includes(attendeeSearch.toLowerCase()) || m.regNo.toLowerCase().includes(attendeeSearch.toLowerCase()))
+                          .every(m => reportForm.attendees?.includes(m._id))}
+                      onChange={() => {
+                        const filteredIds = unitMembers
+                          .filter(m => m.name.toLowerCase().includes(attendeeSearch.toLowerCase()) || m.regNo.toLowerCase().includes(attendeeSearch.toLowerCase()))
+                          .map(m => m._id);
+
+                        const allSelected = filteredIds.every(id => reportForm.attendees?.includes(id));
+
+                        let newAttendees;
+                        if (allSelected) {
+                          // Deselect all filtered
+                          newAttendees = (reportForm.attendees || []).filter(id => !filteredIds.includes(id));
+                        } else {
+                          // Select all filtered
+                          newAttendees = Array.from(new Set([...(reportForm.attendees || []), ...filteredIds]));
+                        }
+                        setReportForm({ ...reportForm, attendees: newAttendees });
+                      }}
+                    />
+                    <span>Select All </span>
+                  </label>
+                  <div style={{ maxHeight: '200px', overflowY: 'auto' }}>
+                    {unitMembers
+                      .filter(m => m.name.toLowerCase().includes(attendeeSearch.toLowerCase()) || m.regNo.toLowerCase().includes(attendeeSearch.toLowerCase()))
+                      .map(member => (
+                        <label key={member._id} className="d-flex align-items-center mb-1 p-1 hover-bg" style={{ cursor: 'pointer' }}>
+                          <input
+                            type="checkbox"
+                            className="form-check-input"
+                            checked={reportForm.attendees?.includes(member._id)}
+                            onChange={(e) => {
+                              const newAttendees = e.target.checked
+                                ? [...(reportForm.attendees || []), member._id]
+                                : (reportForm.attendees || []).filter(id => id !== member._id);
+                              setReportForm({ ...reportForm, attendees: newAttendees });
+                            }}
+                          />
+                          <span className="ms-3 text-sm">{member.name} ({member.regNo})</span>
+                        </label>
+                      ))
+                    }
+                  </div>
+                  <div className="mt-2 text-xs text-muted">
+                    {reportForm.attendees?.length || 0} volunteers selected
+                  </div>
+                </div>
+              </div>
+
+              <div className="form-group mb-4">
                 <label>Event Photos (Max: 5)</label>
                 <input
                   type="file"
@@ -518,7 +604,20 @@ const ExploreEvents = () => {
 
             <div className="mb-6">
               <h3 className="text-lg mb-2">Description</h3>
-              <p style={{ whiteSpace: 'pre-wrap', lineHeight: '1.6' }}>{selectedEvent.description}</p>
+              <p style={{ whiteSpace: 'pre-wrap', lineHeight: '1.6', marginBottom: '1.5rem' }}>{selectedEvent.description}</p>
+
+              {
+                selectedEvent.brochure && (
+                  <div className="p-3 rounded d-flex align-items-center gap-3" style={{ background: 'var(--dark-bg-secondary)', border: '1px solid var(--border-color)' }}>
+                    <div style={{ color: 'var(--primary-500)', fontSize: '1.5rem' }}>📄</div>
+                    <div style={{ flex: 1 }}>
+                      <p className="mb-0 fw-bold">Event Brochure</p>
+                      <p className="mb-0 text-xs text-muted">Download for more details and schedules</p>
+                    </div>
+                    <a href={selectedEvent.brochure} target="_blank" rel="noopener noreferrer" className="btn btn-primary btn-sm">Download PDF</a>
+                  </div>
+                )
+              }
             </div>
 
             {selectedEvent.report && (
@@ -534,6 +633,24 @@ const ExploreEvents = () => {
                 </div>
                 <div className="mt-2">
                   <p><strong>Outcome:</strong> {selectedEvent.report.outcome}</p>
+                </div>
+              </div>
+            )}
+
+            {selectedEvent.attendees && selectedEvent.attendees.length > 0 && (
+              <div className="mb-6">
+                <h3 className="text-lg mb-3">Participation List ({selectedEvent.attendees.length} Volunteers)</h3>
+                <div style={{ maxHeight: '150px', overflowY: 'auto', background: 'var(--dark-bg-secondary)', padding: '10px', borderRadius: '4px' }}>
+                  <div className="d-flex flex-wrap gap-2">
+                    {selectedEvent.attendees.map(attendee => {
+                      // attendee is now a populated object from the backend
+                      return (
+                        <span key={attendee._id} className="badge badge-secondary p-2" style={{ fontSize: '0.75rem' }}>
+                          {attendee.name} ({attendee.regNo})
+                        </span>
+                      );
+                    })}
+                  </div>
                 </div>
               </div>
             )}
