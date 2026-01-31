@@ -34,10 +34,13 @@ const Home = () => {
                 <div className="container" style={{ maxWidth: '800px' }}>
                     <span className="badge badge-primary mb-4 p-2 px-3">National Service Scheme</span>
                     <h1 style={{ fontSize: '3.5rem', marginBottom: '1.5rem', lineHeight: 1.1 }}>
-                        Manage Events with <span style={{ color: 'var(--primary-500)' }}>Efficiency</span>
+                        <span style={{ color: 'var(--primary-500)' }}>Periyar University NSS</span> Portal
                     </h1>
-                    <p style={{ fontSize: '1.25rem', color: 'var(--text-secondary)', marginBottom: '3rem' }}>
-                        Streamline your NSS unit operations, track events, manage volunteers, and report activities - all in one unified platform.
+                    <p style={{ fontSize: '1.25rem', color: 'var(--text-secondary)', marginBottom: '1rem' }}>
+                        Official National Service Scheme platform for Periyar University, Salem
+                    </p>
+                    <p style={{ fontSize: '1.1rem', color: 'var(--text-secondary)', marginBottom: '3rem' }}>
+                        Streamline your Periyar NSS unit operations, track events, manage volunteers, and report community service activities - all in one unified platform.
                     </p>
 
                     <div className="flex-center gap-4 flex-wrap">
@@ -124,7 +127,12 @@ const Home = () => {
                 color: 'var(--text-tertiary)'
             }}>
                 <div className="container">
-                    <p style={{ margin: 0 }}>&copy; {new Date().getFullYear()} NSS Event Manager. All rights reserved.</p>
+                    <p style={{ margin: '0 0 0.5rem 0', fontSize: '1rem' }}>
+                        © {new Date().getFullYear()} Periyar University NSS Portal | National Service Scheme, Salem, Tamil Nadu
+                    </p>
+                    <p style={{ margin: 0, fontSize: '0.9rem', opacity: 0.8 }}>
+                        Periyar NSS - Community Service & Social Development
+                    </p>
                 </div>
             </footer>
         </div>

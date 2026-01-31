@@ -1,0 +1,31 @@
+{
+    "name": "NSS Portal - Periyar University",
+    "short_name": "NSS Portal",
+    "description": "Official National Service Scheme portal of Periyar University for managing NSS units, events, and volunteers",
+    "start_url": "/",
+    "display": "standalone",
+    "background_color": "#1a1a2e",
+    "theme_color": "#1a1a2e",
+    "orientation": "portrait-primary",
+    "icons": [
+        {
+            "src": "/image.png",
+            "sizes": "192x192",
+            "type": "image/png",
+            "purpose": "any maskable"
+        },
+        {
+            "src": "/image.png",
+            "sizes": "512x512",
+            "type": "image/png",
+            "purpose": "any maskable"
+        }
+    ],
+    "categories": [
+        "education",
+        "productivity",
+        "social"
+    ],
+    "lang": "en-IN",
+    "dir": "ltr"
+}

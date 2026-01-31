@@ -1,0 +1,19 @@
+# robots.txt for Periyar University NSS Portal
+
+User-agent: *
+Allow: /
+
+# Disallow admin and authentication pages from indexing
+Disallow: /admin-dashboard
+Disallow: /college-dashboard
+Disallow: /unit-dashboard
+Disallow: /login
+Disallow: /unit-login
+Disallow: /admin-login
+
+# Allow public pages
+Allow: /
+Allow: /explore-events
+
+# Sitemap location
+Sitemap: https://periyar-nss-portal.netlify.app/sitemap.xml
