@@ -28,7 +28,7 @@
     top: 0;
     z-index: var(--z-sticky);
     backdrop-filter: blur(8px);
-    background-color: rgba(30, 34, 48, 0.8);
+    background-color: var(--nav-bg);
 }
 
 .stat-card {
@@ -139,6 +139,12 @@ input[type="checkbox"] {
     margin-top: 10px;
 }
 
+.width-set {
+
+    width: 50%;
+    justify-content: space-around;
+}
+
 @media screen and (max-width:500px) {
     .one {
         width: 100%;
@@ -185,6 +191,25 @@ input[type="checkbox"] {
     .evt-imgs {
         flex-direction: column;
     }
+
+    .width-set {
+        width: 100%;
+        display: flex;
+        justify-content: space-around;
+    }
+
+    .width-set * {
+
+        width: 30%
+    }
+
+    .bells {
+        text-align: center;
+        /* display: flex; */
+        /* align-items: center; */
+    }
+
+
 }
 
 /* Mobile responsive styles for admin dashboard */

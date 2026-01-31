@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import toast from 'react-hot-toast';
+import ThemeToggle from './ThemeToggle';
 
 const ExploreEvents = () => {
   const location = useLocation();
@@ -410,7 +411,10 @@ const ExploreEvents = () => {
             <h1 className="mb-0" style={{ fontSize: '1.5rem' }}>Explore Events</h1>
             <p className="text-sm text-muted mb-0">Discover what's happening in your unit and college</p>
           </div>
-          <button className="btn btn-secondary" onClick={() => navigate(-1)}>Back to Dashboard</button>
+          <div className="d-flex align-items-center width-set gap-3">
+            <ThemeToggle />
+            <button className="btn btn-secondary" onClick={() => navigate(-1)}>Back to Dashboard</button>
+          </div>
         </div>
       </header>
 
@@ -432,7 +436,7 @@ const ExploreEvents = () => {
             </div>
 
             <form onSubmit={handleReportSubmit}>
-              <div className="form-group mb-4 p-3" style={{ background: 'var(--dark-bg-secondary)', borderRadius: 'var(--radius-md)' }}>
+              <div className="form-group mb-4 p-3" style={{ background: 'var(--bg-secondary)', borderRadius: 'var(--radius-md)' }}>
                 <label className="d-flex align-items-center cursor-pointer">
                   <input
                     type="checkbox"
@@ -501,7 +505,7 @@ const ExploreEvents = () => {
                   <label className="d-block mb-0">Mark Attendance (Select Volunteers) <span className="text-danger">*</span></label>
 
                 </div>
-                <div style={{ background: 'var(--dark-bg-tertiary)', padding: '10px', borderRadius: '4px', border: '1px solid var(--border-color)' }}>
+                <div style={{ background: 'var(--bg-tertiary)', padding: '10px', borderRadius: '4px', border: '1px solid var(--border-color)' }}>
 
                   <input
                     type="text"
@@ -616,7 +620,7 @@ const ExploreEvents = () => {
 
               {
                 selectedEvent.brochure && (
-                  <div className="p-3 rounded d-flex align-items-center gap-3" style={{ background: 'var(--dark-bg-secondary)', border: '1px solid var(--border-color)' }}>
+                  <div className="p-3 rounded d-flex align-items-center gap-3" style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border-color)' }}>
                     <div style={{ color: 'var(--primary-500)', fontSize: '1.5rem' }}>📄</div>
                     <div style={{ flex: 1 }}>
                       <p className="mb-0 fw-bold">Event Brochure</p>
@@ -629,7 +633,7 @@ const ExploreEvents = () => {
             </div>
 
             {selectedEvent.report && (
-              <div className="mb-6 p-4 rounded" style={{ background: 'var(--dark-bg-secondary)', border: '1px solid var(--primary-500)' }}>
+              <div className="mb-6 p-4 rounded" style={{ background: 'var(--bg-secondary)', border: '1px solid var(--primary-500)' }}>
                 <h3 className="text-lg mb-3">Event Report</h3>
                 <div className="grid-cols-2 gap-4">
                   <p><strong>Status:</strong> {selectedEvent.report.participantsCount ? (selectedEvent.report.conductedOnDate ? "Conducted on time" : "Delayed/Rescheduled") : "Yet to be updated"}</p>
@@ -648,7 +652,7 @@ const ExploreEvents = () => {
             {selectedEvent.attendees && selectedEvent.attendees.length > 0 && (
               <div className="mb-6">
                 <h3 className="text-lg mb-3">Participation List ({selectedEvent.attendees.length} Volunteers)</h3>
-                <div style={{ maxHeight: '150px', overflowY: 'auto', background: 'var(--dark-bg-secondary)', padding: '10px', borderRadius: '4px' }}>
+                <div style={{ maxHeight: '150px', overflowY: 'auto', background: 'var(--bg-secondary)', padding: '10px', borderRadius: '4px' }}>
                   <div className="d-flex flex-wrap gap-2">
                     {selectedEvent.attendees.map(attendee => {
                       // attendee is now a populated object from the backend

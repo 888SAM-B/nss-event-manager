@@ -6,6 +6,7 @@ import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import * as XLSX from "xlsx";
 import toast from 'react-hot-toast';
+import ThemeToggle from "./ThemeToggle";
 
 const UnitDashboard = () => {
     const navigate = useNavigate();
@@ -401,15 +402,20 @@ const UnitDashboard = () => {
                         <h1 className="mb-0" style={{ fontSize: '1.5rem', marginTop: '1rem', marginBottom: '0.3rem' }}>{college?.code} - {college?.insName} </h1>
                     </div>
                     {isAccessedFromCollege ? (
-                        <button
-                            onClick={() => navigate("/college-dashboard")}
-                            className="btn btn-secondary"
-                        >
-                            ← Back to College Dashboard
-                        </button>
+                        <div className="d-flex align-items-center width-set gap-3">
+                            <ThemeToggle />
+                            <button
+                                onClick={() => navigate("/college-dashboard")}
+                                className="btn btn-secondary"
+                                style={{ width: '50%' }}
+                            >
+                                ← Back to Dashboard
+                            </button>
+                        </div>
                     ) : (
-                        <div className="d-flex align-items-center gap-3">
-                            <div className="position-relative" style={{ cursor: 'pointer', marginRight: '5rem' }} onClick={() => setIsInviteModalOpen(true)}>
+                        <div className="d-flex align-items-center gap-3 width-set " >
+                            <ThemeToggle />
+                            <div className="position-relative bells " style={{ cursor: 'pointer', marginRight: '1rem' }} onClick={() => setIsInviteModalOpen(true)}>
                                 <span style={{ fontSize: '1.5rem' }}>🔔</span>
                                 {invites.length > 0 && (
                                     <span className="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" style={{ fontSize: '0.7rem' }}>
@@ -729,7 +735,7 @@ const UnitDashboard = () => {
                         ) : (
                             <div className="d-flex flex-column gap-3">
                                 {invites.map(invite => (
-                                    <div key={invite._id} className="card p-3 mb-0" style={{ background: 'var(--dark-bg-secondary)' }}>
+                                    <div key={invite._id} className="card p-3 mb-0" style={{ background: 'var(--bg-secondary)' }}>
                                         <div className="flex-between mb-2">
                                             <h4 className="mb-0">{invite.name}</h4>
                                             <span className="badge badge-primary">{invite.category}</span>

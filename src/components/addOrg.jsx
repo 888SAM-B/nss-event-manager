@@ -2,6 +2,7 @@ import axios from "axios";
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import toast from 'react-hot-toast';
+import ThemeToggle from './ThemeToggle';
 
 const AddOrg = () => {
     const navigate = useNavigate();
@@ -36,6 +37,9 @@ const AddOrg = () => {
 
     return (
         <div className="login-page">
+            <div style={{ position: 'absolute', top: '20px', right: '20px' }}>
+                <ThemeToggle />
+            </div>
             <div className="card login-card" style={{ maxWidth: '500px' }}>
                 <div className="text-center mb-6">
                     <div style={{

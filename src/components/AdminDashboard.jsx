@@ -5,6 +5,7 @@ import axios from 'axios';
 import { Chart as ChartJS, ArcElement, Tooltip, Legend, CategoryScale, LinearScale, BarElement, Title } from 'chart.js';
 import { Doughnut, Bar } from 'react-chartjs-2';
 import toast from 'react-hot-toast';
+import ThemeToggle from './ThemeToggle';
 
 ChartJS.register(ArcElement, Tooltip, Legend, CategoryScale, LinearScale, BarElement, Title);
 
@@ -159,7 +160,7 @@ const EventsCalendar = ({ events }) => {
 
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                             {selectedDayEvents.map((event, idx) => (
-                                <div key={idx} className="card" style={{ background: 'var(--dark-bg-tertiary)', margin: 0 }}>
+                                <div key={idx} className="card" style={{ background: 'var(--bg-tertiary)', margin: 0 }}>
                                     <div className="flex-between mb-3">
                                         <h3 className="mb-0">{event.name}</h3>
                                         <span className="badge badge-primary">{event.eventCode}</span>
@@ -227,7 +228,7 @@ const EventsCalendar = ({ events }) => {
                                     )}
 
                                     {event.report && (
-                                        <div className="mt-4 p-3 rounded" style={{ background: 'var(--dark-bg-secondary)', borderLeft: '3px solid var(--success-500)' }}>
+                                        <div className="mt-4 p-3 rounded" style={{ background: 'var(--bg-secondary)', borderLeft: '3px solid var(--success-500)' }}>
                                             <div className="flex-between mb-2">
                                                 <h4 className="mb-0" style={{ fontSize: '0.9rem', color: 'var(--success-500)' }}>Event Report</h4>
                                                 {event.report.reportFile && (
@@ -434,18 +435,21 @@ const AdminDashboard = () => {
     };
     return (
         <div className="admin-dashboard" style={{ minHeight: '100vh', background: 'var(--bg-color)' }}>
-            <header className="dashboard-header">
+            <header className="dashboard-header" style={{ background: 'var(--nav-bg)', backdropFilter: 'blur(10px)', position: 'sticky', top: 0, zIndex: 100, borderBottom: '1px solid var(--border-color)', padding: '1rem 0' }}>
                 <div className="container flex-between">
                     <div>
                         <span className="badge  badge-primary" style={{ marginBottom: '10px' }} >System Administrator</span>
                         <h1 className="mb-0">Admin Dashboard</h1>
                     </div>
-                    <button className='btn' onClick={handleAddOrg} >+ Add an Organization</button>
-                    <button className="btn btn-danger" onClick={handleLogout}>Logout</button>
+                    <div className="d-flex gap-2 align-items-center width-set ">
+                        <ThemeToggle />
+                        <button className='btn' onClick={handleAddOrg} >+ Add Org</button>
+                        <button className="btn btn-danger" onClick={handleLogout}>Logout</button>
+                    </div>
                 </div>
             </header>
 
-            <main className="container main-container">
+            <main className="container main-container" style={{ marginTop: '0px' }} >
                 {/* Stats Cards */}
                 <div className="grid-cols-3 mb-6">
                     <div className="card text-center">
@@ -512,11 +516,11 @@ const AdminDashboard = () => {
                             >
                                 📋 Manage All Events
                             </button>
-                            <div className="p-3" style={{ background: 'var(--dark-bg-tertiary)', borderRadius: '8px' }}>
+                            <div className="p-3" style={{ background: 'var(--bg-tertiary)', borderRadius: '8px' }}>
                                 <p className="text-sm mb-2 fw-bold">Total Events</p>
                                 <p className="text-lg mb-0">{stats.totalEvents}</p>
                             </div>
-                            <div className="p-3" style={{ background: 'var(--dark-bg-tertiary)', borderRadius: '8px' }}>
+                            <div className="p-3" style={{ background: 'var(--bg-tertiary)', borderRadius: '8px' }}>
                                 <p className="text-sm mb-2 fw-bold">Upcoming Events</p>
                                 <p className="text-lg mb-0">
                                     {stats.allEvents?.filter(e => {

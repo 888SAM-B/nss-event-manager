@@ -72,9 +72,12 @@ const AdminAllEvents = () => {
                         <span className="badge badge-primary">System Administrator</span>
                         <h1 className="mb-0">All Events Management</h1>
                     </div>
-                    <button className="btn btn-secondary" onClick={() => navigate('/admin-dashboard')}>
-                        ← Back to Dashboard
-                    </button>
+                    <div className="d-flex align-items-center gap-3">
+                        <ThemeToggle />
+                        <button className="btn btn-secondary" onClick={() => navigate('/admin-dashboard')}>
+                            ← Back to Dashboard
+                        </button>
+                    </div>
                 </div>
             </header>
 
@@ -274,7 +277,7 @@ const AdminAllEvents = () => {
                             )}
 
                             {selectedEvent.report && (
-                                <div className="mt-6 p-4 rounded" style={{ background: 'var(--dark-bg-secondary)', borderLeft: '4px solid var(--success-500)', marginTop: '20px' }}>
+                                <div className="mt-6 p-4 rounded" style={{ background: 'var(--bg-secondary)', borderLeft: '4px solid var(--success-500)', marginTop: '20px' }}>
                                     <div className="flex-between mb-3">
                                         <h3 className="mb-0" style={{ fontSize: '1.1rem', color: 'var(--success-500)' }}>Event Report</h3>
                                         {selectedEvent.report.reportFile && (

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import ThemeToggle from "./ThemeToggle";
 
 const Home = () => {
     const navigate = useNavigate();
@@ -9,15 +10,16 @@ const Home = () => {
             <nav style={{
                 padding: '1.5rem 0',
                 borderBottom: '1px solid var(--border-color)',
-                background: 'rgba(30, 34, 48, 0.8)',
+                background: 'var(--nav-bg)',
                 backdropFilter: 'blur(10px)',
                 position: 'sticky',
                 top: 0,
                 zIndex: 100
             }}>
                 <div className="container flex-between">
-                    <h2 style={{ margin: 0, color: 'var(--primary-400)', letterSpacing: '-0.5px' }}>NSS Event Manager</h2>
-                    <div className="d-flex gap-2">
+                    <h2 style={{ margin: 0, color: 'var(--primary-400)', letterSpacing: '-0.5px' }}>NSS Portal</h2>
+                    <div className="d-flex gap-2 align-items-center">
+                        <ThemeToggle />
                         <button className="btn btn-secondary" onClick={() => navigate("/admin-login")}>Admin Login</button>
                     </div>
                 </div>
@@ -51,7 +53,7 @@ const Home = () => {
                             onClick={() => navigate("/login")}
                             style={{ minWidth: '200px' }}
                         >
-                            College Admin
+                            Organization Admin
                         </button>
                     </div>
                 </div>

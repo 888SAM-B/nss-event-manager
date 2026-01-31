@@ -5,6 +5,7 @@ import { useEffect } from "react";
 import { useState } from "react";
 import * as XLSX from "xlsx";
 import toast from 'react-hot-toast';
+import ThemeToggle from "./ThemeToggle";
 
 const CollegeDashboard = () => {
     const username = localStorage.getItem("nss_username");
@@ -226,15 +227,15 @@ const CollegeDashboard = () => {
 
     return (
         <div style={{ minHeight: '100vh', background: 'var(--bg-color)' }}>
-            <header className="dashboard-header">
+            <header className="dashboard-header" style={{ background: 'var(--nav-bg)', backdropFilter: 'blur(10px)', position: 'sticky', top: 0, zIndex: 100, borderBottom: '1px solid var(--border-color)', padding: '1rem 0' }}>
                 <div className="container flex-between">
                     <div>
                         <h1 className="mb-0" style={{ fontSize: '1.5rem' }}>{insName || 'College Dashboard'}</h1>
                         <span className="badge badge-primary">{insCode}</span>
                     </div>
-                    <div className="d-flex gap-3 align-items-center">
+                    <div className="d-flex gap-3 align-items-center width-set">
+                        <ThemeToggle />
                         <button
-                            style={{ marginRight: '1.5rem' }}
                             className="btn btn-primary"
                             onClick={() => navigate('/explore-events', { state: { collegeCode: insCode, unitCode: 'COLLEGE', fromRole: 'college' } })}
                         >
@@ -264,7 +265,7 @@ const CollegeDashboard = () => {
                 </div>
             </header>
 
-            <main className="container main-container">
+            <main className="container main-container" style={{ marginTop: '0px' }}  >
                 <div className="flex-between mb-6">
                     <div>
                         <h2>NSS Units Management</h2>
@@ -453,7 +454,7 @@ const CollegeDashboard = () => {
                             </div>
 
                             {newMembers.map((member, index) => (
-                                <div key={index} className="card p-4 mb-3" style={{ background: 'var(--dark-bg-tertiary)' }}>
+                                <div key={index} className="card p-4 mb-3" style={{ background: 'var(--bg-tertiary)' }}>
                                     <div className="flex-between mb-2">
                                         <h4 className="text-sm mb-0">Member {index + 1}</h4>
                                         <button className="text-danger" style={{ background: 'none', border: 'none' }} onClick={() => handleRemoveMember(index)}>Remove</button>

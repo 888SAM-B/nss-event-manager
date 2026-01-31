@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { useEffect } from 'react';
 import axios from 'axios';
 import toast from 'react-hot-toast';
+import ThemeToggle from './ThemeToggle';
 
 const UnitLogin = () => {
   const navigate = useNavigate();
@@ -45,6 +46,9 @@ const UnitLogin = () => {
 
   return (
     <div className="login-page">
+      <div style={{ position: 'absolute', top: '20px', right: '20px' }}>
+        <ThemeToggle />
+      </div>
       <div className="card login-card">
         <div className="text-center mb-6">
           <h1 className="mb-2">Unit Login</h1>

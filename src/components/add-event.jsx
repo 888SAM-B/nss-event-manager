@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import axios from 'axios';
 import toast from 'react-hot-toast';
+import ThemeToggle from './ThemeToggle';
 
 // Cloudinary Configuration (Replace with your actual values)
 const CLOUDINARY_CLOUD_NAME = import.meta.env.VITE_CLOUD_NAME;
@@ -280,7 +281,10 @@ const AddEvent = () => {
             <header className="dashboard-header">
                 <div className="container flex-between">
                     <h2 className="mb-0">{eventToEdit ? "Edit Event" : "Create New Event"}</h2>
-                    <button className="btn btn-secondary" onClick={() => navigate(-1)}>Back</button>
+                    <div className="d-flex align-items-center gap-3">
+                        <ThemeToggle />
+                        <button className="btn btn-secondary" onClick={() => navigate(-1)}>Back</button>
+                    </div>
                 </div>
             </header>
 
@@ -355,7 +359,7 @@ const AddEvent = () => {
                         )}
 
                         {/* Single Day / Multi Day Toggle */}
-                        <div className="form-check mb-4 p-3" style={{ background: 'var(--dark-bg-secondary)', borderRadius: 'var(--radius-md)' }}>
+                        <div className="form-check mb-4 p-3" style={{ background: 'var(--bg-secondary)', borderRadius: 'var(--radius-md)' }}>
                             <input
                                 type="checkbox"
                                 className="form-check-input"
@@ -528,7 +532,7 @@ const AddEvent = () => {
                                 </button>
                             </div>
                             {eventForm.brochure && (
-                                <div className="mt-2 p-2 border rounded d-flex justify-content-between align-items-center" style={{ background: 'var(--dark-bg-secondary)' }}>
+                                <div className="mt-2 p-2 border rounded d-flex justify-content-between align-items-center" style={{ background: 'var(--bg-secondary)' }}>
                                     <span className="text-sm text-success">✓ Brochure uploaded</span>
                                     <a href={eventForm.brochure} target="_blank" rel="noopener noreferrer" className="btn btn-sm btn-link text-primary">View</a>
                                     <button type="button" className="btn btn-sm btn-danger" onClick={() => setEventForm(prev => ({ ...prev, brochure: "" }))}>Remove</button>

@@ -4,6 +4,7 @@ import { useUser } from '../context/UserContext';
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { useState } from 'react';
+import ThemeToggle from './ThemeToggle';
 
 const Login = () => {
     const { setUsername } = useUser();
@@ -55,9 +56,12 @@ const Login = () => {
 
     return (
         <div className="login-page">
+            <div style={{ position: 'absolute', top: '20px', right: '20px' }}>
+                <ThemeToggle />
+            </div>
             <div className="card login-card">
                 <div className="text-center mb-6">
-                    <h1 className="mb-2">Admin Login</h1>
+                    <h1 className="mb-2">Organization Login</h1>
                     <p>Enter your credentials to access the dashboard</p>
                 </div>
 
