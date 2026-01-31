@@ -127,6 +127,18 @@ input[type="checkbox"] {
     cursor: pointer;
 }
 
+.excel {
+    width: 100%;
+}
+
+.modal-content::-webkit-scrollbar {
+    display: none;
+}
+
+.close {
+    margin-top: 10px;
+}
+
 @media screen and (max-width:500px) {
     .one {
         width: 100%;

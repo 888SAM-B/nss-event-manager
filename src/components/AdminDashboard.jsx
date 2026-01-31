@@ -1,8 +1,10 @@
 import React, { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { Chart as ChartJS, ArcElement, Tooltip, Legend, CategoryScale, LinearScale, BarElement, Title } from 'chart.js';
 import { Doughnut, Bar } from 'react-chartjs-2';
+import toast from 'react-hot-toast';
 
 ChartJS.register(ArcElement, Tooltip, Legend, CategoryScale, LinearScale, BarElement, Title);
 
@@ -142,9 +144,9 @@ const EventsCalendar = ({ events }) => {
             </div>
 
             {/* Event Details Modal */}
-            {selectedDayEvents && (
-                <div className="modal-overlay" onClick={() => setSelectedDayEvents(null)}>
-                    <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '700px', maxHeight: '80vh', overflowY: 'auto' }}>
+            {selectedDayEvents && createPortal(
+                <div className="modal-overlay " onClick={() => setSelectedDayEvents(null)}>
+                    <div className="modal-content calender-pop " onClick={(e) => e.stopPropagation()} style={{ maxWidth: '700px', maxHeight: '80vh', overflowY: 'auto' }}>
                         <div className="flex-between mb-4">
                             <div>
                                 <h2 className="mb-1">Events on {selectedDate}</h2>
@@ -271,12 +273,12 @@ const EventsCalendar = ({ events }) => {
                         </div>
 
                         <div className="flex-between pt-4 mt-4" style={{ borderTop: '1px solid var(--border-color)' }}>
-                            <button className="btn btn-secondary" onClick={() => setSelectedDayEvents(null)}>
+                            <button className="btn btn-secondary close" onClick={() => setSelectedDayEvents(null)}>
                                 Close
                             </button>
                         </div>
                     </div>
-                </div>
+                </div>, document.body
             )}
         </div>
     );
@@ -411,7 +413,7 @@ const AdminDashboard = () => {
             });
 
             if (res.data.success) {
-                alert("College and all associated data removed successfully");
+                toast.success("College and all associated data removed successfully");
                 setCollegeToDelete(null);
                 setAdminUser("");
                 setAdminPass("");

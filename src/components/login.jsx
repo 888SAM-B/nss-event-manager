@@ -2,10 +2,13 @@ import React from 'react'
 import { useEffect } from 'react';
 import { useUser } from '../context/UserContext';
 import { useNavigate } from 'react-router-dom';
+import toast from 'react-hot-toast';
+import { useState } from 'react';
 
 const Login = () => {
     const { setUsername } = useUser();
     const navigate = useNavigate();
+    const [loading, setLoading] = useState(false);
 
     useEffect(() => {
         if (localStorage.getItem("nsstoken")) {
@@ -17,6 +20,7 @@ const Login = () => {
         e.preventDefault();
         const username = e.target.username.value;
         const password = e.target.password.value;
+        setLoading(true);
 
         try {
             const res = await fetch(`${import.meta.env.VITE_API_URL}/login`, {
@@ -29,6 +33,7 @@ const Login = () => {
             const data = await res.json();
             console.log(data);
             if (data.success) {
+                toast.success("Login successful");
                 localStorage.setItem("nsstoken", data.token);
                 console.log(data.token);
                 setUsername(username);
@@ -36,11 +41,14 @@ const Login = () => {
                 navigate("/college-dashboard");
             }
             else {
-                alert(data.message)
+                toast.error(data.message);
             }
         }
         catch (error) {
-            console.log(error)
+            console.log(error);
+            toast.error("An error occurred during login");
+        } finally {
+            setLoading(false);
         }
 
     };
@@ -76,8 +84,8 @@ const Login = () => {
                         />
                     </div>
 
-                    <button type="submit" className="btn btn-primary" style={{ width: '100%' }}>
-                        Login to Dashboard
+                    <button type="submit" className="btn btn-primary" style={{ width: '100%' }} disabled={loading}>
+                        {loading ? 'Logging in...' : 'Login to Dashboard'}
                     </button>
                 </form>
             </div>

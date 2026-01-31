@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import axios from 'axios';
+import toast from 'react-hot-toast';
 
 // Cloudinary Configuration (Replace with your actual values)
 const CLOUDINARY_CLOUD_NAME = import.meta.env.VITE_CLOUD_NAME;
@@ -49,6 +50,7 @@ const AddEvent = () => {
     const [fileSizeError, setFileSizeError] = useState(null); // New state for file size error
     const [brochureFile, setBrochureFile] = useState(null);
     const [uploadingBrochure, setUploadingBrochure] = useState(false);
+    const [submitting, setSubmitting] = useState(false);
 
     // Collaboration State
     const [availableUnits, setAvailableUnits] = useState([]);
@@ -157,10 +159,11 @@ const AddEvent = () => {
                 images: imageUrls
             }));
             setSelectedFiles([]);
-            alert("Images uploaded successfully!");
+            toast.success("Images uploaded successfully!");
         } catch (error) {
             console.error("Error uploading images to Cloudinary:", error);
             setUploadError("Failed to upload images. Please try again.");
+            toast.error("Failed to upload images");
             if (error.response) {
                 console.error("Cloudinary response error:", error.response.data);
             }
@@ -184,10 +187,10 @@ const AddEvent = () => {
             );
             setEventForm(prev => ({ ...prev, brochure: response.data.secure_url }));
             setBrochureFile(null);
-            alert("Brochure uploaded successfully!");
+            toast.success("Brochure uploaded successfully!");
         } catch (error) {
             console.error("Error uploading brochure:", error);
-            alert("Failed to upload brochure.");
+            toast.error("Failed to upload brochure.");
         } finally {
             setUploadingBrochure(false);
         }
@@ -205,16 +208,16 @@ const AddEvent = () => {
 
         // Basic validation
         if (!eventForm.name || !eventForm.description || !eventForm.category || !eventForm.venue) {
-            alert("Please fill in all required event details.");
+            toast.error("Please fill in all required event details.");
             return;
         }
 
         if (eventForm.singleDay && !eventForm.date) {
-            alert("Please provide a date for the single-day event.");
+            toast.error("Please provide a date for the single-day event.");
             return;
         }
         if (!eventForm.singleDay && (!eventForm.dateFrom || !eventForm.dateTo)) {
-            alert("Please provide 'From' and 'To' dates for the multi-day event.");
+            toast.error("Please provide 'From' and 'To' dates for the multi-day event.");
             return;
         }
 
@@ -238,6 +241,7 @@ const AddEvent = () => {
         };
 
         console.log("Submitting Event Data:", eventData);
+        setSubmitting(true);
 
         try {
             const config = {
@@ -251,21 +255,23 @@ const AddEvent = () => {
                     eventId: eventToEdit._id,
                     eventData: eventData
                 }, config);
-                alert('Event updated successfully!');
+                toast.success('Event updated successfully!');
                 console.log('Backend Response:', response.data);
                 navigate('/explore-events', { state: { unitCode, collegeCode } }); // Go back to explore events
             } else {
                 const response = await axios.post(`${import.meta.env.VITE_API_URL}/addEvent`, { eventData: eventData }, config);
-                alert('Event created successfully!');
+                toast.success('Event created successfully!');
                 console.log('Backend Response:', response.data);
                 navigate('/unit-dashboard');
             }
         } catch (error) {
             console.error('Error saving event:', error);
-            alert('Failed to save event. Please try again.');
+            toast.error('Failed to save event. Please try again.');
             if (error.response) {
                 console.error('Backend Error Details:', error.response.data);
             }
+        } finally {
+            setSubmitting(false);
         }
     };
 
@@ -575,8 +581,8 @@ const AddEvent = () => {
                             <button type="button" className="btn btn-secondary" onClick={() => navigate(-1)} disabled={uploading}>
                                 Cancel
                             </button>
-                            <button type="submit" className="btn btn-primary btn-lg" disabled={uploading}>
-                                {eventToEdit ? "Update Event" : "Create Event"}
+                            <button type="submit" className="btn btn-primary btn-lg" disabled={uploading || uploadingBrochure || submitting}>
+                                {submitting ? (eventToEdit ? "Updating..." : "Creating...") : (eventToEdit ? "Update Event" : "Create Event")}
                             </button>
                         </div>
                     </form>

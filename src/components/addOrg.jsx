@@ -1,6 +1,7 @@
 import axios from "axios";
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import toast from 'react-hot-toast';
 
 const AddOrg = () => {
     const navigate = useNavigate();
@@ -20,13 +21,13 @@ const AddOrg = () => {
 
         axios.post(`${import.meta.env.VITE_API_URL}/add-organization`, data)
             .then((response) => {
-                alert("Organization Added Successfully");
+                toast.success("Organization Added Successfully");
                 e.target.reset();
                 navigate('/admin-dashboard');
             })
             .catch((error) => {
                 console.error("There was an error adding the organization!", error);
-                alert("Failed to add organization. Please try again.");
+                toast.error("Failed to add organization. Please try again.");
             })
             .finally(() => {
                 setIsLoading(false);

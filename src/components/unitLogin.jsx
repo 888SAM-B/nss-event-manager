@@ -2,12 +2,14 @@ import React, { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useEffect } from 'react';
 import axios from 'axios';
+import toast from 'react-hot-toast';
 
 const UnitLogin = () => {
   const navigate = useNavigate();
   const [collegeCode, setCollegeCode] = useState("");
   const [unitCode, setUnitCode] = useState("");
   const [unitPassword, setUnitPassword] = useState("");
+  const [loading, setLoading] = useState(false);
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -16,6 +18,7 @@ const UnitLogin = () => {
       unitCode,
       unitPassword
     };
+    setLoading(true);
     try {
       const res = await axios.post(`${import.meta.env.VITE_API_URL}/unit-login`, payload);
       if (res.data.success) {
@@ -29,12 +32,14 @@ const UnitLogin = () => {
         localStorage.setItem("nsscollegeCode", collegeCode); // Store College code as well
         navigate("/unit-dashboard");
 
-        alert("Login successful");
+        toast.success("Login successful");
 
       }
     } catch (error) {
       console.log(error);
-      alert("Login failed");
+      toast.error("Login failed");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -78,8 +83,8 @@ const UnitLogin = () => {
               required
             />
           </div>
-          <button type="submit" className="btn btn-primary" style={{ width: '100%' }}>
-            Login
+          <button type="submit" className="btn btn-primary" style={{ width: '100%' }} disabled={loading}>
+            {loading ? 'Logging in...' : 'Login'}
           </button>
         </form>
       </div>

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import axios from 'axios';
+import toast from 'react-hot-toast';
 
 const ExploreEvents = () => {
   const location = useLocation();
@@ -32,6 +33,7 @@ const ExploreEvents = () => {
   });
   const [reportFiles, setReportFiles] = useState({ pdf: null, photos: [] });
   const [isSubmittingReport, setIsSubmittingReport] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   const [unitMembers, setUnitMembers] = useState([]);
   const [attendeeSearch, setAttendeeSearch] = useState("");
 
@@ -146,6 +148,9 @@ const ExploreEvents = () => {
     e.stopPropagation();
     if (!window.confirm("Are you sure you want to delete this event? This action cannot be undone.")) return;
 
+    setIsDeleting(true);
+    const toastId = toast.loading("Deleting event...");
+
     try {
       const res = await axios.post(`${import.meta.env.VITE_API_URL}/deleteEvent`, {
         eventId,
@@ -159,13 +164,15 @@ const ExploreEvents = () => {
 
       if (res.data.success) {
         setUnitEvents(prev => prev.filter(ev => ev._id !== eventId));
-        alert("Event deleted successfully");
+        toast.success("Event deleted successfully", { id: toastId });
       } else {
-        alert("Failed to delete event: " + res.data.message);
+        toast.error("Failed to delete event: " + res.data.message, { id: toastId });
       }
     } catch (err) {
       console.error(err);
-      alert("Error deleting event");
+      toast.error("Error deleting event", { id: toastId });
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -258,13 +265,13 @@ const ExploreEvents = () => {
       });
 
       if (res.data.success) {
-        alert("Report submitted successfully!");
+        toast.success("Report submitted successfully!");
         setUnitEvents(prev => prev.map(ev => ev._id === reportingEvent._id ? res.data.event : ev));
         setShowReportModal(false);
       }
     } catch (err) {
       console.error("Report submisson error:", err);
-      alert("Failed to submit report. Ensure cloud configuration is correct.");
+      toast.error("Failed to submit report. Ensure cloud configuration is correct.");
     } finally {
       setIsSubmittingReport(false);
     }
@@ -337,8 +344,9 @@ const ExploreEvents = () => {
                   className="btn btn-danger btn-sm w-100"
                   onClick={(e) => handleDeleteEvent(event._id, e)}
                   style={{ fontSize: '0.8rem', padding: '0.3rem 0.5rem' }}
+                  disabled={isDeleting}
                 >
-                  Delete
+                  {isDeleting ? "Deleting..." : "Delete"}
                 </button>
               </div>
               {isCompleted && (
@@ -682,7 +690,7 @@ const ExploreEvents = () => {
             )}
 
             <div className="flex-center mt-6 pt-4" style={{ borderTop: '1px solid var(--border-color)' }}>
-              <button className="btn btn-secondary" onClick={() => setSelectedEvent(null)}>Close</button>
+              <button className="btn btn-secondary close" onClick={() => setSelectedEvent(null)}>Close</button>
             </div>
           </div>
         </div>

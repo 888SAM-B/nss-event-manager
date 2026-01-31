@@ -4,6 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { useEffect } from "react";
 import { useState } from "react";
 import * as XLSX from "xlsx";
+import toast from 'react-hot-toast';
 
 const CollegeDashboard = () => {
     const username = localStorage.getItem("nss_username");
@@ -25,6 +26,7 @@ const CollegeDashboard = () => {
     const [memberSearch, setMemberSearch] = useState("");
     const [filterUnit, setFilterUnit] = useState("");
     const [filterBatch, setFilterBatch] = useState("");
+    const [isCreating, setIsCreating] = useState(false);
 
     // Check if admin is viewing this dashboard
     const isAdminViewing = localStorage.getItem("adminToken") !== null;
@@ -56,13 +58,12 @@ const CollegeDashboard = () => {
     };
 
     const handleCreateUnit = async () => {
-
         if (units.length >= 6) {
-            alert("Maximum limit of 6 units reached.");
+            toast.error("Maximum limit of 6 units reached.");
             return;
         }
         if (!newUnitName || !newUnitHead) {
-            alert("Please fill in Unit Name and Unit Head.");
+            toast.error("Please fill in Unit Name and Unit Head.");
             return;
         }
 
@@ -84,6 +85,7 @@ const CollegeDashboard = () => {
             createdDate
         };
         console.log(payload);
+        setIsCreating(true);
         try {
             const res = await axios.post(
                 `${import.meta.env.VITE_API_URL}/addUnit`,
@@ -105,13 +107,15 @@ const CollegeDashboard = () => {
                 setNewUnitContact("");
                 setNewUnitPassword("");
                 setNewMembers([]);
-                alert("Unit created successfully!");
+                toast.success("Unit created successfully!");
             } else {
-                alert("Failed to create unit: " + (res.data.message || "Unknown error"));
+                toast.error("Failed to create unit: " + (res.data.message || "Unknown error"));
             }
         } catch (error) {
             console.error(error);
-            alert("An error occurred while creating the unit.");
+            toast.error("An error occurred while creating the unit.");
+        } finally {
+            setIsCreating(false);
         }
     };
     const handleDeleteUnit = async (unitNumber, e) => {
@@ -131,13 +135,13 @@ const CollegeDashboard = () => {
             if (res.data.success) {
                 const updatedUnits = units.filter(u => u.unitNumber !== unitNumber);
                 setUnits(updatedUnits);
-                alert("Unit deleted successfully");
+                toast.success("Unit deleted successfully");
             } else {
-                alert("Failed to delete: " + res.data.message);
+                toast.error("Failed to delete: " + res.data.message);
             }
         } catch (error) {
             console.error(error);
-            alert("Error deleting unit");
+            toast.error("Error deleting unit");
         }
     };
 
@@ -182,7 +186,7 @@ const CollegeDashboard = () => {
             }
         } catch (error) {
             console.error("Error fetching members:", error);
-            alert("Failed to fetch members list");
+            toast.error("Failed to fetch members list");
         }
     };
 
@@ -503,8 +507,8 @@ const CollegeDashboard = () => {
                         </div>
 
                         <div className="flex-between pt-4" style={{ borderTop: '1px solid var(--border-color)' }}>
-                            <button className="btn btn-secondary" onClick={() => setShowUnitModal(false)}>Cancel</button>
-                            <button className="btn btn-primary" onClick={handleCreateUnit}>Create Unit</button>
+                            <button className="btn btn-secondary" onClick={() => setShowUnitModal(false)} disabled={isCreating}>Cancel</button>
+                            <button className="btn btn-primary" onClick={handleCreateUnit} disabled={isCreating}>{isCreating ? 'Creating...' : 'Create Unit'}</button>
                         </div>
                     </div>
                 </div>

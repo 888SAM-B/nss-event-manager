@@ -333,7 +333,7 @@ const AdminAllEvents = () => {
                         </div>
 
                         <div className="flex-between pt-4" style={{ borderTop: '1px solid var(--border-color)' }}>
-                            <button className="btn btn-secondary" onClick={() => setSelectedEvent(null)}>
+                            <button className="btn close btn-secondary" onClick={() => setSelectedEvent(null)}>
                                 Close
                             </button>
                         </div>

@@ -2,8 +2,10 @@ import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 
+
 import axios from "axios";
 import * as XLSX from "xlsx";
+import toast from 'react-hot-toast';
 
 const UnitDashboard = () => {
     const navigate = useNavigate();
@@ -31,6 +33,9 @@ const UnitDashboard = () => {
     const [invites, setInvites] = useState([]);
     const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
     const [selectedMemberIds, setSelectedMemberIds] = useState([]);
+    const [isSaving, setIsSaving] = useState(false);
+    const [isUploading, setIsUploading] = useState(false);
+    const [isDeleting, setIsDeleting] = useState(false);
 
 
     // Check if accessed from college dashboard (admin or college user)
@@ -123,13 +128,13 @@ const UnitDashboard = () => {
             });
 
             if (res.data.success) {
-                alert(`Invitation ${response}`);
+                toast.success(`Invitation ${response}`);
                 // Remove from list
                 setInvites(invites.filter(i => i._id !== eventId));
             }
         } catch (error) {
             console.error(error);
-            alert("Failed to respond");
+            toast.error("Failed to respond");
         }
     };
 
@@ -213,12 +218,14 @@ const UnitDashboard = () => {
                 });
 
                 if (mappedMembers.length === 0) {
-                    alert("No valid data found in the Excel file.");
+                    toast.error("No valid data found in the Excel file.");
                     return;
                 }
 
                 if (!window.confirm(`Are you sure you want to upload ${mappedMembers.length} members?`)) return;
 
+                setIsUploading(true);
+                const toastId = toast.loading("Uploading members...");
                 const token = localStorage.getItem("unitToken");
                 const res = await axios.post(
                     `${import.meta.env.VITE_API_URL}/bulk-add-members`,
@@ -232,11 +239,13 @@ const UnitDashboard = () => {
 
                 if (res.data.success) {
                     setUnit(res.data.unit);
-                    alert(res.data.message);
+                    toast.success(res.data.message, { id: toastId });
                 }
             } catch (error) {
                 console.error("Error processing bulk upload:", error);
-                alert("Failed to process Excel file. Please ensure it matches the export format.");
+                toast.error("Failed to process Excel file. Please ensure it matches the export format.", { id: toastId });
+            } finally {
+                setIsUploading(false);
             }
         };
         reader.readAsArrayBuffer(file);
@@ -247,6 +256,7 @@ const UnitDashboard = () => {
     const handleSaveMember = async (e) => {
         e.preventDefault();
         const token = localStorage.getItem("unitToken");
+        setIsSaving(true);
 
         try {
             if (editingIndex === null) {
@@ -259,7 +269,7 @@ const UnitDashboard = () => {
                 if (res.data.success) {
                     setUnit(res.data.unit); // Server returns updated unit populated with members
                     setIsModalOpen(false);
-                    alert("Member added successfully!");
+                    toast.success("Member added successfully!");
                 }
             } else {
                 // EDIT MODE
@@ -277,12 +287,14 @@ const UnitDashboard = () => {
                     updatedMembers[editingIndex] = res.data.member;
                     setUnit({ ...unit, members: updatedMembers });
                     setIsModalOpen(false);
-                    alert("Member updated successfully!");
+                    toast.success("Member updated successfully!");
                 }
             }
         } catch (err) {
             console.error(err);
-            alert("Failed to save member");
+            toast.error("Failed to save member");
+        } finally {
+            setIsSaving(false);
         }
     };
 
@@ -300,11 +312,11 @@ const UnitDashboard = () => {
             );
             if (res.data.success) {
                 setUnit(res.data.unit);
-                alert("Member deleted successfully!");
+                toast.success("Member deleted successfully!");
             }
         } catch (err) {
             console.error(err);
-            alert("Failed to delete member");
+            toast.error("Failed to delete member");
         }
     };
 
@@ -327,6 +339,7 @@ const UnitDashboard = () => {
     const handleBulkDelete = async () => {
         if (!window.confirm(`Are you sure you want to delete ${selectedMemberIds.length} selected members?`)) return;
         const token = localStorage.getItem("unitToken");
+        setIsDeleting(true);
 
         try {
             const res = await axios.delete(
@@ -339,11 +352,13 @@ const UnitDashboard = () => {
             if (res.data.success) {
                 setUnit(res.data.unit);
                 setSelectedMemberIds([]);
-                alert("Selected members deleted successfully!");
+                toast.success("Selected members deleted successfully!");
             }
         } catch (err) {
             console.error(err);
-            alert("Failed to delete selected members");
+            toast.error("Failed to delete selected members");
+        } finally {
+            setIsDeleting(false);
         }
     };
 
@@ -468,19 +483,20 @@ const UnitDashboard = () => {
                             onChange={(e) => setSearch(e.target.value)}
                         />
                         {selectedMemberIds.length > 0 && (
-                            <button className="btn btn-danger" onClick={handleBulkDelete}>
-                                Delete Selected ({selectedMemberIds.length})
+                            <button className="btn btn-danger" onClick={handleBulkDelete} disabled={isDeleting}>
+                                {isDeleting ? "Deleting..." : `Delete Selected (${selectedMemberIds.length})`}
                             </button>
                         )}
                         <button className="btn btn-success" onClick={handleExportExcel} style={{ marginRight: '10px' }}>
                             Excel Export
                         </button>
-                        <label className="btn btn-secondary" style={{ marginRight: '10px', cursor: 'pointer', marginBottom: 0 }}>
-                            Bulk Upload
+                        <label className={`btn excel btn-secondary ${isUploading ? 'disabled' : ''}`} style={{ marginRight: '10px', cursor: 'pointer', marginBottom: 0 }}>
+                            {isUploading ? "Uploading..." : "Upload via Excel"}
                             <input
                                 type="file"
                                 accept=".xlsx, .xls"
                                 onChange={handleBulkUpload}
+                                disabled={isUploading}
                                 style={{ display: 'none' }}
                             />
                         </label>
@@ -691,8 +707,8 @@ const UnitDashboard = () => {
                             </div>
 
                             <div className="flex-between pt-4 mt-2" style={{ borderTop: '1px solid var(--border-color)', paddingTop: '20px' }}>
-                                <button type="button" className="btn btn-secondary" onClick={() => setIsModalOpen(false)}>Cancel</button>
-                                <button type="submit" className="btn btn-primary">Save Member</button>
+                                <button type="button" className="btn btn-secondary" onClick={() => setIsModalOpen(false)} disabled={isSaving}>Cancel</button>
+                                <button type="submit" className="btn btn-primary" disabled={isSaving}>{isSaving ? 'Saving...' : 'Save Member'}</button>
                             </div>
                         </form>
                     </div>
