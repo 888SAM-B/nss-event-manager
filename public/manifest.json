@@ -1,7 +1,7 @@
 {
-    "name": "NSS Portal - Periyar University",
-    "short_name": "NSS Portal",
-    "description": "Official National Service Scheme portal of Periyar University for managing NSS units, events, and volunteers",
+    "name": "Periyar University NSS Portal",
+    "short_name": "Periyar NSS",
+    "description": "Official Periyar University NSS Portal - National Service Scheme for managing NSS units, events, volunteers, and community service activities in Salem, Tamil Nadu",
     "start_url": "/",
     "display": "standalone",
     "background_color": "#1a1a2e",
