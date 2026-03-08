@@ -5,19 +5,66 @@ const jwt = require('jsonwebtoken');
 const cors = require("cors");
 const bcrypt = require('bcryptjs');
 const verifyToken = require('./middleware/auth');
-const nodemailer = require('nodemailer');
+// Verify Brevo API configuration on startup
+if (process.env.BREVO_API_KEY) {
+    console.log('✅ Brevo Email service is configured');
+} else {
+    console.warn('⚠️ BREVO_API_KEY is not set in environment variables');
+}
 
-const transporter = nodemailer.createTransport({
-    service: 'gmail',
-    auth: {
-        user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASS
+const sendEmailViaBrevo = async ({ from, to, subject, html, bcc }) => {
+    const formatEmail = (email) => {
+        if (typeof email === 'object') return email;
+        return { email };
+    };
+
+    const toArr = Array.isArray(to) ? to.map(formatEmail) : (to ? [{ email: to }] : []);
+    const bccArr = Array.isArray(bcc) ? bcc.map(formatEmail) : (bcc ? [{ email: bcc }] : []);
+
+    const payload = {
+        sender: formatEmail(from || process.env.EMAIL_USER || 'noreply@example.com'),
+        subject: subject,
+        htmlContent: html,
+    };
+
+    if (toArr.length > 0) payload.to = toArr;
+
+    // Brevo usually requires at least one 'to' recipient. If only 'bcc' is present, set an initial 'to' as the sender
+    if (toArr.length === 0 && bccArr.length > 0) {
+        payload.to = [formatEmail(from || process.env.EMAIL_USER || 'noreply@example.com')];
     }
-});
+
+    if (bccArr.length > 0) payload.bcc = bccArr;
+
+    const response = await fetch('https://api.brevo.com/v3/smtp/email', {
+        method: 'POST',
+        headers: {
+            'Accept': 'application/json',
+            'api-key': process.env.BREVO_API_KEY,
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(payload)
+    });
+
+    if (!response.ok) {
+        const contentType = response.headers.get('content-type');
+        let errData = await response.text();
+        if (contentType && contentType.includes('application/json')) {
+            try { errData = JSON.parse(errData); } catch (e) { }
+        }
+        const error = new Error(`Brevo API Error: ${typeof errData === 'object' ? JSON.stringify(errData) : errData}`);
+        error.code = response.status;
+        throw error;
+    }
+
+    const data = await response.json();
+    return { response: '250 Message queued', messageId: data.messageId || 'unknown' };
+};
 
 const app = express();
 app.use(cors());
-app.use(express.json());
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
 const PORT = process.env.PORT;
 const mongoURI = process.env.MONGODB_URL;
@@ -46,10 +93,8 @@ const Member = mongoose.model('Member', memberSchema);
 
 const unitSchema = new mongoose.Schema({
     name: String,
-    head: String,
+    head: { type: mongoose.Schema.Types.ObjectId, ref: 'ProgramOfficer' },
     password: String, // Hashed
-    contact: String,
-    mail: String,
     members: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Member' }],
     unitNumber: String,
     createdDate: String,
@@ -106,6 +151,72 @@ const eventSchema = new mongoose.Schema({
 });
 
 const Event = mongoose.model('Event', eventSchema);
+
+const programOfficerSchema = new mongoose.Schema({
+    // Main Details
+    name: String,
+    designation: String,
+    department: String,
+    unit: String,
+    college: String,
+
+    // Personal Details
+    image: String, // Base64 or URL
+    dob: String,
+    community: String, // SC/ST/OBC/General
+    email: String,
+    mobile: String,
+    address: String,
+    dateOfAppointment: String,
+    teachingExperience: String,
+
+    // Academic
+    qualification: String,
+    seminars: [String],
+    etiCompleted: String, // Yes/No
+
+    // General
+    nssExperience: [String],
+    specialTalent: [String],
+
+    collegeId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+    createdAt: { type: Date, default: Date.now }
+});
+
+const ProgramOfficer = mongoose.model('ProgramOfficer', programOfficerSchema);
+
+// ... existing code ...
+
+app.post('/register-program-officer', verifyToken, async (req, res) => {
+    try {
+        const { officerData, collegeCode } = req.body;
+
+        const college = await User.findOne({ code: collegeCode });
+        if (!college) {
+            return res.status(404).json({ success: false, message: "College not found" });
+        }
+
+        const newOfficer = new ProgramOfficer({
+            ...officerData,
+            collegeId: college._id
+        });
+
+        await newOfficer.save();
+
+        // If a specific unit was selected, update that unit's head reference
+        if (officerData.unit) {
+            await Unit.findOneAndUpdate(
+                { unitNumber: officerData.unit, collegeId: college._id },
+                { head: newOfficer._id }
+            );
+        }
+
+        res.json({ success: true, message: "Program Officer registered successfully", officer: newOfficer });
+    } catch (error) {
+        console.error("Error registering program officer:", error);
+        res.status(500).json({ success: false, message: "Internal Server Error" });
+    }
+});
 
 // ... existing code ...
 
@@ -186,6 +297,53 @@ const comparePassword = async (candidate, target, doc) => {
 app.get('/', (_req, res) => {
     res.send('Hello, World!');
 });
+
+// Test Email Endpoint - For debugging email issues
+app.post('/test-email', async (req, res) => {
+    const { testEmail } = req.body;
+
+    if (!testEmail) {
+        return res.status(400).json({
+            success: false,
+            message: "Please provide a testEmail in the request body"
+        });
+    }
+
+    try {
+        const mailOptions = {
+            from: process.env.EMAIL_USER,
+            to: testEmail,
+            subject: 'Test Email from NSS Portal',
+            html: `
+                <div style="font-family: Arial, sans-serif; padding: 20px;">
+                    <h2>✅ Email Configuration Test</h2>
+                    <p>If you're reading this, nodemailer is working correctly on Render!</p>
+                    <p><strong>Sent at:</strong> ${new Date().toLocaleString()}</p>
+                    <p><strong>From:</strong> ${process.env.EMAIL_USER}</p>
+                </div>
+            `
+        };
+
+        const info = await sendEmailViaBrevo(mailOptions);
+
+        console.log('✅ Test email sent successfully:', info.response);
+        res.json({
+            success: true,
+            message: 'Test email sent successfully!',
+            info: info.response,
+            messageId: info.messageId
+        });
+    } catch (error) {
+        console.error('❌ Error sending test email:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to send test email',
+            error: error.message,
+            code: error.code
+        });
+    }
+});
+
 
 app.post('/login', async (req, res) => {
     console.log('inside login');
@@ -276,7 +434,10 @@ app.get('/college-dashboard', verifyToken, async (req, res) => {
         });
     }
 
-    const user = await User.findOne({ userName: username }).populate('units');
+    const user = await User.findOne({ userName: username }).populate({
+        path: 'units',
+        populate: { path: 'head' }
+    });
 
     if (!user) {
         return res.status(401).json({
@@ -319,10 +480,7 @@ app.post('/addUnit', verifyToken, async (req, res) => {
 
         const newUnit = new Unit({
             name,
-            head,
             password: hashedPassword,
-            contact,
-            mail: mail,
             members: [], // Initialize with empty, will push IDs below
             unitNumber,
             createdDate,
@@ -446,7 +604,9 @@ app.get('/unit-dashboard/:unitCode/:collegeCode', verifyToken, async (req, res) 
         }
     }
 
-    const unit = await Unit.findOne({ unitNumber: unitCode, collegeId: collegeObject._id }).populate('members');
+    const unit = await Unit.findOne({ unitNumber: unitCode, collegeId: collegeObject._id })
+        .populate('members')
+        .populate('head');
     if (!unit) {
         return res.status(401).json({ success: false, message: "Unit not found" });
     }
@@ -520,28 +680,37 @@ app.post('/bulk-add-members', verifyToken, async (req, res) => {
     if (req.user.unitNumber && req.user.unitNumber !== unitCode) return res.status(403).json({ message: "Unauthorized" });
 
     try {
-        const college = await User.findOne({ code: collegeCode });
-        if (!college) return res.status(404).json({ success: false, message: "College not found" });
+        const user = await User.findOne({ code: collegeCode });
+        if (!user) return res.status(404).json({ success: false, message: "College not found" });
 
-        const unit = await Unit.findOne({ unitNumber: unitCode, collegeId: college._id });
-        if (!unit) return res.status(404).json({ success: false, message: "Unit not found" });
+        try {
+            const unit = await Unit.findOne({ unitNumber: unitCode, collegeId: user._id })
+                .populate('members')
+                .populate('head');
+            if (!unit) {
+                return res.status(404).json({ success: false, message: "Unit not found" });
+            }
 
-        const memberDocs = members.map(m => ({
-            ...m,
-            unitId: unit._id,
-            collegeId: college._id
-        }));
+            const memberDocs = members.map(m => ({
+                ...m,
+                unitId: unit._id,
+                collegeId: user._id
+            }));
 
-        const createdMembers = await Member.insertMany(memberDocs);
-        const memberIds = createdMembers.map(m => m._id);
+            const createdMembers = await Member.insertMany(memberDocs);
+            const memberIds = createdMembers.map(m => m._id);
 
-        unit.members.push(...memberIds);
-        await unit.save();
+            unit.members.push(...memberIds);
+            await unit.save();
 
-        const updatedUnit = await Unit.findById(unit._id).populate('members');
-        res.json({ success: true, message: `${createdMembers.length} members added successfully`, unit: updatedUnit });
+            const updatedUnit = await Unit.findById(unit._id).populate('members');
+            res.json({ success: true, message: `${createdMembers.length} members added successfully`, unit: updatedUnit });
+        } catch (error) {
+            console.error("Error bulk adding members:", error);
+            res.status(500).json({ success: false, message: "Internal Server Error" });
+        }
     } catch (error) {
-        console.error("Error bulk adding members:", error);
+        console.error("Outer error in bulk-add-members:", error);
         res.status(500).json({ success: false, message: "Internal Server Error" });
     }
 });
@@ -698,13 +867,17 @@ app.post('/addEvent', verifyToken, async (req, res) => {
                     `
                 };
 
-                transporter.sendMail(mailOptions, (error, info) => {
-                    if (error) {
-                        console.error("Error sending bulk email:", error);
-                    } else {
-                        console.log("Bulk event email sent: " + info.response);
-                    }
-                });
+                try {
+                    const info = await sendEmailViaBrevo(mailOptions);
+                    console.log('✅ Bulk event email sent successfully:', info.response);
+                    console.log(`📧 Sent to ${recipientEmails.length} recipients`);
+                } catch (error) {
+                    console.error('❌ Error sending bulk email:', error.message);
+                    console.error('Error code:', error.code);
+                    // Don't fail the event creation if email fails
+                }
+            } else {
+                console.log('⚠️ No unit emails found to send notifications');
             }
         } catch (emailErr) {
             console.error("Failed to fetch units for email notification:", emailErr);
@@ -964,13 +1137,16 @@ app.put('/updateEvent', verifyToken, async (req, res) => {
                         `
                     };
 
-                    transporter.sendMail(mailOptions, (error, info) => {
-                        if (error) {
-                            console.error("Error sending bulk update email:", error);
-                        } else {
-                            console.log("Bulk update email sent: " + info.response);
-                        }
-                    });
+                    try {
+                        const info = await sendEmailViaBrevo(mailOptions);
+                        console.log('✅ Bulk update email sent successfully:', info.response);
+                        console.log(`📧 Sent to ${recipientEmails.length} recipients`);
+                    } catch (error) {
+                        console.error('❌ Error sending bulk update email:', error.message);
+                        console.error('Error code:', error.code);
+                    }
+                } else {
+                    console.log('⚠️ No unit emails found for update notification');
                 }
             } catch (emailErr) {
                 console.error("Failed to fetch units for update notification:", emailErr);
