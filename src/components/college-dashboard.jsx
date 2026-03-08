@@ -6,6 +6,7 @@ import { useState } from "react";
 import * as XLSX from "xlsx";
 import toast from 'react-hot-toast';
 import ThemeToggle from "./ThemeToggle";
+import ProgramOfficerModal from "./ProgramOfficerModal";
 
 const CollegeDashboard = () => {
     const username = localStorage.getItem("nss_username");
@@ -28,6 +29,7 @@ const CollegeDashboard = () => {
     const [filterUnit, setFilterUnit] = useState("");
     const [filterBatch, setFilterBatch] = useState("");
     const [isCreating, setIsCreating] = useState(false);
+    const [showOfficerModal, setShowOfficerModal] = useState(false);
 
     // Check if admin is viewing this dashboard
     const isAdminViewing = localStorage.getItem("adminToken") !== null;
@@ -63,8 +65,8 @@ const CollegeDashboard = () => {
             toast.error("Maximum limit of 6 units reached.");
             return;
         }
-        if (!newUnitName || !newUnitHead) {
-            toast.error("Please fill in Unit Name and Unit Head.");
+        if (!newUnitName) {
+            toast.error("Please fill in Unit Name.");
             return;
         }
 
@@ -78,9 +80,6 @@ const CollegeDashboard = () => {
             username,
             name: newUnitName,
             password: newUnitPassword,
-            head: newUnitHead,
-            contact: newUnitContact,
-            mail: newUnitMail,
             members: newMembers,
             unitNumber,
             createdDate
@@ -104,8 +103,6 @@ const CollegeDashboard = () => {
                 setUnits([...units, createdUnit]);
                 setShowUnitModal(false);
                 setNewUnitName("");
-                setNewUnitHead("");
-                setNewUnitContact("");
                 setNewUnitPassword("");
                 setNewMembers([]);
                 toast.success("Unit created successfully!");
@@ -286,6 +283,12 @@ const CollegeDashboard = () => {
                         >
                             + Create New Unit
                         </button>
+                        <button
+                            className="btn btn-success"
+                            onClick={() => setShowOfficerModal(true)}
+                        >
+                            📋 Register Program Officer
+                        </button>
                     </div>
                 </div>
 
@@ -386,7 +389,7 @@ const CollegeDashboard = () => {
                                     <span className="badge badge-success">{unit.unitNumber}</span>
                                 </div>
                                 <div className="mb-4">
-                                    <p className="mb-1 text-sm"><strong className="text-white">Head:</strong> {unit.head || unit.unitHead}</p>
+                                    <p className="mb-1 text-sm"><strong className="text-white">Head:</strong> {unit.head?.name || "Not Assigned"}</p>
                                     <p className="mb-1 text-sm"><strong className="text-white">Created:</strong> {unit.createdDate}</p>
                                     <p className="mb-1 text-sm"><strong className="text-white">Members:</strong> {unit.members ? unit.members.length : 0}</p>
                                 </div>
@@ -424,24 +427,6 @@ const CollegeDashboard = () => {
                                 />
                             </div>
                             <div className="form-group">
-                                <label className="form-label">Unit Head</label>
-                                <input
-                                    type="text"
-                                    className="form-input"
-                                    value={newUnitHead}
-                                    onChange={(e) => setNewUnitHead(e.target.value)}
-                                    placeholder="Name of Unit Head"
-                                />
-                            </div>
-                            <div className="form-group">
-                                <label className="form-label">Contact Number</label>
-                                <input className="form-input" placeholder="Contact" value={newUnitContact} onChange={(e) => setNewUnitContact(e.target.value)} />
-                            </div>
-                            <div className="form-group">
-                                <label className="form-label">Email</label>
-                                <input className="form-input" placeholder="Email" value={newUnitMail} onChange={(e) => setNewUnitMail(e.target.value)} />
-                            </div>
-                            <div className="form-group col-span-2" style={{ gridColumn: '1 / -1' }}>
                                 <label className="form-label">Unit Password</label>
                                 <input className="form-input" type="password" placeholder="Set a password for unit login" value={newUnitPassword} onChange={(e) => setNewUnitPassword(e.target.value)} />
                             </div>
@@ -514,6 +499,14 @@ const CollegeDashboard = () => {
                     </div>
                 </div>
             )}
+
+            <ProgramOfficerModal
+                isOpen={showOfficerModal}
+                onClose={() => setShowOfficerModal(false)}
+                insName={insName}
+                insCode={insCode}
+                units={units}
+            />
         </div>
     );
 };

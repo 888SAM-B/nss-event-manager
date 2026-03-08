@@ -15,6 +15,7 @@ const Login = () => {
         if (localStorage.getItem("nsstoken")) {
             navigate("/college-dashboard");
         }
+
     }, [navigate]);
 
     const handleLogin = async (e) => {
