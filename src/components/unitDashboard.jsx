@@ -7,6 +7,7 @@ import axios from "axios";
 import * as XLSX from "xlsx";
 import toast from 'react-hot-toast';
 import ThemeToggle from "./ThemeToggle";
+import VolunteerEnrolmentModal from "./VolunteerEnrolmentModal";
 
 const UnitDashboard = () => {
     const navigate = useNavigate();
@@ -37,6 +38,9 @@ const UnitDashboard = () => {
     const [isSaving, setIsSaving] = useState(false);
     const [isUploading, setIsUploading] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
+    const [selectedMember, setSelectedMember] = useState(null);
+    const [showEnrolmentModal, setShowEnrolmentModal] = useState(false);
+    const [showExcelInfo, setShowExcelInfo] = useState(false);
 
 
     // Check if accessed from college dashboard (admin or college user)
@@ -111,6 +115,24 @@ const UnitDashboard = () => {
         const workbook = XLSX.utils.book_new();
         XLSX.utils.book_append_sheet(workbook, worksheet, "Unit Members");
         XLSX.writeFile(workbook, `Unit_${unit.unitNumber}_Members.xlsx`);
+    };
+
+    const handleDownloadTemplate = () => {
+        const template = [{
+            "Name": "",
+            "Reg No": "",
+            "Dept": "",
+            "Course": "",
+            "Community": "",
+            "Blood Group": "",
+            "DOB": "YYYY-MM-DD",
+            "Batch": "YYYY-YYYY",
+            "Contact": ""
+        }];
+        const worksheet = XLSX.utils.json_to_sheet(template);
+        const workbook = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(workbook, worksheet, "Template");
+        XLSX.writeFile(workbook, "NSS_Member_Upload_Template.xlsx");
     };
 
     const handleRespondInvite = async (eventId, response) => {
@@ -444,15 +466,15 @@ const UnitDashboard = () => {
                             </div>
                             <div>
                                 <p className="text-xs text-muted mb-1">UNIT HEAD</p>
-                                <p className="fw-bold">{unit?.head}</p>
+                                <p className="fw-bold">{unit?.head?.name || unit?.head}</p>
                             </div>
                             <div>
                                 <p className="text-xs text-muted mb-1">CONTACT</p>
-                                <p className="fw-bold">{unit?.contact}</p>
+                                <p className="fw-bold">{unit?.head?.mobile || unit?.contact}</p>
                             </div>
                             <div style={{ gridColumn: '1 / -1' }}>
                                 <p className="text-xs text-muted mb-1">EMAIL</p>
-                                <p className="fw-bold">{unit?.mail}</p>
+                                <p className="fw-bold">{unit?.head?.email || unit?.mail}</p>
                             </div>
                         </div>
                     </div>
@@ -496,16 +518,35 @@ const UnitDashboard = () => {
                         <button className="btn btn-success" onClick={handleExportExcel} style={{ marginRight: '10px' }}>
                             Excel Export
                         </button>
-                        <label className={`btn excel btn-secondary ${isUploading ? 'disabled' : ''}`} style={{ marginRight: '10px', cursor: 'pointer', marginBottom: 0 }}>
-                            {isUploading ? "Uploading..." : "Upload via Excel"}
-                            <input
-                                type="file"
-                                accept=".xlsx, .xls"
-                                onChange={handleBulkUpload}
-                                disabled={isUploading}
-                                style={{ display: 'none' }}
-                            />
-                        </label>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '5px', marginRight: '10px' }}>
+                            <label className={`btn excel btn-secondary ${isUploading ? 'disabled' : ''}`} style={{ cursor: 'pointer', marginBottom: 0 }}>
+                                {isUploading ? "Uploading..." : "Upload via Excel"}
+                                <input
+                                    type="file"
+                                    accept=".xlsx, .xls"
+                                    onChange={handleBulkUpload}
+                                    disabled={isUploading}
+                                    style={{ display: 'none' }}
+                                />
+                            </label>
+                            <span
+                                onClick={() => setShowExcelInfo(true)}
+                                style={{
+                                    cursor: 'pointer',
+                                    background: 'var(--primary-color)',
+                                    color: 'white',
+                                    borderRadius: '50%',
+                                    width: '20px',
+                                    height: '20px',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    fontSize: '12px',
+                                    fontWeight: 'bold'
+                                }}
+                                title="Excel Format Info"
+                            >i</span>
+                        </div>
                         <button className="btn add-btn btn-primary" onClick={handleAddClick}>
                             + Add Member
                         </button>
@@ -563,6 +604,15 @@ const UnitDashboard = () => {
                                                         className="btn btn-sm btn-danger"
                                                     >
                                                         Delete
+                                                    </button>
+                                                    <button
+                                                        onClick={() => {
+                                                            setSelectedMember(member);
+                                                            setShowEnrolmentModal(true);
+                                                        }}
+                                                        className={`btn btn-sm ${member.isEnrolled ? 'btn-success' : 'btn-outline-primary'}`}
+                                                    >
+                                                        {member.isEnrolled ? "✓ Form" : "📝 Form"}
                                                     </button>
                                                 </div>
                                             </td>
@@ -751,6 +801,47 @@ const UnitDashboard = () => {
                                 ))}
                             </div>
                         )}
+                    </div>
+                </div>
+            )}
+
+            <VolunteerEnrolmentModal
+                isOpen={showEnrolmentModal}
+                onClose={() => setShowEnrolmentModal(false)}
+                member={selectedMember}
+                collegeData={college}
+                unitData={unit}
+                onSuccess={() => {
+                    // Update the member in the local state
+                    const updatedMembers = unit.members.map(m =>
+                        m._id === selectedMember._id ? { ...m, isEnrolled: true } : m
+                    );
+                    setUnit({ ...unit, members: updatedMembers });
+                }}
+            />
+
+            {/* Excel Info Modal */}
+            {showExcelInfo && (
+                <div className="modal-overlay" onClick={() => setShowExcelInfo(false)}>
+                    <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '500px' }}>
+                        <div className="flex-between mb-4">
+                            <h2 className="mb-0">Excel Format Guidelines</h2>
+                            <button className="btn btn-sm btn-secondary" onClick={() => setShowExcelInfo(false)}>&times;</button>
+                        </div>
+                        <div className="p-2">
+                            <ul className="text-sm" style={{ listStyle: 'disc', paddingLeft: '20px', lineHeight: '1.6' }}>
+                                <li>Ensure the first row contains the exact headers.</li>
+                                <li><strong>Headers:</strong> Name, Reg No, Dept, Course, Community, Blood Group, DOB, Batch, Contact</li>
+                                <li><strong>DOB Format:</strong> Use YYYY-MM-DD (e.g., 2005-05-15)</li>
+                                <li><strong>Batch Format:</strong> Use YYYY-YYYY (e.g., 2022-2026)</li>
+                                <li>All fields are required for a proper student profile.</li>
+                            </ul>
+                            <div className="mt-6 flex-center">
+                                <button className="btn btn-success w-100" onClick={handleDownloadTemplate}>
+                                    Download Template (.xlsx)
+                                </button>
+                            </div>
+                        </div>
                     </div>
                 </div>
             )}

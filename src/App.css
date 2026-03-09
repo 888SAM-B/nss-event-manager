@@ -145,6 +145,19 @@ input[type="checkbox"] {
     justify-content: space-around;
 }
 
+.table {
+
+    width: 100%;
+
+}
+
+.table tr {
+
+    width: 100px;
+    text-align: center;
+    height: 80px;
+}
+
 @media screen and (max-width:500px) {
     .one {
         width: 100%;

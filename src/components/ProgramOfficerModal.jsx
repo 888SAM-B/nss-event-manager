@@ -1,10 +1,10 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import axios from "axios";
 import toast from "react-hot-toast";
 import jsPDF from "jspdf";
 import html2canvas from "html2canvas";
 
-const ProgramOfficerModal = ({ isOpen, onClose, insName, insCode, units }) => {
+const ProgramOfficerModal = ({ isOpen, onClose, insName, insCode, units, initialData = null, readOnly = false, onSuccess }) => {
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [formData, setFormData] = useState({
         name: "",
@@ -26,6 +26,39 @@ const ProgramOfficerModal = ({ isOpen, onClose, insName, insCode, units }) => {
         nssExperience: [""],
         specialTalent: [""]
     });
+
+    useEffect(() => {
+        if (initialData) {
+            setFormData({
+                ...initialData,
+                college: initialData.college || insName || "",
+                seminars: initialData.seminars?.length ? initialData.seminars : [""],
+                nssExperience: initialData.nssExperience?.length ? initialData.nssExperience : [""],
+                specialTalent: initialData.specialTalent?.length ? initialData.specialTalent : [""]
+            });
+        } else {
+            setFormData({
+                name: "",
+                designation: "",
+                department: "",
+                unit: "",
+                college: insName || "",
+                dob: "",
+                community: "General",
+                email: "",
+                mobile: "",
+                address: "",
+                dateOfAppointment: "",
+                teachingExperience: "",
+                qualification: "",
+                etiCompleted: "No",
+                image: null,
+                seminars: [""],
+                nssExperience: [""],
+                specialTalent: [""]
+            });
+        }
+    }, [initialData, insName, isOpen]);
 
     if (!isOpen) return null;
 
@@ -114,8 +147,8 @@ const ProgramOfficerModal = ({ isOpen, onClose, insName, insCode, units }) => {
 
             if (res.data.success) {
                 toast.success("Program Officer Registered Successfully!");
-                // Optionally generate PDF automatically
-                // generatePDF(); 
+                if (onSuccess) onSuccess();
+                onClose();
             } else {
                 toast.error(res.data.message || "Registration failed");
             }
@@ -131,7 +164,7 @@ const ProgramOfficerModal = ({ isOpen, onClose, insName, insCode, units }) => {
         <div className="modal-overlay">
             <div className="modal-content" style={{ maxWidth: "800px" }}>
                 <div className="flex-between mb-6">
-                    <h2 className="mb-0">Register Program Officer Pro-forma</h2>
+                    <h2 className="mb-0">{readOnly ? "Program Officer Details" : "Register Program Officer Pro-forma"}</h2>
                     <button className="btn btn-sm btn-secondary" onClick={onClose}>&times;</button>
                 </div>
 
@@ -142,19 +175,19 @@ const ProgramOfficerModal = ({ isOpen, onClose, insName, insCode, units }) => {
                         <div className="grid-cols-2">
                             <div className="form-group">
                                 <label>Name of Program Officer</label>
-                                <input className="form-input" name="name" value={formData.name} onChange={handleInputChange} required />
+                                <input className="form-input" name="name" value={formData.name} onChange={handleInputChange} required disabled={readOnly} />
                             </div>
                             <div className="form-group">
                                 <label>Designation</label>
-                                <input className="form-input" name="designation" value={formData.designation} onChange={handleInputChange} required />
+                                <input className="form-input" name="designation" value={formData.designation} onChange={handleInputChange} required disabled={readOnly} />
                             </div>
                             <div className="form-group">
                                 <label>Department</label>
-                                <input className="form-input" name="department" value={formData.department} onChange={handleInputChange} required />
+                                <input className="form-input" name="department" value={formData.department} onChange={handleInputChange} required disabled={readOnly} />
                             </div>
                             <div className="form-group">
                                 <label>Unit</label>
-                                <select className="form-input" name="unit" value={formData.unit} onChange={handleInputChange} required>
+                                <select className="form-input" name="unit" value={formData.unit} onChange={handleInputChange} required disabled={readOnly}>
                                     <option value="">Select Unit</option>
                                     {units.map(u => <option key={u.unitNumber} value={u.unitNumber}>{u.unitNumber} - {u.name}</option>)}
                                 </select>
@@ -166,18 +199,25 @@ const ProgramOfficerModal = ({ isOpen, onClose, insName, insCode, units }) => {
                     <div className="mb-8">
                         <h3 className="section-title text-primary mb-4" style={{ borderBottom: "2px solid var(--primary-color)", paddingBottom: "5px" }}>Personal Details</h3>
                         <div className="grid-cols-2">
-                            <div className="form-group">
-                                <label>Profile Image</label>
-                                <input type="file" className="form-input" accept="image/*" onChange={handleImageChange} />
-                                {formData.image && <img src={formData.image} alt="Preview" style={{ width: "80px", height: "80px", objectFit: "cover", marginTop: "10px", borderRadius: "5px" }} />}
-                            </div>
+                            {!readOnly && (
+                                <div className="form-group">
+                                    <label>Profile Image</label>
+                                    <input type="file" className="form-input" accept="image/*" onChange={handleImageChange} />
+                                </div>
+                            )}
+                            {formData.image && (
+                                <div className="form-group">
+                                    <label>Current Photo</label>
+                                    <img src={formData.image} alt="Preview" style={{ width: "80px", height: "80px", objectFit: "cover", marginTop: "10px", borderRadius: "5px", border: "1px solid #ddd" }} />
+                                </div>
+                            )}
                             <div className="form-group">
                                 <label>Date of Birth</label>
-                                <input type="date" className="form-input" name="dob" value={formData.dob} onChange={handleInputChange} required />
+                                <input type="date" className="form-input" name="dob" value={formData.dob} onChange={handleInputChange} required disabled={readOnly} />
                             </div>
                             <div className="form-group">
                                 <label>Community</label>
-                                <select className="form-input" name="community" value={formData.community} onChange={handleInputChange}>
+                                <select className="form-input" name="community" value={formData.community} onChange={handleInputChange} disabled={readOnly}>
                                     <option value="General">General</option>
                                     <option value="SC">SC</option>
                                     <option value="ST">ST</option>
@@ -186,23 +226,23 @@ const ProgramOfficerModal = ({ isOpen, onClose, insName, insCode, units }) => {
                             </div>
                             <div className="form-group">
                                 <label>Email ID</label>
-                                <input type="email" className="form-input" name="email" value={formData.email} onChange={handleInputChange} required />
+                                <input type="email" className="form-input" name="email" value={formData.email} onChange={handleInputChange} required disabled={readOnly} />
                             </div>
                             <div className="form-group">
                                 <label>Mobile Number</label>
-                                <input className="form-input" name="mobile" value={formData.mobile} onChange={handleInputChange} required />
+                                <input className="form-input" name="mobile" value={formData.mobile} onChange={handleInputChange} required disabled={readOnly} />
                             </div>
                             <div className="form-group">
                                 <label>Date of Appointment in College</label>
-                                <input type="date" className="form-input" name="dateOfAppointment" value={formData.dateOfAppointment} onChange={handleInputChange} required />
+                                <input type="date" className="form-input" name="dateOfAppointment" value={formData.dateOfAppointment} onChange={handleInputChange} required disabled={readOnly} />
                             </div>
                             <div className="form-group col-span-2" style={{ gridColumn: "1 / -1" }}>
                                 <label>Total Teaching Experience (Years)</label>
-                                <input className="form-input" name="teachingExperience" value={formData.teachingExperience} onChange={handleInputChange} placeholder="e.g. 10 years including previous org" />
+                                <input className="form-input" name="teachingExperience" value={formData.teachingExperience} onChange={handleInputChange} placeholder="e.g. 10 years including previous org" disabled={readOnly} />
                             </div>
                             <div className="form-group col-span-2" style={{ gridColumn: "1 / -1" }}>
                                 <label>Address</label>
-                                <textarea className="form-input" name="address" value={formData.address} onChange={handleInputChange} rows="3" required></textarea>
+                                <textarea className="form-input" name="address" value={formData.address} onChange={handleInputChange} rows="3" required disabled={readOnly}></textarea>
                             </div>
                         </div>
                     </div>
@@ -212,17 +252,17 @@ const ProgramOfficerModal = ({ isOpen, onClose, insName, insCode, units }) => {
                         <h3 className="section-title text-primary mb-4" style={{ borderBottom: "2px solid var(--primary-color)", paddingBottom: "5px" }}>Academic</h3>
                         <div className="form-group">
                             <label>Qualification</label>
-                            <input className="form-input" name="qualification" value={formData.qualification} onChange={handleInputChange} required />
+                            <input className="form-input" name="qualification" value={formData.qualification} onChange={handleInputChange} required disabled={readOnly} />
                         </div>
                         <div className="form-group">
                             <label className="flex-between">
                                 Seminar / Workshops / Courses Attended
-                                <button type="button" className="btn btn-sm btn-secondary" onClick={() => addDynamicField("seminars")}>+</button>
+                                {!readOnly && <button type="button" className="btn btn-sm btn-secondary" onClick={() => addDynamicField("seminars")}>+</button>}
                             </label>
                             {formData.seminars.map((item, idx) => (
                                 <div key={idx} className="input-group mb-2">
-                                    <input className="form-input" value={item} onChange={(e) => handleDynamicChange(idx, "seminars", e.target.value)} placeholder={`Item ${idx + 1}`} />
-                                    {formData.seminars.length > 1 && (
+                                    <input className="form-input" value={item} onChange={(e) => handleDynamicChange(idx, "seminars", e.target.value)} placeholder={`Item ${idx + 1}`} disabled={readOnly} />
+                                    {!readOnly && formData.seminars.length > 1 && (
                                         <button type="button" className="btn btn-danger btn-sm" onClick={() => removeDynamicField(idx, "seminars")}>&times;</button>
                                     )}
                                 </div>
@@ -232,10 +272,10 @@ const ProgramOfficerModal = ({ isOpen, onClose, insName, insCode, units }) => {
                             <label>ETI Training Completed?</label>
                             <div className="d-flex gap-4">
                                 <label className="form-check-label d-flex align-items-center gap-2">
-                                    <input type="radio" name="etiCompleted" value="Yes" checked={formData.etiCompleted === "Yes"} onChange={handleInputChange} /> Yes
+                                    <input type="radio" name="etiCompleted" value="Yes" checked={formData.etiCompleted === "Yes"} onChange={handleInputChange} disabled={readOnly} /> Yes
                                 </label>
                                 <label className="form-check-label d-flex align-items-center gap-2">
-                                    <input type="radio" name="etiCompleted" value="No" checked={formData.etiCompleted === "No"} onChange={handleInputChange} /> No
+                                    <input type="radio" name="etiCompleted" value="No" checked={formData.etiCompleted === "No"} onChange={handleInputChange} disabled={readOnly} /> No
                                 </label>
                             </div>
                         </div>
@@ -247,12 +287,12 @@ const ProgramOfficerModal = ({ isOpen, onClose, insName, insCode, units }) => {
                         <div className="form-group">
                             <label className="flex-between">
                                 Previous Experience in NSS
-                                <button type="button" className="btn btn-sm btn-secondary" onClick={() => addDynamicField("nssExperience")}>+</button>
+                                {!readOnly && <button type="button" className="btn btn-sm btn-secondary" onClick={() => addDynamicField("nssExperience")}>+</button>}
                             </label>
                             {formData.nssExperience.map((item, idx) => (
                                 <div key={idx} className="input-group mb-2">
-                                    <input className="form-input" value={item} onChange={(e) => handleDynamicChange(idx, "nssExperience", e.target.value)} placeholder={`Experience ${idx + 1}`} />
-                                    {formData.nssExperience.length > 1 && (
+                                    <input className="form-input" value={item} onChange={(e) => handleDynamicChange(idx, "nssExperience", e.target.value)} placeholder={`Experience ${idx + 1}`} disabled={readOnly} />
+                                    {!readOnly && formData.nssExperience.length > 1 && (
                                         <button type="button" className="btn btn-danger btn-sm" onClick={() => removeDynamicField(idx, "nssExperience")}>&times;</button>
                                     )}
                                 </div>
@@ -261,12 +301,12 @@ const ProgramOfficerModal = ({ isOpen, onClose, insName, insCode, units }) => {
                         <div className="form-group">
                             <label className="flex-between">
                                 Special Talent
-                                <button type="button" className="btn btn-sm btn-secondary" onClick={() => addDynamicField("specialTalent")}>+</button>
+                                {!readOnly && <button type="button" className="btn btn-sm btn-secondary" onClick={() => addDynamicField("specialTalent")}>+</button>}
                             </label>
                             {formData.specialTalent.map((item, idx) => (
                                 <div key={idx} className="input-group mb-2">
-                                    <input className="form-input" value={item} onChange={(e) => handleDynamicChange(idx, "specialTalent", e.target.value)} placeholder={`Talent ${idx + 1}`} />
-                                    {formData.specialTalent.length > 1 && (
+                                    <input className="form-input" value={item} onChange={(e) => handleDynamicChange(idx, "specialTalent", e.target.value)} placeholder={`Talent ${idx + 1}`} disabled={readOnly} />
+                                    {!readOnly && formData.specialTalent.length > 1 && (
                                         <button type="button" className="btn btn-danger btn-sm" onClick={() => removeDynamicField(idx, "specialTalent")}>&times;</button>
                                     )}
                                 </div>
@@ -279,10 +319,12 @@ const ProgramOfficerModal = ({ isOpen, onClose, insName, insCode, units }) => {
                             <button type="button" className="btn btn-success" onClick={generatePDF}>Download Form PDF</button>
                         </div>
                         <div className="d-flex gap-2">
-                            <button type="button" className="btn btn-secondary" onClick={onClose}>Cancel</button>
-                            <button type="submit" className="btn btn-primary" disabled={isSubmitting}>
-                                {isSubmitting ? "Registering..." : "Register Officer"}
-                            </button>
+                            <button type="button" className="btn btn-secondary" onClick={onClose}>Close</button>
+                            {!readOnly && (
+                                <button type="submit" className="btn btn-primary" disabled={isSubmitting}>
+                                    {isSubmitting ? "Registering..." : "Register Officer"}
+                                </button>
+                            )}
                         </div>
                     </div>
                 </form>

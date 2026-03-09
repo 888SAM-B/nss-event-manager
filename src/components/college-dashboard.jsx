@@ -7,6 +7,7 @@ import * as XLSX from "xlsx";
 import toast from 'react-hot-toast';
 import ThemeToggle from "./ThemeToggle";
 import ProgramOfficerModal from "./ProgramOfficerModal";
+import VolunteerEnrolmentModal from "./VolunteerEnrolmentModal";
 
 const CollegeDashboard = () => {
     const username = localStorage.getItem("nss_username");
@@ -30,6 +31,13 @@ const CollegeDashboard = () => {
     const [filterBatch, setFilterBatch] = useState("");
     const [isCreating, setIsCreating] = useState(false);
     const [showOfficerModal, setShowOfficerModal] = useState(false);
+    const [programOfficers, setProgramOfficers] = useState([]);
+    const [showOfficersList, setShowOfficersList] = useState(false);
+    const [selectedOfficer, setSelectedOfficer] = useState(null);
+    const [isOfficerReadOnly, setIsOfficerReadOnly] = useState(false);
+    const [collegeData, setCollegeData] = useState(null);
+    const [selectedMember, setSelectedMember] = useState(null);
+    const [showEnrolmentModal, setShowEnrolmentModal] = useState(false);
 
     // Check if admin is viewing this dashboard
     const isAdminViewing = localStorage.getItem("adminToken") !== null;
@@ -72,7 +80,7 @@ const CollegeDashboard = () => {
 
         const prefix = (insName || "INS").replace(/\s+/g, '').substring(0, 3).toUpperCase();
         const serial = units.length + 1;
-        const unitNumber = `${prefix}${insCode}${String(serial).padStart(2, '0')}`;
+        const unitNumber = `PUNSS${prefix}${insCode}${String(serial).padStart(2, '0')}`;
         console.log(unitNumber);
         const createdDate = new Date().toISOString().split('T')[0];
 
@@ -158,10 +166,13 @@ const CollegeDashboard = () => {
 
                 if (res.data.success) {
                     console.log(res.data.user);
+                    setCollegeData(res.data.user);
                     setinsName(res.data.user.insName);
                     setinsCode(res.data.user.code);
                     setUnits(res.data.user.units || []); // Ensure units is array
                     setLoading(false);
+                    // Fetch officers using the code from response
+                    fetchProgramOfficers(res.data.user.code);
                 } else {
                     navigate("/");
                 }
@@ -171,7 +182,22 @@ const CollegeDashboard = () => {
             }
         };
         fetchDashboard();
-    }, [username, navigate]);
+    }, [navigate, username]);
+
+    const fetchProgramOfficers = async (code) => {
+        const targetCode = code || insCode;
+        if (!targetCode) return;
+        try {
+            const res = await axios.get(`${import.meta.env.VITE_API_URL}/program-officers/${targetCode}`, {
+                headers: { Authorization: `Bearer ${localStorage.getItem("nsstoken")}` }
+            });
+            if (res.data.success) {
+                setProgramOfficers(res.data.officers);
+            }
+        } catch (error) {
+            console.error("Error fetching officers:", error);
+        }
+    };
 
     const fetchAllMembers = async () => {
         try {
@@ -271,13 +297,20 @@ const CollegeDashboard = () => {
                     <div className="d-flex gap-2">
                         <button
                             className="btn btn-secondary"
-                            onClick={fetchAllMembers}
+                            onClick={() => {
+                                setShowMembersList(false);
+                                setShowOfficersList(!showOfficersList);
+                            }}
                         >
-                            📊 View All Members
+                            👥 View Program Officers
                         </button>
                         <button
                             className="btn btn-primary"
-                            onClick={() => setShowUnitModal(true)}
+                            onClick={() => {
+                                setSelectedOfficer(null);
+                                setIsOfficerReadOnly(false);
+                                setShowUnitModal(true);
+                            }}
                             disabled={units.length >= 6}
                             title={units.length >= 6 ? "Maximum limit of 6 units reached" : ""}
                         >
@@ -285,12 +318,70 @@ const CollegeDashboard = () => {
                         </button>
                         <button
                             className="btn btn-success"
-                            onClick={() => setShowOfficerModal(true)}
+                            onClick={() => {
+                                setSelectedOfficer(null);
+                                setIsOfficerReadOnly(false);
+                                setShowOfficerModal(true);
+                            }}
                         >
                             📋 Register Program Officer
                         </button>
                     </div>
                 </div>
+
+                {showOfficersList && (
+                    <div className="card mb-6" style={{ background: 'var(--card-bg)', animation: 'fadeIn 0.5s' }}>
+                        <div className="flex-between mb-4">
+                            <h3>Registered Program Officers</h3>
+                            <button className="btn btn-sm btn-secondary" onClick={() => setShowOfficersList(false)}>&times; Close</button>
+                        </div>
+                        <div className="overflow-x-auto">
+                            <table className="table" border={1} style={{ borderCollapse: "collapse" }} cellPadding={30} cellSpacing={50} >
+                                <thead>
+                                    <tr>
+                                        <th>Photo</th>
+                                        <th>Name</th>
+                                        <th>Designation</th>
+                                        <th>Department</th>
+                                        <th>Unit</th>
+                                        <th>Contact</th>
+                                        <th>Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {programOfficers.length === 0 ? (
+                                        <tr><td colSpan="7" className="text-center py-4">No officers registered yet.</td></tr>
+                                    ) : (
+                                        programOfficers.map((officer) => (
+                                            <tr key={officer._id}>
+                                                <td>
+                                                    <img src={officer.image || "https://via.placeholder.com/40"} alt="Officer" style={{ width: '40px', height: '40px', borderRadius: '50%', objectFit: 'cover' }} />
+                                                </td>
+                                                <td>{officer.name}</td>
+                                                <td>{officer.designation}</td>
+                                                <td>{officer.department}</td>
+                                                <td><span className="badge badge-primary">{officer.unit || "Not Assigned"}</span></td>
+                                                <td>{officer.mobile}</td>
+                                                <td>
+                                                    <button
+                                                        className="btn btn-sm btn-outline-primary"
+                                                        onClick={() => {
+                                                            setSelectedOfficer(officer);
+                                                            setIsOfficerReadOnly(true);
+                                                            setShowOfficerModal(true);
+                                                        }}
+                                                    >
+                                                        📄 View / PDF
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                        ))
+                                    )}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                )}
 
                 {showMembersList ? (
                     <div className="card mb-6">
@@ -343,11 +434,12 @@ const CollegeDashboard = () => {
                                         <th>Dept</th>
                                         <th>Batch</th>
                                         <th>Contact</th>
+                                        <th>Action</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     {filteredAllMembers.map((m, index) => (
-                                        <tr key={m._id}>
+                                        <tr key={m._id}  >
                                             <td>{index + 1}</td>
                                             <td>{m.name}</td>
                                             <td><span className="badge badge-secondary">{m.regNo}</span></td>
@@ -355,6 +447,17 @@ const CollegeDashboard = () => {
                                             <td>{m.dept}</td>
                                             <td>{m.batchFrom} - {m.batchTo}</td>
                                             <td>{m.contact}</td>
+                                            <td>
+                                                <button
+                                                    className={`btn btn-sm ${m.isEnrolled ? 'btn-success' : 'btn-outline-primary'}`}
+                                                    onClick={() => {
+                                                        setSelectedMember(m);
+                                                        setShowEnrolmentModal(true);
+                                                    }}
+                                                >
+                                                    {m.isEnrolled ? "✓ View Enrolment" : "📝 Enrolment"}
+                                                </button>
+                                            </td>
                                         </tr>
                                     ))}
                                 </tbody>
@@ -389,7 +492,7 @@ const CollegeDashboard = () => {
                                     <span className="badge badge-success">{unit.unitNumber}</span>
                                 </div>
                                 <div className="mb-4">
-                                    <p className="mb-1 text-sm"><strong className="text-white">Head:</strong> {unit.head?.name || "Not Assigned"}</p>
+                                    <p className="mb-1 text-sm"><strong className="text-white">Head:</strong> {unit.head?.name || unit.head || "Not Assigned"}</p>
                                     <p className="mb-1 text-sm"><strong className="text-white">Created:</strong> {unit.createdDate}</p>
                                     <p className="mb-1 text-sm"><strong className="text-white">Members:</strong> {unit.members ? unit.members.length : 0}</p>
                                 </div>
@@ -506,6 +609,18 @@ const CollegeDashboard = () => {
                 insName={insName}
                 insCode={insCode}
                 units={units}
+                initialData={selectedOfficer}
+                readOnly={isOfficerReadOnly}
+                onSuccess={fetchProgramOfficers}
+            />
+
+            <VolunteerEnrolmentModal
+                isOpen={showEnrolmentModal}
+                onClose={() => setShowEnrolmentModal(false)}
+                member={selectedMember}
+                collegeData={collegeData}
+                unitData={selectedMember?.unitId}
+                onSuccess={fetchAllMembers}
             />
         </div>
     );
