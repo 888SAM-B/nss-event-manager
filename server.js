@@ -86,14 +86,32 @@ const memberSchema = new mongoose.Schema({
     batchFrom: String,
     batchTo: String,
     unitId: { type: mongoose.Schema.Types.ObjectId, ref: 'Unit' },
-    collegeId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' }
+    collegeId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+    // Annexure-A Enrolment Fields
+    fatherName: String,
+    fatherPhone: String,
+    sex: String,
+    height: String,
+    weight: String,
+    aadhaar: String,
+    enrolmentDate: String,
+    culturalTalents: String,
+    hobbies: String,
+    address: String,
+    image: String,
+    enrolmentNo: String,
+    remarks: String,
+    universityName: String,
+    isEnrolled: { type: Boolean, default: false }
 });
 
 const Member = mongoose.model('Member', memberSchema);
 
 const unitSchema = new mongoose.Schema({
     name: String,
-    head: { type: mongoose.Schema.Types.ObjectId, ref: 'ProgramOfficer' },
+    head: { type: mongoose.Schema.Types.Mixed, ref: 'ProgramOfficer' }, // Mixed to support legacy names and new ObjectIds
+    contact: String, // Legacy/Backup contact
+    mail: String,    // Legacy/Backup mail
     password: String, // Hashed
     members: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Member' }],
     unitNumber: String,
@@ -109,6 +127,7 @@ const insLoginScheme = new mongoose.Schema({
     password: String, // Hashed
     insName: String,
     location: String,
+    universityName: { type: String, default: "" },
     events: { type: Array, default: [] },
     code: String,
     units: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Unit' }]
@@ -214,6 +233,20 @@ app.post('/register-program-officer', verifyToken, async (req, res) => {
         res.json({ success: true, message: "Program Officer registered successfully", officer: newOfficer });
     } catch (error) {
         console.error("Error registering program officer:", error);
+        res.status(500).json({ success: false, message: "Internal Server Error" });
+    }
+});
+
+app.get('/program-officers/:collegeCode', verifyToken, async (req, res) => {
+    try {
+        const { collegeCode } = req.params;
+        const college = await User.findOne({ code: collegeCode });
+        if (!college) return res.status(404).json({ success: false, message: "College not found" });
+
+        const officers = await ProgramOfficer.find({ collegeId: college._id });
+        res.json({ success: true, officers });
+    } catch (error) {
+        console.error("Error fetching program officers:", error);
         res.status(500).json({ success: false, message: "Internal Server Error" });
     }
 });
