@@ -98,10 +98,10 @@ const memberSchema = new mongoose.Schema({
     culturalTalents: String,
     hobbies: String,
     address: String,
-    image: String,
     enrolmentNo: String,
     remarks: String,
     universityName: String,
+    email: String,
     isEnrolled: { type: Boolean, default: false }
 });
 
