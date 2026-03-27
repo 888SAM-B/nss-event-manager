@@ -18,29 +18,17 @@ const UnitDashboard = () => {
     const [error, setError] = useState("");
 
     const [search, setSearch] = useState("");
-    const [isModalOpen, setIsModalOpen] = useState(false);
-    const [memberForm, setMemberForm] = useState({
-        name: "",
-        regNo: "",
-        dept: "",
-        course: "",
-        community: "",
-        bloodGroup: "",
-        dob: "",
-        batchFrom: "",
-        batchTo: "",
-        contact: ""
-    });
     const [editingIndex, setEditingIndex] = useState(null);
     const [invites, setInvites] = useState([]);
     const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
     const [selectedMemberIds, setSelectedMemberIds] = useState([]);
-    const [isSaving, setIsSaving] = useState(false);
     const [isUploading, setIsUploading] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
     const [selectedMember, setSelectedMember] = useState(null);
     const [showEnrolmentModal, setShowEnrolmentModal] = useState(false);
     const [showExcelInfo, setShowExcelInfo] = useState(false);
+    const [modalMode, setModalMode] = useState("edit"); // "edit" | "view" | "download"
+
 
 
     // Check if accessed from college dashboard (admin or college user)
@@ -106,9 +94,21 @@ const UnitDashboard = () => {
             "Course": m.course,
             "Community": m.community,
             "Blood Group": m.bloodGroup,
-            "DOB": m.dob,
-            "Batch": `${m.batchFrom} - ${m.batchTo}`,
-            "Contact": m.contact
+            "DOB (YYYY-MM-DD)": m.dob,
+            "Batch (YYYY-YYYY)": `${m.batchFrom}-${m.batchTo}`,
+            "Contact": m.contact,
+            "Sex": m.sex || "",
+            "Father Name": m.fatherName || "",
+            "Father Contact": m.fatherPhone || "",
+            "Address": m.address || "",
+            "Height (cm)": m.height || "",
+            "Weight (kg)": m.weight || "",
+            "Email": m.email || "",
+            "Aadhaar": m.aadhaar || "",
+            "Enrolment Date (YYYY-MM-DD)": m.enrolmentDate || "",
+            "Cultural Talents": m.culturalTalents || "",
+            "Hobbies": m.hobbies || "",
+            "University Name": m.universityName || ""
         }));
 
         const worksheet = XLSX.utils.json_to_sheet(dataToExport);
@@ -125,9 +125,21 @@ const UnitDashboard = () => {
             "Course": "",
             "Community": "",
             "Blood Group": "",
-            "DOB": "YYYY-MM-DD",
-            "Batch": "YYYY-YYYY",
-            "Contact": ""
+            "DOB (YYYY-MM-DD)": "",
+            "Batch (YYYY-YYYY)": "",
+            "Contact": "",
+            "Sex": "",
+            "Father Name": "",
+            "Father Contact": "",
+            "Address": "",
+            "Height (cm)": "",
+            "Weight (kg)": "",
+            "Email": "",
+            "Aadhaar": "",
+            "Enrolment Date (YYYY-MM-DD)": "",
+            "Cultural Talents": "",
+            "Hobbies": "",
+            "University Name": ""
         }];
         const worksheet = XLSX.utils.json_to_sheet(template);
         const workbook = XLSX.utils.book_new();
@@ -177,31 +189,29 @@ const UnitDashboard = () => {
 
     const handleAddClick = () => {
         setEditingIndex(null);
-        setMemberForm({
-            name: "",
-            regNo: "",
-            dept: "",
-            course: "",
-            community: "",
-            bloodGroup: "",
-            dob: "",
-            batchFrom: "",
-            batchTo: "",
-            contact: ""
-        });
-        setIsModalOpen(true);
+        setSelectedMember(null);
+        setModalMode("edit");
+        setShowEnrolmentModal(true);
     };
 
     const handleUpdateClick = (member) => {
-        // Find ORIGINAL index in the full unit.members array
         const index = unit.members.indexOf(member);
         setEditingIndex(index);
-        setMemberForm({ ...member });
-        setIsModalOpen(true);
+        setSelectedMember(member);
+        setModalMode("edit");
+        setShowEnrolmentModal(true);
     };
 
-    const handleEditChange = (e) => {
-        setMemberForm({ ...memberForm, [e.target.name]: e.target.value });
+    const handleViewClick = (member) => {
+        setSelectedMember(member);
+        setModalMode("view");
+        setShowEnrolmentModal(true);
+    };
+
+    const handleDownloadClick = (member) => {
+        setSelectedMember(member);
+        setModalMode("download");
+        setShowEnrolmentModal(true);
     };
 
     const handleBulkUpload = (e) => {
@@ -212,16 +222,39 @@ const UnitDashboard = () => {
         reader.onload = async (event) => {
             try {
                 const data = new Uint8Array(event.target.result);
-                const workbook = XLSX.read(data, { type: 'array' });
+                const workbook = XLSX.read(data, { type: 'array', cellDates: true });
                 const sheetName = workbook.SheetNames[0];
                 const worksheet = workbook.Sheets[sheetName];
                 const jsonData = XLSX.utils.sheet_to_json(worksheet);
 
+                const formatExcelDate = (value) => {
+                    if (!value) return "";
+                    
+                    // If it's a JS Date object (thanks to cellDates: true)
+                    if (value instanceof Date) {
+                        return value.toISOString().split('T')[0];
+                    }
+
+                    // If it's a string already in YYYY-MM-DD
+                    if (typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value)) return value;
+
+                    // Fallback for other string formats
+                    try {
+                        const date = new Date(value);
+                        if (!isNaN(date.getTime())) {
+                            return date.toISOString().split('T')[0];
+                        }
+                    } catch (e) {}
+                    
+                    return String(value);
+                };
+
                 // Map Excel headers to schema fields
                 const mappedMembers = jsonData.map(row => {
                     let batchFrom = "", batchTo = "";
-                    if (row["Batch"]) {
-                        const parts = String(row["Batch"]).split("-");
+                    const batchCell = row["Batch (YYYY-YYYY)"] || row["Batch"] || "";
+                    if (batchCell) {
+                        const parts = String(batchCell).split("-");
                         batchFrom = parts[0]?.trim() || "";
                         batchTo = parts[1]?.trim() || "";
                     }
@@ -233,10 +266,23 @@ const UnitDashboard = () => {
                         course: row["Course"] || "",
                         community: row["Community"] || "",
                         bloodGroup: row["Blood Group"] || "",
-                        dob: row["DOB"] || "",
+                        dob: formatExcelDate(row["DOB (YYYY-MM-DD)"] || row["DOB"]),
                         batchFrom: batchFrom || row["BatchFrom"] || "",
                         batchTo: batchTo || row["BatchTo"] || "",
-                        contact: row["Contact"] || ""
+                        contact: String(row["Contact"] || ""),
+                        sex: row["Sex"] || "Male",
+                        fatherName: row["Father Name"] || "",
+                        fatherPhone: String(row["Father Contact"] || ""),
+                        address: row["Address"] || "",
+                        height: String(row["Height (cm)"] || ""),
+                        weight: String(row["Weight (kg)"] || ""),
+                        email: row["Email"] || "",
+                        aadhaar: String(row["Aadhaar"] || ""),
+                        enrolmentDate: formatExcelDate(row["Enrolment Date (YYYY-MM-DD)"]) || new Date().toISOString().split('T')[0],
+                        culturalTalents: row["Cultural Talents"] || "",
+                        hobbies: row["Hobbies"] || "",
+                        universityName: row["University Name"] || "",
+                        isEnrolled: true
                     };
                 });
 
@@ -274,51 +320,6 @@ const UnitDashboard = () => {
         reader.readAsArrayBuffer(file);
         // Reset input
         e.target.value = null;
-    };
-
-    const handleSaveMember = async (e) => {
-        e.preventDefault();
-        const token = localStorage.getItem("unitToken");
-        setIsSaving(true);
-
-        try {
-            if (editingIndex === null) {
-                // ADD MODE
-                const res = await axios.post(
-                    `${import.meta.env.VITE_API_URL}/add-unit-member`,
-                    { unitCode: unit.unitNumber, collegeCode: college.code, member: memberForm },
-                    { headers: { Authorization: `Bearer ${token}` } }
-                );
-                if (res.data.success) {
-                    setUnit(res.data.unit); // Server returns updated unit populated with members
-                    setIsModalOpen(false);
-                    toast.success("Member added successfully!");
-                }
-            } else {
-                // EDIT MODE
-                const memberId = memberForm._id;
-                const res = await axios.put(
-                    `${import.meta.env.VITE_API_URL}/update-unit-member`,
-                    {
-                        memberId: memberId,
-                        memberData: memberForm
-                    },
-                    { headers: { Authorization: `Bearer ${token}` } }
-                );
-                if (res.data.success) {
-                    const updatedMembers = [...unit.members];
-                    updatedMembers[editingIndex] = res.data.member;
-                    setUnit({ ...unit, members: updatedMembers });
-                    setIsModalOpen(false);
-                    toast.success("Member updated successfully!");
-                }
-            }
-        } catch (err) {
-            console.error(err);
-            toast.error("Failed to save member");
-        } finally {
-            setIsSaving(false);
-        }
     };
 
     const handleDeleteClick = async (member) => {
@@ -595,25 +596,27 @@ const UnitDashboard = () => {
                                                 <div className="d-flex ed gap-2">
                                                     <button
                                                         onClick={() => handleUpdateClick(member)}
-                                                        className="btn btn-sm btn-primary"
+                                                        className={`btn btn-sm ${member.isEnrolled ? 'btn-success' : 'btn-primary'}`}
+                                                        title="Edit Details"
                                                     >
-                                                        Edit
+                                                        {member.isEnrolled ? "✓ Edit" : "Edit"}
                                                     </button>
                                                     <button
                                                         onClick={() => handleDeleteClick(member)}
                                                         className="btn btn-sm btn-danger"
+                                                        title="Delete Member"
                                                     >
                                                         Delete
                                                     </button>
-                                                    <button
-                                                        onClick={() => {
-                                                            setSelectedMember(member);
-                                                            setShowEnrolmentModal(true);
-                                                        }}
-                                                        className={`btn btn-sm ${member.isEnrolled ? 'btn-success' : 'btn-outline-primary'}`}
-                                                    >
-                                                        {member.isEnrolled ? "✓ Form" : "📝 Form"}
-                                                    </button>
+                                                    {member.isEnrolled && (
+                                                        <button
+                                                            onClick={() => handleDownloadClick(member)}
+                                                            className="btn btn-sm btn-outline-success"
+                                                            title="Download Enrolment Form PDF"
+                                                        >
+                                                            ⬇ PDF
+                                                        </button>
+                                                    )}
                                                 </div>
                                             </td>
                                         </tr>
@@ -629,147 +632,7 @@ const UnitDashboard = () => {
                 </div>
             </main>
 
-            {isModalOpen && (
-                <div className="modal-overlay">
-                    <div className="modal-content">
-                        <div className="flex-between mb-4">
-                            <h2 className="mb-0">{editingIndex === null ? "Add New Member" : "Edit Member"}</h2>
-                            <button className="btn btn-sm btn-secondary" onClick={() => setIsModalOpen(false)}>&times;</button>
-                        </div>
 
-                        <form onSubmit={handleSaveMember}>
-                            <div className="grid-cols-2">
-                                <div className="form-group">
-                                    <label className="form-label">Name</label>
-                                    <input
-                                        className="form-input"
-                                        name="name"
-                                        value={memberForm.name}
-                                        onChange={handleEditChange}
-                                        required
-                                        placeholder="Full Name"
-                                    />
-                                </div>
-                                <div className="form-group">
-                                    <label className="form-label">Reg No</label>
-                                    <input
-                                        className="form-input"
-                                        name="regNo"
-                                        value={memberForm.regNo}
-                                        onChange={handleEditChange}
-                                        required
-                                        placeholder="Registration Number"
-                                    />
-                                </div>
-                                <div className="form-group">
-                                    <label className="form-label">Department</label>
-                                    <input
-                                        className="form-input"
-                                        name="dept"
-                                        value={memberForm.dept}
-                                        onChange={handleEditChange}
-                                        required
-                                        placeholder="e.g. CSE"
-                                    />
-                                </div>
-                                <div className="form-group">
-                                    <label className="form-label">Course</label>
-                                    <input
-                                        className="form-input"
-                                        name="course"
-                                        value={memberForm.course}
-                                        onChange={handleEditChange}
-                                        required
-                                        placeholder="e.g. B.E. / B.Tech"
-                                    />
-                                </div>
-                                <div className="form-group">
-                                    <label className="form-label">Community</label>
-                                    <input
-                                        className="form-input"
-                                        name="community"
-                                        value={memberForm.community}
-                                        onChange={handleEditChange}
-                                        required
-                                        placeholder="e.g. BC/MBC/SC/ST"
-                                    />
-                                </div>
-                                <div className="form-group">
-                                    <label className="form-label">Blood Group</label>
-                                    <select
-                                        className="form-input"
-                                        name="bloodGroup"
-                                        value={memberForm.bloodGroup}
-                                        onChange={handleEditChange}
-                                        required
-                                    >
-                                        <option value="">Select Blood Group</option>
-                                        <option value="A+">A+</option>
-                                        <option value="A-">A-</option>
-                                        <option value="B+">B+</option>
-                                        <option value="B-">B-</option>
-                                        <option value="O+">O+</option>
-                                        <option value="O-">O-</option>
-                                        <option value="AB+">AB+</option>
-                                        <option value="AB-">AB-</option>
-                                    </select>
-                                </div>
-                                <div className="form-group">
-                                    <label className="form-label">Date of Birth</label>
-                                    <input
-                                        className="form-input"
-                                        type="date"
-                                        name="dob"
-                                        value={memberForm.dob}
-                                        onChange={handleEditChange}
-                                        required
-                                    />
-                                </div>
-                                <div className="form-group">
-                                    <label className="form-label">Batch From (Year)</label>
-                                    <input
-                                        className="form-input"
-                                        type="number"
-                                        name="batchFrom"
-                                        value={memberForm.batchFrom}
-                                        onChange={handleEditChange}
-                                        required
-                                        placeholder="e.g. 2022"
-                                    />
-                                </div>
-                                <div className="form-group">
-                                    <label className="form-label">Batch To (Year)</label>
-                                    <input
-                                        className="form-input"
-                                        type="number"
-                                        name="batchTo"
-                                        value={memberForm.batchTo}
-                                        onChange={handleEditChange}
-                                        required
-                                        placeholder="e.g. 2026"
-                                    />
-                                </div>
-                                <div className="form-group col-span-2" style={{ gridColumn: '1 / -1' }}>
-                                    <label className="form-label">Contact Number</label>
-                                    <input
-                                        className="form-input"
-                                        name="contact"
-                                        value={memberForm.contact}
-                                        onChange={handleEditChange}
-                                        required
-                                        placeholder="Phone Number"
-                                    />
-                                </div>
-                            </div>
-
-                            <div className="flex-between pt-4 mt-2" style={{ borderTop: '1px solid var(--border-color)', paddingTop: '20px' }}>
-                                <button type="button" className="btn btn-secondary" onClick={() => setIsModalOpen(false)} disabled={isSaving}>Cancel</button>
-                                <button type="submit" className="btn btn-primary" disabled={isSaving}>{isSaving ? 'Saving...' : 'Save Member'}</button>
-                            </div>
-                        </form>
-                    </div>
-                </div>
-            )}
 
             {/* Notifications Modal */}
             {isInviteModalOpen && (
@@ -807,16 +670,27 @@ const UnitDashboard = () => {
 
             <VolunteerEnrolmentModal
                 isOpen={showEnrolmentModal}
-                onClose={() => setShowEnrolmentModal(false)}
+                onClose={() => { setShowEnrolmentModal(false); setSelectedMember(null); }}
                 member={selectedMember}
                 collegeData={college}
                 unitData={unit}
-                onSuccess={() => {
-                    // Update the member in the local state
-                    const updatedMembers = unit.members.map(m =>
-                        m._id === selectedMember._id ? { ...m, isEnrolled: true } : m
-                    );
-                    setUnit({ ...unit, members: updatedMembers });
+                isNewMember={!selectedMember}
+                mode={modalMode}
+                unitCode={unit?.unitNumber}
+                collegeCode={college?.code}
+                onSuccess={(updatedUnitOrMember) => {
+                    if (updatedUnitOrMember?.members) {
+                        // Full unit returned (add mode)
+                        setUnit(updatedUnitOrMember);
+                    } else if (selectedMember) {
+                        // Updated member returned (edit mode)
+                        const updatedMembers = unit.members.map(m =>
+                            m._id === selectedMember._id ? { ...m, ...updatedUnitOrMember, isEnrolled: true } : m
+                        );
+                        setUnit({ ...unit, members: updatedMembers });
+                    }
+                    setShowEnrolmentModal(false);
+                    setSelectedMember(null);
                 }}
             />
 
@@ -831,10 +705,11 @@ const UnitDashboard = () => {
                         <div className="p-2">
                             <ul className="text-sm" style={{ listStyle: 'disc', paddingLeft: '20px', lineHeight: '1.6' }}>
                                 <li>Ensure the first row contains the exact headers.</li>
-                                <li><strong>Headers:</strong> Name, Reg No, Dept, Course, Community, Blood Group, DOB, Batch, Contact</li>
-                                <li><strong>DOB Format:</strong> Use YYYY-MM-DD (e.g., 2005-05-15)</li>
-                                <li><strong>Batch Format:</strong> Use YYYY-YYYY (e.g., 2022-2026)</li>
-                                <li>All fields are required for a proper student profile.</li>
+                                <li><strong>Required:</strong> Name, Reg No, Dept, Course, Community, Blood Group, DOB (YYYY-MM-DD), Batch (YYYY-YYYY), Contact</li>
+                                <li><strong>Enrolment Fields:</strong> Sex, Father Name, Father Contact, Address, Height (cm), Weight (kg), Email, Aadhaar, Enrolment Date (YYYY-MM-DD), Cultural Talents, Hobbies, University Name</li>
+                                <li><strong>DOB / Date Format:</strong> YYYY-MM-DD (e.g., 2005-05-15)</li>
+                                <li><strong>Batch Format:</strong> YYYY-YYYY (e.g., 2022-2026)</li>
+                                <li>Download the template below for the correct format.</li>
                             </ul>
                             <div className="mt-6 flex-center">
                                 <button className="btn btn-success w-100" onClick={handleDownloadTemplate}>
