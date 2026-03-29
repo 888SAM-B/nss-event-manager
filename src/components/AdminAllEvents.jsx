@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
+import ThemeToggle from './ThemeToggle';
 
 const AdminAllEvents = () => {
     const navigate = useNavigate();
@@ -255,6 +256,20 @@ const AdminAllEvents = () => {
                                 <p className="fw-bold">{selectedEvent.venue || 'N/A'}</p>
                             </div>
 
+                            {selectedEvent.brochure && (
+                                <div className="mb-4">
+                                    <p className="text-xs text-muted mb-2">EVENT BROCHURE</p>
+                                    <a 
+                                        href={selectedEvent.brochure} 
+                                        target="_blank" 
+                                        rel="noopener noreferrer"
+                                        className="btn btn-sm btn-outline-primary"
+                                    >
+                                        📁 View Brochure
+                                    </a>
+                                </div>
+                            )}
+
                             {selectedEvent.images && selectedEvent.images.length > 0 && (
                                 <div>
                                     <p className="text-xs text-muted mb-2">IMAGES</p>
@@ -276,7 +291,7 @@ const AdminAllEvents = () => {
                                 </div>
                             )}
 
-                            {selectedEvent.report && (
+                            {selectedEvent.report ? (
                                 <div className="mt-6 p-4 rounded" style={{ background: 'var(--bg-secondary)', borderLeft: '4px solid var(--success-500)', marginTop: '20px' }}>
                                     <div className="flex-between mb-3">
                                         <h3 className="mb-0" style={{ fontSize: '1.1rem', color: 'var(--success-500)' }}>Event Report</h3>
@@ -290,13 +305,12 @@ const AdminAllEvents = () => {
                                             >
                                                 Download PDF Report
                                             </a>
-
                                         )}
                                     </div>
                                     <div className="grid-cols-3 mb-3">
                                         <div>
                                             <p className="text-xs text-muted mb-1">STATUS</p>
-                                            <p className="fw-bold">{selectedEvent.report.conductedOnDate ? "On Schedule" : "Delayed/Rescheduled"}</p>
+                                            <p className="fw-bold">{selectedEvent.report.conductedOnDate ? "On Schedule" : "Yet to be updated"}</p>
                                         </div>
                                         <div>
                                             <p className="text-xs text-muted mb-1">PARTICIPANTS</p>
@@ -331,6 +345,10 @@ const AdminAllEvents = () => {
                                             </div>
                                         </div>
                                     )}
+                                </div>
+                            ) : (
+                                <div className="mt-4 p-4 rounded text-center" style={{ background: 'var(--bg-secondary)', border: '1px dashed var(--border-color)' }}>
+                                    <p className="mb-0 text-muted">📊 Event Report: Yet to be updated</p>
                                 </div>
                             )}
                         </div>

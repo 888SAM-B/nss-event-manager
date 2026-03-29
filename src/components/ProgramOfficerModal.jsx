@@ -173,6 +173,12 @@ const ProgramOfficerModal = ({ isOpen, onClose, insName, insCode, units, initial
                     <div className="mb-8">
                         <h3 className="section-title text-primary mb-4" style={{ borderBottom: "2px solid var(--primary-color)", paddingBottom: "5px" }}>Main Details</h3>
                         <div className="grid-cols-2">
+                            {formData.officerID && (
+                                <div className="form-group col-span-2" style={{ gridColumn: "1 / -1" }}>
+                                    <label>Official Officer ID</label>
+                                    <input className="form-input" value={formData.officerID} disabled style={{ background: 'var(--bg-tertiary)', fontWeight: 'bold', color: 'var(--primary-color)' }} />
+                                </div>
+                            )}
                             <div className="form-group">
                                 <label>Name of Program Officer</label>
                                 <input className="form-input" name="name" value={formData.name} onChange={handleInputChange} required disabled={readOnly} />
@@ -186,9 +192,9 @@ const ProgramOfficerModal = ({ isOpen, onClose, insName, insCode, units, initial
                                 <input className="form-input" name="department" value={formData.department} onChange={handleInputChange} required disabled={readOnly} />
                             </div>
                             <div className="form-group">
-                                <label>Unit</label>
-                                <select className="form-input" name="unit" value={formData.unit} onChange={handleInputChange} required disabled={readOnly}>
-                                    <option value="">Select Unit</option>
+                                <label>Unit (Optional)</label>
+                                <select className="form-input" name="unit" value={formData.unit} onChange={handleInputChange} disabled={readOnly}>
+                                    <option value="">Unassigned</option>
                                     {units.map(u => <option key={u.unitNumber} value={u.unitNumber}>{u.unitNumber} - {u.name}</option>)}
                                 </select>
                             </div>

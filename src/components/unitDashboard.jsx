@@ -28,6 +28,9 @@ const UnitDashboard = () => {
     const [showEnrolmentModal, setShowEnrolmentModal] = useState(false);
     const [showExcelInfo, setShowExcelInfo] = useState(false);
     const [modalMode, setModalMode] = useState("edit"); // "edit" | "view" | "download"
+    const [unassignedOfficers, setUnassignedOfficers] = useState([]);
+    const [isAssignModalOpen, setIsAssignModalOpen] = useState(false);
+    const [isAssigning, setIsAssigning] = useState(false);
 
 
 
@@ -395,6 +398,49 @@ const UnitDashboard = () => {
     }
 
 
+    const fetchUnassignedOfficers = async () => {
+        const token = localStorage.getItem("nsstoken");
+        if (!token) return;
+
+        try {
+            const res = await axios.get(`${import.meta.env.VITE_API_URL}/unassigned-officers/${college.code}`, {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+            if (res.data.success) {
+                setUnassignedOfficers(res.data.officers);
+            }
+        } catch (error) {
+            console.error("Error fetching unassigned officers:", error);
+        }
+    };
+
+    const handleAssignOfficer = async (officerId) => {
+        setIsAssigning(true);
+        const token = localStorage.getItem("nsstoken");
+
+        try {
+            const res = await axios.post(`${import.meta.env.VITE_API_URL}/assign-officer-to-unit`, {
+                officerId,
+                unitNumber: unit.unitNumber,
+                collegeCode: college.code
+            }, {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+
+            if (res.data.success) {
+                toast.success("Officer assigned successfully!");
+                // Refresh unit data
+                setUnit({ ...unit, head: res.data.officer });
+                setIsAssignModalOpen(false);
+            }
+        } catch (error) {
+            console.error(error);
+            toast.error("Failed to assign officer");
+        } finally {
+            setIsAssigning(false);
+        }
+    };
+
     if (loading) return (
         <div className="flex-center" style={{ height: '100vh' }}>
             <div className="loading"></div>
@@ -467,7 +513,21 @@ const UnitDashboard = () => {
                             </div>
                             <div>
                                 <p className="text-xs text-muted mb-1">UNIT HEAD</p>
-                                <p className="fw-bold">{unit?.head?.name || unit?.head}</p>
+                                <div className="d-flex align-items-center gap-2">
+                                    <p className="fw-bold mb-0">{unit?.head?.name || unit?.head || "N/A"}</p>
+                                    {isAccessedFromCollege && (!unit?.head || (typeof unit.head === 'string' && unit.head.trim() === '')) && (
+                                        <button 
+                                            className="btn btn-sm btn-outline-primary" 
+                                            style={{ padding: '0.1rem 0.4rem', fontSize: '0.7rem' }}
+                                            onClick={() => {
+                                                fetchUnassignedOfficers();
+                                                setIsAssignModalOpen(true);
+                                            }}
+                                        >
+                                            Assign Officer
+                                        </button>
+                                    )}
+                                </div>
                             </div>
                             <div>
                                 <p className="text-xs text-muted mb-1">CONTACT</p>
@@ -693,6 +753,47 @@ const UnitDashboard = () => {
                     setSelectedMember(null);
                 }}
             />
+
+            {/* Assign Officer Modal */}
+            {isAssignModalOpen && (
+                <div className="modal-overlay" onClick={() => setIsAssignModalOpen(false)}>
+                    <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '500px' }}>
+                        <div className="flex-between mb-4">
+                            <h2 className="mb-0">Assign Program Officer</h2>
+                            <button className="btn btn-sm btn-secondary" onClick={() => setIsAssignModalOpen(false)}>&times;</button>
+                        </div>
+                        
+                        <div className="p-2">
+                            <p className="text-sm text-muted mb-4">Select an unassigned Program Officer for this unit ({unit.unitNumber}):</p>
+                            
+                            {unassignedOfficers.length === 0 ? (
+                                <div className="text-center p-4">
+                                    <p>No unassigned Program Officers found in this college.</p>
+                                    <p className="text-xs text-muted">Register a Program Officer without assigning a unit first.</p>
+                                </div>
+                            ) : (
+                                <div className="d-flex flex-column gap-2" style={{ maxHeight: '300px', overflowY: 'auto' }}>
+                                    {unassignedOfficers.map(officer => (
+                                        <div key={officer._id} className="card mb-0 p-3 flex-between" style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border-color)' }}>
+                                            <div>
+                                                <h4 className="mb-0">{officer.name}</h4>
+                                                <p className="text-xs text-muted mb-0">{officer.designation} - {officer.department}</p>
+                                            </div>
+                                            <button 
+                                                className="btn btn-sm btn-primary" 
+                                                onClick={() => handleAssignOfficer(officer._id)}
+                                                disabled={isAssigning}
+                                            >
+                                                {isAssigning ? "Processing..." : "Select"}
+                                            </button>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {/* Excel Info Modal */}
             {showExcelInfo && (

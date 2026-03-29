@@ -1,0 +1,158 @@
+import { useState, useEffect } from "react";
+import axios from "axios";
+import { useNavigate } from "react-router-dom";
+import toast from 'react-hot-toast';
+import ThemeToggle from "./ThemeToggle";
+import VolunteerEnrolmentModal from "./VolunteerEnrolmentModal";
+
+const AdminAllStudents = () => {
+    const navigate = useNavigate();
+    const [students, setStudents] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [searchTerm, setSearchTerm] = useState("");
+    const [collegeFilter, setCollegeFilter] = useState("");
+    const [selectedStudent, setSelectedStudent] = useState(null);
+    const [showEnrolmentModal, setShowEnrolmentModal] = useState(false);
+
+    useEffect(() => {
+        const fetchAllStudents = async () => {
+            const token = localStorage.getItem("adminToken");
+            if (!token) {
+                navigate("/admin/login");
+                return;
+            }
+
+            try {
+                const res = await axios.get(`${import.meta.env.VITE_API_URL}/admin/all-students`, {
+                    headers: { Authorization: `Bearer ${token}` }
+                });
+                if (res.data.success) {
+                    setStudents(res.data.students);
+                }
+            } catch (err) {
+                console.error(err);
+                if (err.response?.status === 401) {
+                    localStorage.removeItem("adminToken");
+                    navigate("/admin/login");
+                }
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchAllStudents();
+    }, [navigate]);
+
+    const filteredStudents = students.filter(s => {
+        const nameMatch = s.name.toLowerCase().includes(searchTerm.toLowerCase());
+        const regNoMatch = s.regNo.toLowerCase().includes(searchTerm.toLowerCase());
+        const collegeMatch = collegeFilter === "" || 
+            s.collegeId?.insName.toLowerCase().includes(collegeFilter.toLowerCase()) ||
+            s.collegeId?.code === collegeFilter;
+        return (nameMatch || regNoMatch) && collegeMatch;
+    });
+
+    if (loading) return <div className="flex-center" style={{ height: '100vh' }}>Loading Students...</div>;
+
+    return (
+        <div style={{ minHeight: '100vh', background: 'var(--bg-color)' }}>
+            <header className="dashboard-header" style={{ background: 'var(--nav-bg)', backdropFilter: 'blur(10px)', position: 'sticky', top: 0, zIndex: 100, borderBottom: '1px solid var(--border-color)', padding: '1rem 0' }}>
+                <div className="container flex-between">
+                    <div>
+                        <h1 className="mb-0" style={{ fontSize: '1.5rem' }}>All Students</h1>
+                        <span className="badge badge-primary">Admin Access</span>
+                    </div>
+                    <div className="d-flex gap-2">
+                        <ThemeToggle />
+                        <button className="btn btn-secondary" onClick={() => navigate("/admin-dashboard")}>← Dashboard</button>
+                    </div>
+                </div>
+            </header>
+
+            <main className="container main-container" style={{ marginTop: '20px' }}>
+                <div className="card mb-6">
+                    <div className="grid-cols-2 gap-4">
+                        <div className="form-group">
+                            <label className="form-label">Search (Name or Reg No)</label>
+                            <input 
+                                className="form-input" 
+                                placeholder="Enter student name or reg no..." 
+                                value={searchTerm}
+                                onChange={(e) => setSearchTerm(e.target.value)}
+                            />
+                        </div>
+                        <div className="form-group">
+                            <label className="form-label">Filter by College</label>
+                            <input 
+                                className="form-input" 
+                                placeholder="College name or code..." 
+                                value={collegeFilter}
+                                onChange={(e) => setCollegeFilter(e.target.value)}
+                            />
+                        </div>
+                    </div>
+                </div>
+
+                <div className="card">
+                    <div style={{ overflowX: 'auto' }}>
+                        <table className="styled-table w-100">
+                            <thead>
+                                <tr>
+                                    <th>Reg No</th>
+                                    <th>Name</th>
+                                    <th>College (Code)</th>
+                                    <th>Unit</th>
+                                    <th>Dept</th>
+                                    <th>Batch</th>
+                                    <th>Action</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {filteredStudents.length === 0 ? (
+                                    <tr><td colSpan="7" className="text-center">No students found matching criteria.</td></tr>
+                                ) : (
+                                    filteredStudents.map((s) => (
+                                        <tr key={s._id}>
+                                            <td><span className="badge badge-secondary">{s.regNo}</span></td>
+                                            <td className="fw-bold">{s.name}</td>
+                                            <td>
+                                                <div>{s.collegeId?.insName}</div>
+                                                <div className="text-sm text-muted">{s.collegeId?.code}</div>
+                                            </td>
+                                            <td><span className="badge badge-primary">{s.unitId?.unitNumber || "N/A"}</span></td>
+                                            <td>{s.dept}</td>
+                                            <td>{s.batchFrom} - {s.batchTo}</td>
+                                            <td>
+                                                <button 
+                                                    className={`btn btn-sm ${s.isEnrolled ? 'btn-success' : 'btn-outline-primary'}`}
+                                                    onClick={() => {
+                                                        setSelectedStudent(s);
+                                                        setShowEnrolmentModal(true);
+                                                    }}
+                                                >
+                                                    {s.isEnrolled ? "✓ View Enrolment" : "📝 Not Enrolled"}
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    ))
+                                )}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </main>
+
+            {showEnrolmentModal && selectedStudent && (
+                <VolunteerEnrolmentModal 
+                    isOpen={showEnrolmentModal}
+                    onClose={() => setShowEnrolmentModal(false)}
+                    member={selectedStudent}
+                    collegeData={selectedStudent.collegeId}
+                    unitData={selectedStudent.unitId}
+                />
+            )}
+        </div>
+    );
+};
+
+export default AdminAllStudents;

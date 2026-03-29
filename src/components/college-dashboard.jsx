@@ -38,6 +38,10 @@ const CollegeDashboard = () => {
     const [collegeData, setCollegeData] = useState(null);
     const [selectedMember, setSelectedMember] = useState(null);
     const [showEnrolmentModal, setShowEnrolmentModal] = useState(false);
+    const [showAssignModal, setShowAssignModal] = useState(false);
+    const [selectedOfficerForAssign, setSelectedOfficerForAssign] = useState(null);
+    const [assignTargetUnit, setAssignTargetUnit] = useState("");
+    const [isAssigning, setIsAssigning] = useState(false);
 
     // Check if admin is viewing this dashboard
     const isAdminViewing = localStorage.getItem("adminToken") !== null;
@@ -73,10 +77,7 @@ const CollegeDashboard = () => {
             toast.error("Maximum limit of 6 units reached.");
             return;
         }
-        if (!newUnitName) {
-            toast.error("Please fill in Unit Name.");
-            return;
-        }
+        const assignedName = `Unit ${units.length + 1}`;
 
         const prefix = (insName || "INS").replace(/\s+/g, '').substring(0, 3).toUpperCase();
         const serial = units.length + 1;
@@ -86,7 +87,7 @@ const CollegeDashboard = () => {
 
         const payload = {
             username,
-            name: newUnitName,
+            name: assignedName,
             password: newUnitPassword,
             members: newMembers,
             unitNumber,
@@ -151,38 +152,48 @@ const CollegeDashboard = () => {
         }
     };
 
-    useEffect(() => {
-        const fetchDashboard = async () => {
-            try {
-                const res = await axios.get(
-                    `${import.meta.env.VITE_API_URL}/college-dashboard`,
-                    {
-                        headers: {
-                            Authorization: `Bearer ${localStorage.getItem("nsstoken")}`,
-                        },
-                        params: { username } // ✅ GET request data
-                    }
-                );
-
-                if (res.data.success) {
-                    console.log(res.data.user);
-                    setCollegeData(res.data.user);
-                    setinsName(res.data.user.insName);
-                    setinsCode(res.data.user.code);
-                    setUnits(res.data.user.units || []); // Ensure units is array
-                    setLoading(false);
-                    // Fetch officers using the code from response
-                    fetchProgramOfficers(res.data.user.code);
-                } else {
-                    navigate("/");
+    const fetchDashboard = async () => {
+        try {
+            setLoading(true);
+            const res = await axios.get(
+                `${import.meta.env.VITE_API_URL}/college-dashboard`,
+                {
+                    headers: {
+                        Authorization: `Bearer ${localStorage.getItem("nsstoken")}`,
+                    },
+                    params: { username } // ✅ GET request data
                 }
-            } catch (error) {
-                console.error(error);
+            );
+
+            if (res.data.success) {
+                console.log(res.data.user);
+                setCollegeData(res.data.user);
+                setinsName(res.data.user.insName);
+                setinsCode(res.data.user.code);
+                setUnits(res.data.user.units || []); // Ensure units is array
+                setLoading(false);
+                // Fetch officers using the code from response
+                fetchProgramOfficers(res.data.user.code);
+            } else {
                 navigate("/");
             }
-        };
+        } catch (error) {
+            console.error(error);
+            navigate("/");
+            setLoading(false);
+        }
+    };
+
+    useEffect(() => {
         fetchDashboard();
     }, [navigate, username]);
+
+    // Auto-set unit name when modal opens
+    useEffect(() => {
+        if (showUnitModal) {
+            setNewUnitName(`Unit ${units.length + 1}`);
+        }
+    }, [showUnitModal, units.length]);
 
     const fetchProgramOfficers = async (code) => {
         const targetCode = code || insCode;
@@ -196,6 +207,49 @@ const CollegeDashboard = () => {
             }
         } catch (error) {
             console.error("Error fetching officers:", error);
+        }
+    };
+
+    const handleAssignOfficer = async () => {
+        if (!selectedOfficerForAssign || !assignTargetUnit) return;
+        setIsAssigning(true);
+        try {
+            const res = await axios.post(`${import.meta.env.VITE_API_URL}/assign-officer-to-unit`, {
+                officerId: selectedOfficerForAssign._id,
+                unitNumber: assignTargetUnit,
+                collegeCode: insCode
+            }, {
+                headers: { Authorization: `Bearer ${localStorage.getItem("nsstoken")}` }
+            });
+
+            if (res.data.success) {
+                toast.success(assignTargetUnit ? "Officer assigned successfully" : "Officer unassigned successfully");
+                setShowAssignModal(false);
+                fetchProgramOfficers();
+                fetchDashboard(); // Refresh UI
+            }
+        } catch (error) {
+            console.error("Error assigning officer:", error);
+            toast.error("Failed to assign officer");
+        } finally {
+            setIsAssigning(false);
+        }
+    };
+
+    const handleDeleteOfficer = async (officerId) => {
+        if (!confirm("Are you sure you want to remove this Program Officer?")) return;
+        try {
+            const res = await axios.delete(`${import.meta.env.VITE_API_URL}/program-officer/${officerId}`, {
+                headers: { Authorization: `Bearer ${localStorage.getItem("nsstoken")}` }
+            });
+            if (res.data.success) {
+                toast.success("Officer removed successfully");
+                fetchProgramOfficers();
+                fetchDashboard(); // Refresh units as well to clear heads
+            }
+        } catch (error) {
+            console.error("Error deleting officer:", error);
+            toast.error("Failed to delete officer");
         }
     };
 
@@ -289,6 +343,46 @@ const CollegeDashboard = () => {
             </header>
 
             <main className="container main-container" style={{ marginTop: '0px' }}  >
+                {/* Adopting Villages Section */}
+                {collegeData?.adoptingVillages && collegeData.adoptingVillages.length > 0 && (
+                    <div className="card mb-6">
+                        <div className="flex-between mb-4">
+                            <h3 className="mb-0">Adopting Villages</h3>
+                            <span className="badge badge-primary">{collegeData.adoptingVillages.length} Villages</span>
+                        </div>
+                        <div className="grid-cols-3 gap-4">
+                            {collegeData.adoptingVillages.map((village, idx) => (
+                                <div key={idx} className="p-4 rounded village-card" style={{
+                                    background: 'var(--bg-tertiary)',
+                                    border: '1px solid var(--border-color)',
+                                    position: 'relative',
+                                    overflow: 'hidden'
+                                }}>
+                                    <div style={{
+                                        position: 'absolute',
+                                        top: 0,
+                                        left: 0,
+                                        width: '4px',
+                                        height: '100%',
+                                        background: 'var(--primary-color)'
+                                    }}></div>
+                                    <h4 className="mb-3 text-primary-400" style={{ fontSize: '1.1rem' }}>{village.name}</h4>
+                                    <div className="d-flex flex-column gap-2">
+                                        <div className="d-flex align-items-start gap-2">
+                                            <span style={{ fontSize: '0.8rem', opacity: 0.7 }}>📍</span>
+                                            <p className="mb-0 text-sm" style={{ opacity: 0.9 }}>{village.address}</p>
+                                        </div>
+                                        <div className="d-flex align-items-center gap-2">
+                                            <span style={{ fontSize: '0.8rem', opacity: 0.7 }}>📮</span>
+                                            <p className="mb-0 text-sm" style={{ opacity: 0.9 }}>{village.pincode}</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                )}
+
                 <div className="flex-between mb-6">
                     <div>
                         <h2>NSS Units Management</h2>
@@ -340,6 +434,7 @@ const CollegeDashboard = () => {
                                 <thead>
                                     <tr>
                                         <th>Photo</th>
+                                        <th>ID</th>
                                         <th>Name</th>
                                         <th>Designation</th>
                                         <th>Department</th>
@@ -350,19 +445,20 @@ const CollegeDashboard = () => {
                                 </thead>
                                 <tbody>
                                     {programOfficers.length === 0 ? (
-                                        <tr><td colSpan="7" className="text-center py-4">No officers registered yet.</td></tr>
+                                        <tr><td colSpan="9" className="text-center py-4">No officers registered yet.</td></tr>
                                     ) : (
                                         programOfficers.map((officer) => (
                                             <tr key={officer._id}>
                                                 <td>
                                                     <img src={officer.image || "https://via.placeholder.com/40"} alt="Officer" style={{ width: '40px', height: '40px', borderRadius: '50%', objectFit: 'cover' }} />
                                                 </td>
+                                                <td><span className="badge badge-secondary">{officer.officerID || "N/A"}</span></td>
                                                 <td>{officer.name}</td>
                                                 <td>{officer.designation}</td>
                                                 <td>{officer.department}</td>
-                                                <td><span className="badge badge-primary">{officer.unit || "Not Assigned"}</span></td>
+                                                <td><span className="badge badge-primary">{officer.unit || "Unassigned"}</span></td>
                                                 <td>{officer.mobile}</td>
-                                                <td>
+                                                <td className="d-flex gap-2">
                                                     <button
                                                         className="btn btn-sm btn-outline-primary"
                                                         onClick={() => {
@@ -372,6 +468,22 @@ const CollegeDashboard = () => {
                                                         }}
                                                     >
                                                         📄 View / PDF
+                                                    </button>
+                                                    <button
+                                                        className="btn btn-sm btn-secondary"
+                                                        onClick={() => {
+                                                            setSelectedOfficerForAssign(officer);
+                                                            setAssignTargetUnit(officer.unit || "");
+                                                            setShowAssignModal(true);
+                                                        }}
+                                                    >
+                                                        📌 Assign Unit
+                                                    </button>
+                                                    <button
+                                                        className="btn btn-sm btn-danger"
+                                                        onClick={() => handleDeleteOfficer(officer._id)}
+                                                    >
+                                                        Delete
                                                     </button>
                                                 </td>
                                             </tr>
@@ -521,13 +633,9 @@ const CollegeDashboard = () => {
                         <div className="grid-cols-2 mb-4">
                             <div className="form-group">
                                 <label className="form-label">Unit Name</label>
-                                <input
-                                    type="text"
-                                    className="form-input"
-                                    value={newUnitName}
-                                    onChange={(e) => setNewUnitName(e.target.value)}
-                                    placeholder="e.g. NSS Unit A"
-                                />
+                                <div className="form-input" style={{ background: 'var(--bg-tertiary)', cursor: 'not-allowed', opacity: 0.8, display: 'flex', alignItems: 'center' }}>
+                                    {`Unit ${units.length + 1}`}
+                                </div>
                             </div>
                             <div className="form-group">
                                 <label className="form-label">Unit Password</label>
@@ -622,6 +730,50 @@ const CollegeDashboard = () => {
                 unitData={selectedMember?.unitId}
                 onSuccess={fetchAllMembers}
             />
+
+            {showAssignModal && (
+                <div className="modal-overlay">
+                    <div className="modal-content" style={{ maxWidth: '400px' }}>
+                        <div className="flex-between mb-4">
+                            <h2 className="mb-0">Assign to Unit</h2>
+                            <button className="btn btn-sm btn-secondary" onClick={() => setShowAssignModal(false)}>&times;</button>
+                        </div>
+                        <p className="mb-4">Select the unit you want to assign <strong>{selectedOfficerForAssign?.name}</strong> to.</p>
+                        
+                        <div className="form-group mb-4">
+                            <label className="form-label">Select Unit</label>
+                            <select 
+                                className="form-input" 
+                                value={assignTargetUnit} 
+                                onChange={(e) => setAssignTargetUnit(e.target.value)}
+                            >
+                                <option value="">--- Select Unit ---</option>
+                                <option value="UNASSIGNED">Unassigned (None)</option>
+                                {units.map(u => (
+                                    <option key={u.unitNumber} value={u.unitNumber}>
+                                        {u.unitNumber} - {u.name} {u.head ? `(Already assigned: ${u.head.name || u.head})` : ""}
+                                    </option>
+                                ))}
+                            </select>
+                        </div>
+
+                        <div className="alert alert-warning mb-4" style={{ fontSize: '0.85rem' }}>
+                            ⚠️ Caution: Assigning a new head will automatically unassign the current head of that unit.
+                        </div>
+
+                        <div className="flex-between pt-4" style={{ borderTop: '1px solid var(--border-color)' }}>
+                            <button className="btn btn-secondary" onClick={() => setShowAssignModal(false)}>Cancel</button>
+                            <button 
+                                className="btn btn-primary" 
+                                onClick={handleAssignOfficer} 
+                                disabled={isAssigning || !assignTargetUnit}
+                            >
+                                {isAssigning ? 'Assigning...' : 'Assign Officer'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

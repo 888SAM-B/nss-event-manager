@@ -443,7 +443,7 @@ const AdminDashboard = () => {
                     </div>
                     <div className="d-flex gap-2 align-items-center width-set ">
                         <ThemeToggle />
-                        <button className='btn' onClick={handleAddOrg} >+ Add Org</button>
+                        <button className='btn' onClick={handleAddOrg} >+ Register College</button>
                         <button className="btn btn-danger" onClick={handleLogout}>Logout</button>
                     </div>
                 </div>
@@ -515,6 +515,18 @@ const AdminDashboard = () => {
                                 onClick={() => navigate('/admin/all-events')}
                             >
                                 📋 Manage All Events
+                            </button>
+                            <button
+                                className="btn btn-secondary w-100"
+                                onClick={() => navigate('/admin/all-officers')}
+                            >
+                                👨‍💼 Manage All Officers
+                            </button>
+                            <button
+                                className="btn btn-success w-100"
+                                onClick={() => navigate('/admin/all-students')}
+                            >
+                                🎓 Manage All Students
                             </button>
                             <div className="p-3" style={{ background: 'var(--bg-tertiary)', borderRadius: '8px' }}>
                                 <p className="text-sm mb-2 fw-bold">Total Events</p>

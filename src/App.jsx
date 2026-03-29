@@ -15,6 +15,8 @@ import AddOrg from './components/addOrg.jsx'
 import AdminLogin from './components/AdminLogin.jsx'
 import AdminDashboard from './components/AdminDashboard.jsx'
 import AdminAllEvents from './components/AdminAllEvents.jsx'
+import AdminAllOfficers from './components/AdminAllOfficers.jsx'
+import AdminAllStudents from './components/AdminAllStudents.jsx'
 
 function App() {
   return (
@@ -33,6 +35,8 @@ function App() {
             <Route path='/admin-login' element={<AdminLogin />} ></Route>
             <Route path='/admin-dashboard' element={<AdminDashboard />} ></Route>
             <Route path='/admin/all-events' element={<AdminAllEvents />} ></Route>
+            <Route path='/admin/all-officers' element={<AdminAllOfficers />} ></Route>
+            <Route path='/admin/all-students' element={<AdminAllStudents />} ></Route>
             <Route path='*' element={<h1>404 Not Found</h1>} ></Route>
 
           </Routes>
