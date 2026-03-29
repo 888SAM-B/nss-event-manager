@@ -130,7 +130,12 @@ const insLoginScheme = new mongoose.Schema({
     universityName: { type: String, default: "" },
     events: { type: Array, default: [] },
     code: String,
-    units: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Unit' }]
+    units: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Unit' }],
+    adoptingVillages: [{
+        name: String,
+        address: String,
+        pincode: String
+    }]
 });
 
 const User = mongoose.model('User', insLoginScheme);
@@ -199,6 +204,7 @@ const programOfficerSchema = new mongoose.Schema({
     specialTalent: [String],
 
     collegeId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+    officerID: String,
     createdAt: { type: Date, default: Date.now }
 });
 
@@ -208,16 +214,18 @@ const ProgramOfficer = mongoose.model('ProgramOfficer', programOfficerSchema);
 
 app.post('/register-program-officer', verifyToken, async (req, res) => {
     try {
-        const { officerData, collegeCode } = req.body;
-
         const college = await User.findOne({ code: collegeCode });
         if (!college) {
             return res.status(404).json({ success: false, message: "College not found" });
         }
 
+        const officerCount = await ProgramOfficer.countDocuments({ collegeId: college._id });
+        const officerID = `NSSPO${college.code}${String(officerCount + 1).padStart(2, '0')}`;
+
         const newOfficer = new ProgramOfficer({
             ...officerData,
-            collegeId: college._id
+            collegeId: college._id,
+            officerID
         });
 
         await newOfficer.save();
@@ -247,6 +255,28 @@ app.get('/program-officers/:collegeCode', verifyToken, async (req, res) => {
         res.json({ success: true, officers });
     } catch (error) {
         console.error("Error fetching program officers:", error);
+        res.status(500).json({ success: false, message: "Internal Server Error" });
+    }
+});
+
+app.delete('/program-officer/:id', verifyToken, async (req, res) => {
+    try {
+        const { id } = req.params;
+        const officer = await ProgramOfficer.findById(id);
+        if (!officer) return res.status(404).json({ success: false, message: "Officer not found" });
+
+        // If officer was assigned to a unit, clear that unit's head
+        if (officer.unit) {
+            await Unit.findOneAndUpdate(
+                { unitNumber: officer.unit, collegeId: officer.collegeId },
+                { $set: { head: null } }
+            );
+        }
+
+        await ProgramOfficer.findByIdAndDelete(id);
+        res.json({ success: true, message: "Program Officer removed successfully" });
+    } catch (error) {
+        console.error("Error deleting program officer:", error);
         res.status(500).json({ success: false, message: "Internal Server Error" });
     }
 });
@@ -417,16 +447,16 @@ app.post('/login', async (req, res) => {
 });
 
 app.post('/add-organization', async (req, res) => {
-    const { insName, location, code, username, password } = req.body;
+    const { insName, location, code, username, password, adoptingVillages } = req.body;
     console.log("Add Organization Request:", req.body);
     try {
         const existingCode = await User.findOne({ code: code });
         if (existingCode) {
-            return res.status(400).json({ success: false, message: "Organization code already exists" });
+            return res.status(400).json({ success: false, message: "College code already exists" });
         }
         const existingUser = await User.findOne({ userName: username });
         if (existingUser) {
-            return res.status(400).json({ success: false, message: "Username already exists" });
+            return res.status(400).json({ success: false, message: "Admin email already exists" });
         }
 
         const salt = await bcrypt.genSalt(10);
@@ -437,7 +467,8 @@ app.post('/add-organization', async (req, res) => {
             location,
             code,
             userName: username,
-            password: hashedPassword
+            password: hashedPassword,
+            adoptingVillages: adoptingVillages || []
         });
         await newUser.save();
         res.json({
@@ -490,7 +521,7 @@ app.post('/addUnit', verifyToken, async (req, res) => {
     const { username, name, password, head, contact, mail, members, unitNumber, createdDate } = req.body;
 
     if (req.user.userName !== username && req.user.role !== 'admin') {
-        return res.status(403).json({ success: false, message: "Unauthori`zed" });
+        return res.status(403).json({ success: false, message: "Unauthorized" });
     }
 
     if (!username) {
@@ -554,7 +585,7 @@ app.post('/addUnit', verifyToken, async (req, res) => {
 app.delete('/deleteUnit', verifyToken, async (req, res) => {
     const { username, unitNumber } = req.body;
 
-    if (req.user.userName !== username) {
+    if (req.user.userName !== username && req.user.role !== 'admin') {
         return res.status(403).json({ success: false, message: "Unauthorized" });
     }
 
@@ -855,7 +886,7 @@ app.post('/addEvent', verifyToken, async (req, res) => {
 
         const eventCount = await Event.countDocuments({ unitId: unit._id });
         const eventNumber = eventCount + 1;
-        const eventCode = `${eventData.collegeCode}${eventData.unitCode}${String(eventNumber).padStart(3, '0')}`;
+        const eventCode = `NSSEVT${eventData.unitCode}${String(eventNumber).padStart(3, '0')}`;
 
         const newEvent = new Event({
             ...eventData,
@@ -1308,6 +1339,130 @@ app.get('/admin/events', verifyToken, async (req, res) => {
     } catch (error) {
         console.error("Error fetching events:", error);
         res.status(500).json({ success: false, message: "Internal Server Error" });
+    }
+});
+
+// Admin: Get All Program Officers
+app.get('/admin/all-program-officers', verifyToken, async (req, res) => {
+    if (req.user.role !== 'admin') {
+        return res.status(403).json({ success: false, message: "Unauthorized: Admin access required" });
+    }
+
+    try {
+        const officers = await ProgramOfficer.find({})
+            .populate('collegeId', 'insName code')
+            .sort({ createdAt: -1 });
+
+        res.json({
+            success: true,
+            officers
+        });
+    } catch (error) {
+        console.error("Error fetching all program officers:", error);
+        res.status(500).json({ success: false, message: "Internal Server Error" });
+    }
+});
+
+// Admin: Get All Students
+app.get('/admin/all-students', verifyToken, async (req, res) => {
+    if (req.user.role !== 'admin') {
+        return res.status(403).json({ success: false, message: "Unauthorized: Admin access required" });
+    }
+
+    try {
+        const students = await Member.find({})
+            .populate('collegeId', 'insName code')
+            .populate('unitId', 'unitNumber name')
+            .sort({ createdAt: -1 });
+
+        res.json({
+            success: true,
+            students
+        });
+    } catch (error) {
+        console.error("Error fetching all students:", error);
+        res.status(500).json({ success: false, message: "Internal Server Error" });
+    }
+});
+
+// Get Unassigned Program Officers for a college
+app.get('/unassigned-officers/:collegeCode', verifyToken, async (req, res) => {
+    const { collegeCode } = req.params;
+    try {
+        const college = await User.findOne({ code: collegeCode });
+        if (!college) return res.status(404).json({ success: false, message: "College not found" });
+
+        // Officers with no unit assigned (unit is empty string or field missing)
+        const unassignedOfficers = await ProgramOfficer.find({ 
+            collegeId: college._id, 
+            $or: [{ unit: "" }, { unit: { $exists: false } }] 
+        });
+
+        res.json({ success: true, officers: unassignedOfficers });
+    } catch (error) {
+        console.error("Error fetching unassigned officers:", error);
+        res.status(500).json({ success: false, message: "Server error" });
+    }
+});
+
+// Assign Program Officer to a Unit
+app.post('/assign-officer-to-unit', verifyToken, async (req, res) => {
+    const { officerId, unitNumber, collegeCode } = req.body;
+    
+    // Only Admin or College users can assign
+    if (req.user.role !== 'admin' && req.user.role !== 'college') {
+        return res.status(403).json({ success: false, message: "Unauthorized" });
+    }
+
+    try {
+        const college = await User.findOne({ code: collegeCode });
+        if (!college) return res.status(404).json({ success: false, message: "College not found" });
+
+        const officer = await ProgramOfficer.findById(officerId);
+        if (!officer) return res.status(404).json({ success: false, message: "Officer not found" });
+
+        // Handle Unassignment
+        if (unitNumber === "UNASSIGNED") {
+            if (officer.unit) {
+                // Clear the head field in the unit they were assigned to
+                await Unit.findOneAndUpdate(
+                    { unitNumber: officer.unit, collegeId: college._id },
+                    { $set: { head: null } }
+                );
+            }
+            officer.unit = "";
+            await officer.save();
+            return res.json({ success: true, message: "Officer unassigned successfully", officer });
+        }
+
+        const unit = await Unit.findOne({ unitNumber, collegeId: college._id });
+        if (!unit) return res.status(404).json({ success: false, message: "Unit not found" });
+
+        // 1. If this officer belongs to another unit already, clear that unit's head
+        if (officer.unit && officer.unit !== unitNumber) {
+            await Unit.findOneAndUpdate(
+                { unitNumber: officer.unit, collegeId: college._id },
+                { $set: { head: null } }
+            );
+        }
+
+        // 2. If the target unit already has a different head, clear that officer's unit field
+        if (unit.head && String(unit.head) !== String(officerId)) {
+            await ProgramOfficer.findByIdAndUpdate(unit.head, { $set: { unit: "" } });
+        }
+
+        // 3. Update the officer record
+        officer.unit = unitNumber;
+        await officer.save();
+
+        // 4. Update the unit record
+        unit.head = officerId;
+        await unit.save();
+
+        res.json({ success: true, message: "Officer assigned successfully", officer });
+    } catch (error) {
+        console.error("Error assigning officer:", error);
+        res.status(500).json({ success: false, message: "Server error" });
     }
 });
 
