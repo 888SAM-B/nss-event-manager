@@ -59,18 +59,33 @@ const UnitDashboard = () => {
                 },
             })
             .then((res) => {
-                setUnit(res.data.unit);
-                setCollege(res.data.college);
-                setLoading(false);
-            })
-            .catch((err) => {
-                setError(err.response?.data?.message || "Something went wrong");
-                setLoading(false);
-
-                if (err.response?.status === 401) {
+                if (res.data.success) {
+                    setUnit(res.data.unit);
+                    setCollege(res.data.college);
+                    setLoading(false);
+                } else {
+                    localStorage.removeItem("adminToken");
+                    localStorage.removeItem("nsstoken");
+                    localStorage.removeItem("nss_username");
                     localStorage.removeItem("unitToken");
+                    localStorage.removeItem("nssunitCode");
+                    localStorage.removeItem("nsscollegeCode");
+                    toast.error("Failed to fetch unit details. Please login again.");
                     navigate("/unit-login");
                 }
+            })
+            .catch((err) => {
+                console.error(err);
+                localStorage.removeItem("adminToken");
+                localStorage.removeItem("nsstoken");
+                localStorage.removeItem("nss_username");
+                localStorage.removeItem("unitToken");
+                localStorage.removeItem("nssunitCode");
+                localStorage.removeItem("nsscollegeCode");
+                toast.error("Session expired or error fetching unit details. Please login again.");
+                navigate("/unit-login");
+                setError(err.response?.data?.message || "Something went wrong");
+                setLoading(false);
             });
 
         // Fetch Notifications (Invites)
@@ -442,20 +457,32 @@ const UnitDashboard = () => {
     };
 
     if (loading) return (
-        <div className="flex-center" style={{ height: '100vh' }}>
-            <div className="loading"></div>
-            <h2 className="ms-2">Loading Unit Dashboard...</h2>
+        <div className="flex-center" style={{ height: '100vh', flexDirection: 'column', gap: '1.25rem' }}>
+            <div style={{
+                width: 56, height: 56,
+                border: '3px solid rgba(20,184,166,0.2)',
+                borderTop: '3px solid #14b8a6',
+                borderRadius: '50%',
+                animation: 'spin 0.8s linear infinite'
+            }} />
+            <span style={{ color: 'var(--txt-3)', fontSize: '0.875rem', letterSpacing: '0.05em' }}>Loading unit dashboard...</span>
         </div>
     );
 
     if (error) {
         return (
-            <div className="container p-6">
-                <div className="card text-center">
-                    <h2 className="text-danger mb-2">Error</h2>
-                    <p>{error}</p>
-                    <button className="btn btn-primary mt-4" onClick={() => navigate('/unit-login')}>Go to Login</button>
-                </div>
+            <div className="flex-center" style={{ height: '100vh', flexDirection: 'column', gap: '1rem' }}>
+                <div style={{
+                    width: 64, height: 64,
+                    background: 'rgba(239,68,68,0.1)',
+                    border: '1px solid rgba(239,68,68,0.25)',
+                    borderRadius: '18px',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    fontSize: '1.75rem',
+                }}>⚠️</div>
+                <h3 style={{ color: 'var(--danger-400)' }}>Unable to load dashboard</h3>
+                <p style={{ color: 'var(--txt-3)', margin: 0 }}>{error}</p>
+                <button className="btn btn-primary" onClick={() => navigate('/unit-login')}>Back to Login</button>
             </div>
         );
     }
@@ -463,36 +490,60 @@ const UnitDashboard = () => {
 
 
     return (
-        <div style={{ minHeight: '100vh', background: 'var(--bg-color)' }}>
+        <div style={{ minHeight: '100vh', background: 'var(--bg)' }}>
             <header className="dashboard-header">
                 <div className="container flex-between">
-                    <div>
-                        <span className="badge badge-primary">Unit Dashboard</span>
-                        <h1 className="mb-0" style={{ fontSize: '1.5rem', marginTop: '1rem', marginBottom: '0.3rem' }}>{college?.code} - {college?.insName} </h1>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.875rem' }}>
+                        <div style={{
+                            width: 38, height: 38,
+                            background: 'linear-gradient(135deg, rgba(20,184,166,0.2), rgba(99,102,241,0.15))',
+                            border: '1px solid rgba(20,184,166,0.25)',
+                            borderRadius: '11px',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            fontSize: '1.1rem', flexShrink: 0,
+                            boxShadow: '0 0 20px rgba(20,184,166,0.15)',
+                        }}>🏫</div>
+                        <div>
+                            <div style={{
+                                fontWeight: 800, fontSize: '1rem', letterSpacing: '-0.02em',
+                                background: 'linear-gradient(135deg, #2dd4bf, #818cf8)',
+                                WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text',
+                            }}>{unit?.name || 'Unit Dashboard'}</div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', marginTop: '1px' }}>
+                                <span className="badge badge-success" style={{ fontSize: '0.6rem', letterSpacing: '0.1em' }}>{unit?.unitNumber}</span>
+                                <span style={{ fontSize: '0.68rem', color: 'var(--txt-3)' }}>{college?.insName}</span>
+                            </div>
+                        </div>
                     </div>
+
                     {isAccessedFromCollege ? (
-                        <div className="d-flex align-items-center width-set gap-3">
+                        <div className="d-flex align-items-center" style={{ gap: '0.625rem' }}>
                             <ThemeToggle />
-                            <button
-                                onClick={() => navigate("/college-dashboard")}
-                                className="btn btn-secondary"
-                                style={{ width: '50%' }}
-                            >
-                                ← Back to Dashboard
+                            <button className="btn btn-secondary btn-sm" onClick={() => navigate('/college-dashboard')}>
+                                ← College Dashboard
                             </button>
                         </div>
                     ) : (
-                        <div className="d-flex align-items-center gap-3 width-set " >
+                        <div className="d-flex align-items-center" style={{ gap: '0.625rem' }}>
                             <ThemeToggle />
-                            <div className="position-relative bells " style={{ cursor: 'pointer', marginRight: '1rem' }} onClick={() => setIsInviteModalOpen(true)}>
-                                <span style={{ fontSize: '1.5rem' }}>🔔</span>
-                                {invites.length > 0 && (
-                                    <span className="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" style={{ fontSize: '0.7rem' }}>
-                                        {invites.length}
-                                    </span>
-                                )}
+                            <div style={{ position: 'relative', cursor: 'pointer' }} onClick={() => setIsInviteModalOpen(true)}>
+                                <button className="btn btn-secondary btn-sm" style={{ position: 'relative', minWidth: 42 }}>
+                                    🔔
+                                    {invites.length > 0 && (
+                                        <span style={{
+                                            position: 'absolute', top: -6, right: -6,
+                                            background: '#ef4444',
+                                            color: 'white',
+                                            borderRadius: '50%',
+                                            width: 18, height: 18,
+                                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                            fontSize: '0.65rem', fontWeight: 700,
+                                            border: '2px solid var(--bg)',
+                                        }}>{invites.length}</span>
+                                    )}
+                                </button>
                             </div>
-                            <button onClick={handleLogout} className="btn btn-danger">Logout</button>
+                            <button className="btn btn-danger btn-sm" onClick={handleLogout}>Sign Out</button>
                         </div>
                     )}
                 </div>

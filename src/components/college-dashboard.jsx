@@ -43,6 +43,11 @@ const CollegeDashboard = () => {
     const [assignTargetUnit, setAssignTargetUnit] = useState("");
     const [isAssigning, setIsAssigning] = useState(false);
 
+    // Adopting Villages State
+    const [showVillageModal, setShowVillageModal] = useState(false);
+    const [newVillage, setNewVillage] = useState({ name: "", address: "", pincode: "" });
+    const [isAddingVillage, setIsAddingVillage] = useState(false);
+
     // Check if admin is viewing this dashboard
     const isAdminViewing = localStorage.getItem("adminToken") !== null;
 
@@ -175,11 +180,27 @@ const CollegeDashboard = () => {
                 // Fetch officers using the code from response
                 fetchProgramOfficers(res.data.user.code);
             } else {
-                navigate("/");
+                localStorage.removeItem("adminToken");
+                localStorage.removeItem("nsstoken");
+                localStorage.removeItem("nss_username");
+                localStorage.removeItem("unitToken");
+                localStorage.removeItem("nssunitCode");
+                localStorage.removeItem("nsscollegeCode");
+
+                toast.error("Failed to fetch dashboard details. Please login again.");
+                navigate("/login");
             }
         } catch (error) {
             console.error(error);
-            navigate("/");
+            localStorage.removeItem("adminToken");
+            localStorage.removeItem("nsstoken");
+            localStorage.removeItem("nss_username");
+            localStorage.removeItem("unitToken");
+            localStorage.removeItem("nssunitCode");
+            localStorage.removeItem("nsscollegeCode");
+
+            toast.error("Error fetching details. Please login again.");
+            navigate("/login");
             setLoading(false);
         }
     };
@@ -295,61 +316,128 @@ const CollegeDashboard = () => {
         return matchesSearch && matchesUnit && matchesBatch;
     });
 
+    const handleAddVillage = async () => {
+        if (!newVillage.name || !newVillage.address || !newVillage.pincode) {
+            toast.error("Please fill all village details");
+            return;
+        }
+        setIsAddingVillage(true);
+        try {
+            const res = await axios.post(`${import.meta.env.VITE_API_URL}/add-village`, {
+                username,
+                village: newVillage
+            }, {
+                headers: { Authorization: `Bearer ${localStorage.getItem("nsstoken")}` }
+            });
+
+            if (res.data.success) {
+                toast.success("Village added successfully!");
+                setCollegeData({ ...collegeData, adoptingVillages: res.data.user.adoptingVillages });
+                setShowVillageModal(false);
+                setNewVillage({ name: "", address: "", pincode: "" });
+            }
+        } catch (error) {
+            console.error("Error adding village:", error);
+            toast.error("Failed to add village");
+        } finally {
+            setIsAddingVillage(false);
+        }
+    };
+
+    const handleDeleteVillage = async (index) => {
+        if (!confirm("Are you sure you want to remove this village?")) return;
+        try {
+            const res = await axios.delete(`${import.meta.env.VITE_API_URL}/delete-village`, {
+                data: { username, villageIndex: index },
+                headers: { Authorization: `Bearer ${localStorage.getItem("nsstoken")}` }
+            });
+
+            if (res.data.success) {
+                toast.success("Village removed successfully");
+                setCollegeData({ ...collegeData, adoptingVillages: res.data.user.adoptingVillages });
+            }
+        } catch (error) {
+            console.error("Error deleting village:", error);
+            toast.error("Failed to remove village");
+        }
+    };
+
     if (loading) return (
-        <div className="flex-center" style={{ height: '100vh' }}>
-            <div className="loading"></div>
-            <h2 className="ms-2">Loading College Dashboard...</h2>
+        <div className="flex-center" style={{ height: '100vh', flexDirection: 'column', gap: '1.25rem' }}>
+            <div style={{
+                width: 56, height: 56,
+                border: '3px solid rgba(99,102,241,0.2)',
+                borderTop: '3px solid #6366f1',
+                borderRadius: '50%',
+                animation: 'spin 0.8s linear infinite'
+            }} />
+            <span style={{ color: 'var(--txt-3)', fontSize: '0.875rem', letterSpacing: '0.05em' }}>Loading dashboard...</span>
         </div>
     );
 
     return (
-        <div style={{ minHeight: '100vh', background: 'var(--bg-color)' }}>
-            <header className="dashboard-header" style={{ background: 'var(--nav-bg)', backdropFilter: 'blur(10px)', position: 'sticky', top: 0, zIndex: 100, borderBottom: '1px solid var(--border-color)', padding: '1rem 0' }}>
+        <div style={{ minHeight: '100vh', background: 'var(--bg)' }}>
+            <header className="dashboard-header">
                 <div className="container flex-between">
-                    <div>
-                        <h1 className="mb-0" style={{ fontSize: '1.5rem' }}>{insName || 'College Dashboard'}</h1>
-                        <span className="badge badge-primary">{insCode}</span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.875rem' }}>
+                        <div style={{
+                            width: 38, height: 38,
+                            background: 'linear-gradient(135deg, rgba(99,102,241,0.2), rgba(20,184,166,0.15))',
+                            border: '1px solid rgba(99,102,241,0.25)',
+                            borderRadius: '11px',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            fontSize: '1.1rem', flexShrink: 0,
+                            boxShadow: '0 0 20px rgba(99,102,241,0.15)',
+                        }}>🏛️</div>
+                        <div>
+                            <div style={{
+                                fontWeight: 800, fontSize: '1rem', letterSpacing: '-0.02em',
+                                background: 'linear-gradient(135deg, #818cf8, #2dd4bf)',
+                                WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text',
+                            }}>{insName || 'College Dashboard'}</div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', marginTop: '1px' }}>
+                                <span className="badge badge-primary" style={{ fontSize: '0.6rem', letterSpacing: '0.1em' }}>{insCode}</span>
+                                <span style={{ fontSize: '0.68rem', color: 'var(--txt-3)' }}>NSS Organization</span>
+                            </div>
+                        </div>
                     </div>
-                    <div className="d-flex gap-3 align-items-center width-set">
+                    <div className="d-flex align-items-center" style={{ gap: '0.625rem' }}>
                         <ThemeToggle />
-                        <button
-                            className="btn btn-primary"
-                            onClick={() => navigate('/explore-events', { state: { collegeCode: insCode, unitCode: 'COLLEGE', fromRole: 'college' } })}
-                        >
+                        <button className="btn btn-secondary btn-sm"
+                            onClick={() => navigate('/explore-events', { state: { collegeCode: insCode, unitCode: 'COLLEGE', fromRole: 'college' } })}>
                             Explore Events
                         </button>
                         {isAdminViewing ? (
-                            <button
-                                className="btn btn-secondary"
-                                onClick={() => {
-                                    navigate("/admin-dashboard");
-                                }}
-                            >
-                                ← Back to Admin Dashboard
+                            <button className="btn btn-secondary btn-sm" onClick={() => navigate('/admin-dashboard')}>
+                                ← Admin
                             </button>
                         ) : (
-                            <button
-                                className="btn btn-danger"
-                                onClick={() => {
-                                    localStorage.removeItem("nsstoken");
-                                    navigate("/");
-                                }}
-                            >
-                                Logout
+                            <button className="btn btn-danger btn-sm" onClick={() => { localStorage.removeItem('nsstoken'); navigate('/'); }}>
+                                Sign Out
                             </button>
                         )}
                     </div>
                 </div>
             </header>
 
-            <main className="container main-container" style={{ marginTop: '0px' }}  >
+            <main className="container main-container">
                 {/* Adopting Villages Section */}
-                {collegeData?.adoptingVillages && collegeData.adoptingVillages.length > 0 && (
-                    <div className="card mb-6">
-                        <div className="flex-between mb-4">
-                            <h3 className="mb-0">Adopting Villages</h3>
-                            <span className="badge badge-primary">{collegeData.adoptingVillages.length} Villages</span>
+                <div className="card mb-6">
+                    <div className="flex-between mb-4">
+                        <h3 className="mb-0">Adopting Villages</h3>
+                        <div className="d-flex gap-2">
+                            {collegeData?.adoptingVillages && collegeData.adoptingVillages.length > 0 && (
+                                <span className="badge badge-primary">{collegeData.adoptingVillages.length} Villages</span>
+                            )}
+                            <button 
+                                className="btn btn-sm btn-primary" 
+                                onClick={() => setShowVillageModal(true)}
+                            >
+                                + Add Village
+                            </button>
                         </div>
+                    </div>
+                    {collegeData?.adoptingVillages && collegeData.adoptingVillages.length > 0 ? (
                         <div className="grid-cols-3 gap-4">
                             {collegeData.adoptingVillages.map((village, idx) => (
                                 <div key={idx} className="p-4 rounded village-card" style={{
@@ -366,7 +454,17 @@ const CollegeDashboard = () => {
                                         height: '100%',
                                         background: 'var(--primary-color)'
                                     }}></div>
-                                    <h4 className="mb-3 text-primary-400" style={{ fontSize: '1.1rem' }}>{village.name}</h4>
+                                    <div className="flex-between mb-3">
+                                        <h4 className="mb-0 text-primary-400" style={{ fontSize: '1.1rem' }}>{village.name}</h4>
+                                        <button 
+                                            className="text-danger" 
+                                            style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
+                                            onClick={() => handleDeleteVillage(idx)}
+                                            title="Remove Village"
+                                        >
+                                            &times;
+                                        </button>
+                                    </div>
                                     <div className="d-flex flex-column gap-2">
                                         <div className="d-flex align-items-start gap-2">
                                             <span style={{ fontSize: '0.8rem', opacity: 0.7 }}>📍</span>
@@ -380,8 +478,12 @@ const CollegeDashboard = () => {
                                 </div>
                             ))}
                         </div>
-                    </div>
-                )}
+                    ) : (
+                        <div className="text-center p-6" style={{ background: 'var(--bg-tertiary)', borderRadius: '8px' }}>
+                            <p className="text-muted mb-0">No villages adopted yet. Click the button above to add one.</p>
+                        </div>
+                    )}
+                </div>
 
                 <div className="flex-between mb-6">
                     <div>
@@ -769,6 +871,60 @@ const CollegeDashboard = () => {
                                 disabled={isAssigning || !assignTargetUnit}
                             >
                                 {isAssigning ? 'Assigning...' : 'Assign Officer'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Add Village Modal */}
+            {showVillageModal && (
+                <div className="modal-overlay" onClick={() => setShowVillageModal(false)}>
+                    <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '450px' }}>
+                        <div className="flex-between mb-4">
+                            <h2 className="mb-0">Adopt a New Village</h2>
+                            <button className="btn btn-sm btn-secondary" onClick={() => setShowVillageModal(false)}>&times;</button>
+                        </div>
+                        
+                        <div className="form-group mb-3">
+                            <label className="form-label">Village Name</label>
+                            <input 
+                                className="form-input"
+                                placeholder="e.g. Melpattu Village"
+                                value={newVillage.name}
+                                onChange={(e) => setNewVillage({...newVillage, name: e.target.value})}
+                            />
+                        </div>
+
+                        <div className="form-group mb-3">
+                            <label className="form-label">Location / Address</label>
+                            <input 
+                                className="form-input"
+                                placeholder="e.g. Near Taluk Office"
+                                value={newVillage.address}
+                                onChange={(e) => setNewVillage({...newVillage, address: e.target.value})}
+                            />
+                        </div>
+
+                        <div className="form-group mb-4">
+                            <label className="form-label">Pincode</label>
+                            <input 
+                                className="form-input"
+                                placeholder="6-digit pincode"
+                                value={newVillage.pincode}
+                                onChange={(e) => setNewVillage({...newVillage, pincode: e.target.value})}
+                                maxLength={6}
+                            />
+                        </div>
+
+                        <div className="flex-between pt-4" style={{ borderTop: '1px solid var(--border-color)' }}>
+                            <button className="btn btn-secondary" onClick={() => setShowVillageModal(false)}>Cancel</button>
+                            <button 
+                                className="btn btn-primary" 
+                                onClick={handleAddVillage}
+                                disabled={isAddingVillage}
+                            >
+                                {isAddingVillage ? 'Adding...' : 'Add Village'}
                             </button>
                         </div>
                     </div>

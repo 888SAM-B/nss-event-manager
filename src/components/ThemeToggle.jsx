@@ -1,38 +1,39 @@
 import React from 'react';
 import { useTheme } from '../context/ThemeContext';
-import lightModeIcon from '/light-mode.png';
-import darkModeIcon from '/night-mode.png';
-
-
+import lightMode from '/light-mode.png';
+import darkMode from '/dark-mode.png';
 const ThemeToggle = () => {
     const { theme, toggleTheme } = useTheme();
+    const isDark = theme === 'dark';
 
     return (
         <button
-            className="btn btn-secondary theme-toggle"
             onClick={toggleTheme}
-            title={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}
+            title={`Switch to ${isDark ? 'light' : 'dark'} mode`}
             style={{
-                width: '40px',
-                height: '40px',
-                borderRadius: '50%',
-                padding: 0,
+                width: 40, height: 40,
+                borderRadius: '10px',
+                background: 'transparent',
+                border: 'none',
+                color: 'var(--txt-1)',
+                cursor: 'pointer',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                fontSize: '1.2rem',
-                border: '1px solid var(--border-color)',
-                backgroundColor: 'var(--bg-tertiary)',
-                color: 'var(--text-primary)',
-                cursor: 'pointer',
-                transition: 'all var(--transition-base)'
+                fontSize: '1rem',
+                transition: 'all 0.2s ease',
+                flexShrink: 0,
+            }}
+            onMouseEnter={e => {
+
+                e.currentTarget.style.transform = 'scale(1.05)';
+            }}
+            onMouseLeave={e => {
+
+                e.currentTarget.style.transform = 'scale(1)';
             }}
         >
-            {theme === 'dark' ? (
-                <img src={lightModeIcon} alt="Light Mode" style={{ width: '24px', height: '24px' }} />
-            ) : (
-                <img src={darkModeIcon} alt="Dark Mode" style={{ width: '24px', height: '24px' }} />
-            )}
+            {isDark ? <img style={{ width: 20, height: 20 }} src={lightMode} alt="light mode" /> : <img style={{ width: 20, height: 20 }} src={darkMode} alt="dark mode" />}
         </button>
     );
 };

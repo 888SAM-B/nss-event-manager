@@ -324,10 +324,16 @@ const AdminDashboard = () => {
                 }
             } catch (err) {
                 console.error(err);
-                if (err.response && err.response.status === 401) {
-                    localStorage.removeItem("adminToken");
-                    navigate("/admin/login");
-                }
+                // Clear all dashboard-related tokens
+                localStorage.removeItem("adminToken");
+                localStorage.removeItem("nsstoken");
+                localStorage.removeItem("nss_username");
+                localStorage.removeItem("unitToken");
+                localStorage.removeItem("nssunitCode");
+                localStorage.removeItem("nsscollegeCode");
+                
+                toast.error("Session expired or error fetching details. Please login again.");
+                navigate("/admin-login");
             } finally {
                 setLoading(false);
             }
@@ -341,56 +347,78 @@ const AdminDashboard = () => {
         navigate("/");
     };
 
-    if (loading) return <div className="flex-center" style={{ height: '100vh' }}>Loading Admin Dashboard...</div>;
-    if (!stats) return <div className="flex-center">Failed to load stats.</div>;
+    if (loading) return (
+        <div className="flex-center" style={{ height: '100vh', flexDirection: 'column', gap: '1.25rem' }}>
+            <div style={{
+                width: 56, height: 56,
+                border: '3px solid rgba(99,102,241,0.2)',
+                borderTop: '3px solid #6366f1',
+                borderRadius: '50%',
+                animation: 'spin 0.8s linear infinite'
+            }} />
+            <span style={{ color: 'var(--txt-3)', fontSize: '0.875rem', letterSpacing: '0.05em' }}>Loading dashboard...</span>
+        </div>
+    );
 
-    // Prepare Chart Data
+    if (!stats) {
+        localStorage.removeItem("adminToken");
+        navigate("/admin-login");
+        return null;
+    }
+
+    // Chart data — standard professional palette
     const categoryData = {
         labels: stats.eventsByCategory.map(c => c._id),
-        datasets: [
-            {
-                label: '# of Events',
-                data: stats.eventsByCategory.map(c => c.count),
-                backgroundColor: [
-                    'rgba(255, 99, 132, 0.6)',
-                    'rgba(54, 162, 235, 0.6)',
-                    'rgba(255, 206, 86, 0.6)',
-                    'rgba(75, 192, 192, 0.6)',
-                    'rgba(153, 102, 255, 0.6)',
-                    'rgba(255, 159, 64, 0.6)',
-                ],
-                borderColor: [
-                    'rgba(255, 99, 132, 1)',
-                    'rgba(54, 162, 235, 1)',
-                    'rgba(255, 206, 86, 1)',
-                    'rgba(75, 192, 192, 1)',
-                    'rgba(153, 102, 255, 1)',
-                    'rgba(255, 159, 64, 1)',
-                ],
-                borderWidth: 1,
-            },
-        ],
+        datasets: [{
+            label: '# of Events',
+            data: stats.eventsByCategory.map(c => c.count),
+            backgroundColor: [
+                '#3b82f6', '#22c55e', '#f59e0b',
+                '#ef4444', '#8b5cf6', '#06b6d4',
+            ],
+            borderColor: '#ffffff',
+            borderWidth: 2,
+            hoverOffset: 6,
+        }],
     };
 
     const collegeData = {
         labels: stats.colleges.map(c => c.code),
         datasets: [
             {
-                label: 'Units per College',
+                label: 'Units',
                 data: stats.colleges.map(c => c.units.length),
-                backgroundColor: 'rgba(54, 162, 235, 0.5)',
+                backgroundColor: '#3b82f6',
+                borderColor: '#2563eb',
+                borderWidth: 1,
+                borderRadius: 4,
             },
             {
-                label: 'Events per College',
+                label: 'Events',
                 data: stats.colleges.map(c => c.events.length),
-                backgroundColor: 'rgba(255, 99, 132, 0.5)',
+                backgroundColor: '#22c55e',
+                borderColor: '#16a34a',
+                borderWidth: 1,
+                borderRadius: 4,
             }
         ]
     };
+
+    const chartBaseOptions = {
+        plugins: {
+            legend: {
+                labels: { color: '#64748b', font: { family: 'Plus Jakarta Sans', size: 12 }, padding: 14 }
+            }
+        },
+        scales: {
+            x: { ticks: { color: '#64748b' }, grid: { color: 'rgba(0,0,0,0.06)' } },
+            y: { ticks: { color: '#64748b' }, grid: { color: 'rgba(0,0,0,0.06)' }, beginAtZero: true }
+        }
+    };
+
     const handleAddOrg = () => {
         navigate('/add-org', { state: { admin: import.meta.env.VITE_ADMIN_TOKEN } });
-        // console.log("Hello",import.meta.env.VITE_ADMIN_TOKEN)
-    }
+    };
 
     const handleCollegeRedirect = (college) => {
         localStorage.setItem('nss_username', college.userName);
@@ -433,146 +461,192 @@ const AdminDashboard = () => {
             setIsDeleting(false);
         }
     };
+    const upcomingCount = stats.allEvents?.filter(e => {
+        const d = new Date(e.singleDay ? e.date : e.dateFrom);
+        return d >= new Date();
+    }).length || 0;
+
     return (
-        <div className="admin-dashboard" style={{ minHeight: '100vh', background: 'var(--bg-color)' }}>
-            <header className="dashboard-header" style={{ background: 'var(--nav-bg)', backdropFilter: 'blur(10px)', position: 'sticky', top: 0, zIndex: 100, borderBottom: '1px solid var(--border-color)', padding: '1rem 0' }}>
+        <div className="admin-dashboard" style={{ minHeight: '100vh', background: 'var(--bg)' }}>
+            <header className="dashboard-header">
                 <div className="container flex-between">
-                    <div>
-                        <span className="badge  badge-primary" style={{ marginBottom: '10px' }} >System Administrator</span>
-                        <h1 className="mb-0">Admin Dashboard</h1>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.875rem' }}>
+                        <div style={{
+                            width: 38, height: 38,
+                            background: 'linear-gradient(135deg, rgba(99,102,241,0.25), rgba(20,184,166,0.18))',
+                            border: '1px solid rgba(99,102,241,0.3)',
+                            borderRadius: '11px',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            fontSize: '1.1rem',
+                            boxShadow: '0 0 20px rgba(99,102,241,0.2)',
+                            flexShrink: 0,
+                        }}>🛡️</div>
+                        <div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                <span style={{
+                                    fontWeight: 800, fontSize: '1rem', letterSpacing: '-0.02em',
+                                    background: 'linear-gradient(135deg, #818cf8, #2dd4bf)',
+                                    WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text',
+                                }}>Admin Dashboard</span>
+                                <span className="badge badge-primary" style={{ fontSize: '0.6rem', letterSpacing: '0.1em' }}>SYSTEM</span>
+                            </div>
+                            <p style={{ margin: 0, fontSize: '0.7rem', color: 'var(--txt-3)', marginTop: '-1px' }}>Periyar University NSS Portal</p>
+                        </div>
                     </div>
-                    <div className="d-flex gap-2 align-items-center width-set ">
+                    <div className="d-flex align-items-center" style={{ gap: '0.625rem' }}>
                         <ThemeToggle />
-                        <button className='btn' onClick={handleAddOrg} >+ Register College</button>
-                        <button className="btn btn-danger" onClick={handleLogout}>Logout</button>
+                        <button className="btn btn-secondary btn-sm" onClick={handleAddOrg}>+ Register College</button>
+                        <button className="btn btn-danger btn-sm" onClick={handleLogout}>Sign Out</button>
                     </div>
                 </div>
             </header>
 
-            <main className="container main-container" style={{ marginTop: '0px' }} >
-                {/* Stats Cards */}
-                <div className="grid-cols-3 mb-6">
-                    <div className="card text-center">
-                        <h3 className="text-secondary mb-2">Total Colleges</h3>
-                        <p className="fw-bold" style={{ fontSize: '2rem' }}>{stats.totalColleges}</p>
+            <main className="container main-container">
 
-                    </div>
-                    <div className="card text-center">
-                        <h3 className="text-secondary mb-2">Total Units</h3>
-                        <p className="fw-bold" style={{ fontSize: '2rem' }}>{stats.totalUnits}</p>
-                    </div>
-                    <div className="card text-center">
-                        <h3 className="text-secondary mb-2">Total Events</h3>
-                        <p className="fw-bold" style={{ fontSize: '2rem' }}>{stats.totalEvents}</p>
-                    </div>
+                {/* ── Stats Row ── */}
+                <div className="grid-cols-4 mb-6" style={{ gap: '1rem' }}>
+                    {[
+                        { label: 'Colleges',  value: stats.totalColleges, icon: '🏛️', bg: '#dbeafe', clr: '#1d4ed8' },
+                        { label: 'Units',     value: stats.totalUnits,    icon: '🏫', bg: '#dcfce7', clr: '#15803d' },
+                        { label: 'Events',    value: stats.totalEvents,   icon: '📋', bg: '#fef3c7', clr: '#b45309' },
+                        { label: 'Upcoming',  value: upcomingCount,       icon: '📅', bg: '#f0fdf4', clr: '#15803d' },
+                    ].map(s => (
+                        <div key={s.label} style={{
+                            background: 'var(--card)',
+                            border: '1px solid var(--border)',
+                            borderRadius: '1rem',
+                            padding: '1.25rem 1.5rem',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '1rem',
+                            transition: 'all 0.2s ease',
+                            cursor: 'default',
+                            boxShadow: 'var(--sh)',
+                        }}
+                            onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = 'var(--sh-md)'; }}
+                            onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = 'var(--sh)'; }}
+                        >
+                            <div style={{
+                                width: 48, height: 48, borderRadius: '12px', flexShrink: 0,
+                                background: s.bg,
+                                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                fontSize: '1.3rem',
+                            }}>{s.icon}</div>
+                            <div>
+                                <div style={{ fontSize: '1.875rem', fontWeight: 800, letterSpacing: '-0.04em', color: s.clr, lineHeight: 1 }}>{s.value}</div>
+                                <div style={{ fontSize: '0.72rem', fontWeight: 600, color: 'var(--txt-3)', textTransform: 'uppercase', letterSpacing: '0.08em', marginTop: '0.25rem' }}>{s.label}</div>
+                            </div>
+                        </div>
+                    ))}
                 </div>
-                {/* Charts */}
+
+                {/* ── Charts ── */}
                 <div className="grid-cols-2 mb-6 admin-charts-container">
-                    <div className="card admin-chart-card" style={{ height: '400px' }}>
-                        <h3 className="mb-4">Events by Category</h3>
-                        <div className="chart-wrapper" style={{ height: '300px', display: 'flex', justifyContent: 'center' }}>
-                            <Doughnut data={categoryData} options={{ maintainAspectRatio: false }} />
+                    <div className="card admin-chart-card" style={{ height: 400 }}>
+                        <div className="flex-between mb-4">
+                            <h3 className="mb-0" style={{ fontSize: '1rem' }}>Events by Category</h3>
+                            <span className="badge badge-primary">{stats.eventsByCategory.length} categories</span>
+                        </div>
+                        <div className="chart-wrapper" style={{ height: 300, display: 'flex', justifyContent: 'center' }}>
+                            <Doughnut data={categoryData} options={{ maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { color: '#64748b', font: { family: 'Plus Jakarta Sans', size: 11 }, padding: 12 } } } }} />
                         </div>
                     </div>
-                    <div className="card admin-chart-card" style={{ height: '400px' }}>
-                        <h3 className="mb-4">College Overview</h3>
-                        <div className="chart-wrapper" style={{ height: '300px' }}>
-                            <Bar
-                                data={collegeData}
-                                options={{
-                                    maintainAspectRatio: false,
-                                    responsive: true,
-                                    scales: {
-                                        y: {
-                                            beginAtZero: true
-                                        }
-                                    }
-                                }}
-                            />
+                    <div className="card admin-chart-card" style={{ height: 400 }}>
+                        <div className="flex-between mb-4">
+                            <h3 className="mb-0" style={{ fontSize: '1rem' }}>College Overview</h3>
+                            <span className="badge badge-secondary">{stats.colleges.length} colleges</span>
+                        </div>
+                        <div className="chart-wrapper" style={{ height: 300 }}>
+                            <Bar data={collegeData} options={{ ...chartBaseOptions, maintainAspectRatio: false, responsive: true }} />
                         </div>
                     </div>
                 </div>
 
-                {/* Events Calendar & Quick Actions */}
+                {/* ── Calendar + Quick Actions ── */}
                 <div className="grid-cols-2 mb-6" style={{ gridTemplateColumns: '2fr 1fr' }}>
                     <div className="card">
                         <div className="flex-between mb-4">
-                            <h3 className="mb-0">Events Calendar</h3>
-                            <button
-                                className="btn btn-primary btn-sm"
-                                onClick={() => navigate('/admin/all-events')}
-                            >
-                                View All Events →
+                            <h3 className="mb-0" style={{ fontSize: '1rem' }}>Events Calendar</h3>
+                            <button className="btn btn-primary btn-sm" onClick={() => navigate('/admin/all-events')}>
+                                View All →
                             </button>
                         </div>
                         <EventsCalendar events={stats.allEvents || []} />
                     </div>
-                    <div className="card">
-                        <h3 className="mb-4">Quick Actions</h3>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                            <button
-                                className="btn btn-primary w-100"
-                                onClick={() => navigate('/admin/all-events')}
-                            >
-                                📋 Manage All Events
-                            </button>
-                            <button
-                                className="btn btn-secondary w-100"
-                                onClick={() => navigate('/admin/all-officers')}
-                            >
-                                👨‍💼 Manage All Officers
-                            </button>
-                            <button
-                                className="btn btn-success w-100"
-                                onClick={() => navigate('/admin/all-students')}
-                            >
-                                🎓 Manage All Students
-                            </button>
-                            <div className="p-3" style={{ background: 'var(--bg-tertiary)', borderRadius: '8px' }}>
-                                <p className="text-sm mb-2 fw-bold">Total Events</p>
-                                <p className="text-lg mb-0">{stats.totalEvents}</p>
-                            </div>
-                            <div className="p-3" style={{ background: 'var(--bg-tertiary)', borderRadius: '8px' }}>
-                                <p className="text-sm mb-2 fw-bold">Upcoming Events</p>
-                                <p className="text-lg mb-0">
-                                    {stats.allEvents?.filter(e => {
-                                        const eventDate = new Date(e.singleDay ? e.date : e.dateFrom);
-                                        return eventDate >= new Date();
-                                    }).length || 0}
-                                </p>
+
+                        <div className="card" style={{ display: 'flex', flexDirection: 'column', gap: '0.875rem' }}>
+                            <h3 className="mb-0" style={{ fontSize: '1rem' }}>Quick Actions</h3>
+                            {[
+                                { label: 'Manage All Events',  icon: '📋', handler: () => navigate('/admin/all-events'),   primary: true },
+                                { label: 'Program Officers',   icon: '👨‍💼', handler: () => navigate('/admin/all-officers'), primary: false },
+                                { label: 'Student Records',    icon: '🎓', handler: () => navigate('/admin/all-students'), primary: false },
+                            ].map(a => (
+                                <button key={a.label}
+                                    className={`btn ${a.primary ? 'btn-primary' : 'btn-secondary'} w-100`}
+                                    onClick={a.handler}
+                                    style={{ justifyContent: 'flex-start', gap: '0.75rem' }}
+                                >
+                                    <span>{a.icon}</span> {a.label}
+                                </button>
+                            ))}
+                            <div style={{ marginTop: 'auto', paddingTop: '0.75rem', borderTop: '1px solid var(--border)', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                                {[
+                                    { label: 'Total Events',    val: stats.totalEvents },
+                                    { label: 'Upcoming Events', val: upcomingCount },
+                                ].map(s => (
+                                    <div key={s.label} style={{
+                                        display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                                        padding: '0.5rem 0.75rem',
+                                        background: 'var(--bg-2)',
+                                        borderRadius: '0.5rem',
+                                        border: '1px solid var(--border)',
+                                    }}>
+                                        <span style={{ fontSize: '0.8rem', color: 'var(--txt-3)', fontWeight: 600 }}>{s.label}</span>
+                                        <span style={{ fontSize: '1.1rem', fontWeight: 800, color: 'var(--brand-600)' }}>{s.val}</span>
+                                    </div>
+                                ))}
                             </div>
                         </div>
-                    </div>
                 </div>
 
-                {/* College List Table */}
+                {/* ── College Table ── */}
                 <div className="card">
-                    <h3 className="mb-4">Registered Colleges</h3>
+                    <div className="flex-between mb-5">
+                        <div>
+                            <h3 className="mb-1" style={{ fontSize: '1.1rem' }}>Registered Colleges</h3>
+                            <p style={{ margin: 0, color: 'var(--txt-3)', fontSize: '0.8rem' }}>Click a row to enter the college dashboard</p>
+                        </div>
+                        <span className="badge badge-primary">{stats.colleges.length} total</span>
+                    </div>
                     <div style={{ overflowX: 'auto' }}>
-                        <table className="styled-table w-100">
+                        <table className="styled-table" style={{ width: '100%' }}>
                             <thead>
                                 <tr>
                                     <th>Code</th>
-                                    <th>Institute Name</th>
+                                    <th>Institution Name</th>
                                     <th>Units</th>
-                                    <th>Total Events</th>
-                                    <th>Actions</th>
+                                    <th>Events</th>
+                                    <th style={{ textAlign: 'right' }}>Actions</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 {stats.colleges.map((college) => (
-                                    <tr key={college._id} style={{ cursor: 'pointer' }} >
-                                        <td onClick={() => handleCollegeRedirect(college)}><span className="badge badge-secondary">{college.code}</span></td>
-                                        <td onClick={() => handleCollegeRedirect(college)}>{college.insName}</td>
-                                        <td onClick={() => handleCollegeRedirect(college)}>{college.units.length}</td>
-                                        <td onClick={() => handleCollegeRedirect(college)}>{college.events.length}</td>
-                                        <td>
-                                            <button
-                                                className="btn btn-sm btn-danger"
-                                                onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    setCollegeToDelete(college);
-                                                }}
+                                    <tr key={college._id} style={{ cursor: 'pointer' }}>
+                                        <td onClick={() => handleCollegeRedirect(college)}>
+                                            <span className="badge badge-primary" style={{ fontFamily: 'var(--font-mono)', fontSize: '0.7rem' }}>{college.code}</span>
+                                        </td>
+                                        <td onClick={() => handleCollegeRedirect(college)}>
+                                            <span style={{ fontWeight: 600, color: 'var(--txt-1)' }}>{college.insName}</span>
+                                        </td>
+                                        <td onClick={() => handleCollegeRedirect(college)}>
+                                            <span style={{ color: 'var(--brand-400)', fontWeight: 700 }}>{college.units.length}</span>
+                                        </td>
+                                        <td onClick={() => handleCollegeRedirect(college)}>
+                                            <span style={{ color: 'var(--accent-400, #2dd4bf)', fontWeight: 700 }}>{college.events.length}</span>
+                                        </td>
+                                        <td style={{ textAlign: 'right' }}>
+                                            <button className="btn btn-sm btn-danger"
+                                                onClick={(e) => { e.stopPropagation(); setCollegeToDelete(college); }}
                                             >
                                                 Remove
                                             </button>
@@ -584,47 +658,56 @@ const AdminDashboard = () => {
                     </div>
                 </div>
 
-                {/* Confirm Delete Modal */}
+                {/* ── Delete Modal ── */}
                 {collegeToDelete && (
                     <div className="modal-overlay" onClick={() => setCollegeToDelete(null)}>
-                        <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '450px' }}>
-                            <div className="text-center mb-6">
-                                <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>⚠️</div>
-                                <h3>Confirm Deletion</h3>
-                                <p>Are you sure you want to delete <strong>{collegeToDelete.insName}</strong>?</p>
-                                <p className="text-danger text-sm">This will permanently remove all associated units and events.</p>
+                        <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 460 }}>
+                            <div style={{ textAlign: 'center', marginBottom: '1.75rem' }}>
+                                <div style={{
+                                    width: 64, height: 64,
+                                    background: 'rgba(239,68,68,0.1)',
+                                    border: '1px solid rgba(239,68,68,0.25)',
+                                    borderRadius: '18px',
+                                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                    margin: '0 auto 1.25rem',
+                                    fontSize: '1.75rem',
+                                }}>🗑️</div>
+                                <h3 style={{ fontSize: '1.3rem', marginBottom: '0.5rem' }}>Delete College</h3>
+                                <p style={{ color: 'var(--txt-2)', marginBottom: '0.375rem' }}>
+                                    You are about to permanently delete <strong style={{ color: 'var(--txt-1)' }}>{collegeToDelete.insName}</strong>.
+                                </p>
+                                <p style={{ color: 'var(--danger-400)', fontSize: '0.8rem', margin: 0 }}>
+                                    ⚠️ This will remove all units, events, and member data.
+                                </p>
                             </div>
 
                             <form onSubmit={handleDeleteCollege}>
                                 <div className="form-group">
                                     <label className="form-label">Admin Username</label>
-                                    <input
-                                        type="text"
-                                        className="form-input"
-                                        placeholder="Confirm admin username"
-                                        value={adminUser}
-                                        onChange={(e) => setAdminUser(e.target.value)}
-                                        required
-                                    />
+                                    <input type="text" className="form-input" placeholder="Confirm your username"
+                                        value={adminUser} onChange={(e) => setAdminUser(e.target.value)} required />
                                 </div>
-                                <div className="form-group">
+                                <div className="form-group" style={{ marginBottom: '1.5rem' }}>
                                     <label className="form-label">Admin Password</label>
-                                    <input
-                                        type="password"
-                                        className="form-input"
-                                        placeholder="Confirm admin password"
-                                        value={adminPass}
-                                        onChange={(e) => setAdminPass(e.target.value)}
-                                        required
-                                    />
+                                    <input type="password" className="form-input" placeholder="Confirm your password"
+                                        value={adminPass} onChange={(e) => setAdminPass(e.target.value)} required />
                                 </div>
 
-                                {deleteError && <div className="text-danger mb-4 text-center">{deleteError}</div>}
+                                {deleteError && (
+                                    <div style={{
+                                        padding: '0.75rem 1rem', background: 'rgba(239,68,68,0.07)',
+                                        border: '1px solid rgba(239,68,68,0.2)', borderRadius: '0.75rem',
+                                        color: '#f87171', fontSize: '0.875rem', marginBottom: '1.25rem'
+                                    }}>{deleteError}</div>
+                                )}
 
-                                <div className="flex-between">
-                                    <button type="button" className="btn btn-secondary" onClick={() => setCollegeToDelete(null)}>Cancel</button>
+                                <div className="flex-between" style={{ paddingTop: '1rem', borderTop: '1px solid var(--border)' }}>
+                                    <button type="button" className="btn btn-secondary"
+                                        onClick={() => { setCollegeToDelete(null); setDeleteError(''); }}>
+                                        Cancel
+                                    </button>
                                     <button type="submit" className="btn btn-danger" disabled={isDeleting}>
-                                        {isDeleting ? "Deleting..." : "Confirm Delete"}
+                                        {isDeleting ? <span className="flex-center" style={{ gap: '0.5rem' }}><span className="loading" />Deleting...</span> : '🗑️ Confirm Delete'}
                                     </button>
                                 </div>
                             </form>

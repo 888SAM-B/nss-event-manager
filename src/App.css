@@ -1,6 +1,7 @@
-:root {
-    --primary-600: #4f46e5;
-    --primary-700: #4338ca;
+/* App-level overrides and layout helpers */
+.home-container {
+    width: 100% !important;
+    overflow-x: hidden !important;
 }
 
 .login-page {
@@ -8,97 +9,114 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    background: radial-gradient(circle at center, var(--bg-secondary) 0%, var(--bg-color) 100%);
-    padding: var(--space-4);
+    background: var(--bg-2);
+    padding: 1rem;
+    position: relative;
 }
 
 .login-card {
     width: 100%;
-    max-width: 420px;
-
+    max-width: 440px;
 }
 
 .dashboard-header {
-    background: var(--card-bg);
-    border-bottom: 1px solid var(--border-color);
-    padding: var(--space-4) 0;
-    margin-bottom: var(--space-8);
-    position: absolute;
+    background: var(--nav-bg);
+    border-bottom: 1px solid var(--border);
+    padding: 0.875rem 0;
+    position: fixed;
     width: 100%;
     top: 0;
-    z-index: var(--z-sticky);
-    backdrop-filter: blur(8px);
-    background-color: var(--nav-bg);
+    z-index: 200;
+    backdrop-filter: blur(12px) saturate(160%);
+    -webkit-backdrop-filter: blur(12px) saturate(160%);
 }
 
 .stat-card {
-    background: var(--card-bg);
-    border: 1px solid var(--border-color);
-    padding: var(--space-6);
-    border-radius: var(--radius-lg);
+    background: var(--card);
+    border: 1px solid var(--border);
+    padding: 1.5rem;
+    border-radius: 1rem;
     display: flex;
     flex-direction: column;
-    gap: var(--space-2);
+    gap: 0.5rem;
+    box-shadow: var(--sh);
+    transition: all 0.2s ease;
 }
 
 .stat-value {
-    font-size: var(--text-3xl);
+    font-size: 2.25rem;
     font-weight: 800;
-    color: var(--primary-400);
+    letter-spacing: -0.04em;
+    color: var(--brand-600);
+    line-height: 1;
 }
 
 .stat-label {
-    color: var(--text-secondary);
-    font-size: var(--text-sm);
-    font-weight: 500;
+    color: var(--txt-3);
+    font-size: 0.72rem;
+    font-weight: 600;
     text-transform: uppercase;
-    letter-spacing: 0.05em;
+    letter-spacing: 0.08em;
 }
 
 .actionbuttons {
     display: flex;
     flex-direction: column;
-    gap: var(--space-4);
-
+    gap: 1rem;
 }
 
 .one {
-    border: 1px solid var(--border-color);
+    border: 1px solid var(--border);
     display: flex;
     flex-direction: column;
     margin: auto;
-    padding-top: 20px;
+    padding: 1.25rem;
     align-items: center;
-    width: 80%;
-    border-radius: 10px;
+    width: 85%;
+    border-radius: 1.25rem;
+    background: var(--bg-2);
+    transition: all 0.2s ease;
+}
+
+.one:hover {
+    border-color: var(--brand-300);
+    background: #eff6ff;
 }
 
 .main-container {
-    margin-top: 150px;
+    margin-top: 90px;
+    padding-bottom: 4rem;
 }
 
 .evt-container {
-    margin-top: 120px;
+    margin-top: 90px;
+    padding-bottom: 4rem;
 }
 
 .ed button {
-    border-radius: 7px;
+    border-radius: 0.5rem;
 }
 
 .add-member button {
     width: 100%;
 }
 
-.evt-container {
-    margin-bottom: 20px;
-}
-
 input[type="file"]::file-selector-button {
-    background-color: #4338ca;
+    background: var(--brand-600);
     color: white;
     border: none;
-    border-radius: 7px;
-    padding: 8px 14px;
+    border-radius: 6px;
+    padding: 0.35rem 0.75rem;
+    font-weight: 600;
+    font-size: 0.75rem;
+    cursor: pointer;
+    margin-right: 0.75rem;
+    transition: all 0.2s;
+    font-family: var(--font-family);
+}
+
+input[type="file"]::file-selector-button:hover {
+    background: var(--brand-700);
 }
 
 .selected-evt::-webkit-scrollbar {
@@ -106,7 +124,7 @@ input[type="file"]::file-selector-button {
 }
 
 .gaps {
-    margin-bottom: 20px;
+    margin-bottom: 1.25rem;
 }
 
 .evt-cat {
@@ -116,14 +134,12 @@ input[type="file"]::file-selector-button {
 .select-all {
     margin-bottom: 10px;
     margin-top: 10px;
-    color: #10B96C;
+    color: #16a34a;
 }
 
 input[type="checkbox"] {
-    scale: 0.7;
-    border: none;
-    outline: none;
-
+    scale: 0.85;
+    accent-color: var(--brand-600);
     cursor: pointer;
 }
 
@@ -131,34 +147,157 @@ input[type="checkbox"] {
     width: 100%;
 }
 
+.close {
+    margin-top: 0.75rem;
+}
+
 .modal-content::-webkit-scrollbar {
     display: none;
 }
 
-.close {
-    margin-top: 10px;
-}
-
 .width-set {
-
-    width: 50%;
-    justify-content: space-around;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 0.625rem;
 }
 
 .table {
-
     width: 100%;
-
 }
 
 .table tr {
-
-    width: 100px;
     text-align: center;
-    height: 80px;
+    height: 70px;
 }
 
-@media screen and (max-width:500px) {
+.table th,
+.table td {
+    padding: 0.75rem 1rem;
+    text-align: center;
+}
+
+.logout-btn {
+    position: absolute;
+    top: 1rem;
+    right: 1.5rem;
+}
+
+.bg-container {
+    width: 100%;
+
+    height: 80vh;
+    position: absolute;
+    text-align: center;
+    z-index: 1;
+}
+
+.bg-logo img {
+    overflow-x: hidden;
+    width: 80%;
+    opacity: 0.1;
+    margin-top: 40px;
+    animation: rotate 18s infinite linear;
+}
+
+.content-img {
+
+    width: 40%;
+    height: 300px;
+    aspect-ratio: 1/1;
+    margin-bottom: 20px;
+    object-fit: contain;
+    overflow: hidden;
+    border-radius: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.content-img:hover {
+    transform: scale(1.02);
+    transition: all 0.2s ease-in-out;
+    cursor: pointer;
+}
+
+.content-content {
+    width: 58%;
+    text-align: justify;
+}
+
+.content-img img {
+    width: 90%;
+    height: 100%;
+    border-radius: 10px;
+    object-fit: cover;
+}
+
+.content-container {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 50px;
+}
+
+.btn-tretiary {
+    background-color: #E12129;
+    color: white;
+}
+
+.sm {
+    width: 49%;
+    min-height: 400px;
+}
+
+.full {
+    width: 100%;
+}
+
+@keyframes rotate {
+    from {
+        transform: rotate(0deg);
+    }
+
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+.cards1-list {
+    padding-left: 1.5rem;
+    margin-top: 1rem;
+}
+
+.cards1-list li {
+    list-style: disc !important;
+    margin-bottom: 0.5rem;
+    color: var(--txt-2);
+}
+
+.cards-container {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-around;
+}
+
+.cards1 {
+    border: 1px solid var(--border);
+    padding: 20px;
+    margin-bottom: 30px;
+    border-radius: 20px;
+}
+
+.cards1:hover {
+    border-color: var(--brand-600);
+    box-shadow: var(--sh);
+    transform: translateY(-5px);
+
+}
+
+
+/* Mobile */
+@media screen and (max-width: 500px) {
     .one {
         width: 100%;
     }
@@ -170,35 +309,29 @@ input[type="checkbox"] {
     .dashboard-header .container {
         flex-direction: column;
         align-items: flex-start;
-
-
     }
 
     .member {
         flex-direction: column;
         align-items: flex-start;
-        margin-top: 30px;
+        margin-top: 1.5rem;
     }
 
     .main-container {
-        margin-top: 190px;
+        margin-top: 150px;
+    }
+
+    .evt-container {
+        margin-top: 150px;
     }
 
     .add-member {
         flex-direction: column;
-    }
-
-    .add-member button {
-        height: 50px;
-
-    }
-
-    .add-member {
         width: 100%;
     }
 
-    .evt-container {
-        margin-top: 160px;
+    .add-member button {
+        height: 48px;
     }
 
     .evt-imgs {
@@ -207,63 +340,36 @@ input[type="checkbox"] {
 
     .width-set {
         width: 100%;
-        display: flex;
-        justify-content: space-around;
     }
 
     .width-set * {
-
-        width: 30%
+        width: 30%;
     }
 
     .bells {
         text-align: center;
-        /* display: flex; */
-        /* align-items: center; */
     }
+
 
 
 }
 
-/* Mobile responsive styles for admin dashboard */
 @media screen and (max-width: 768px) {
-
-    /* Make grid layouts stack vertically on mobile */
-    .grid-cols-2,
-    .grid-cols-3 {
-        grid-template-columns: 1fr !important;
-    }
-
-    /* Admin charts container */
     .admin-charts-container {
         display: flex;
         flex-direction: column;
-        gap: 1.5rem;
+        gap: 1.25rem;
     }
 
-    /* Adjust chart card heights for mobile */
     .admin-chart-card {
         height: auto !important;
-        min-height: 350px;
+        min-height: 320px;
     }
 
-    /* Ensure chart wrappers are responsive */
     .chart-wrapper {
-        height: 280px !important;
+        height: 260px !important;
     }
 
-    /* Calendar and quick actions section */
-    .grid-cols-2[style*="gridTemplateColumns"] {
-        grid-template-columns: 1fr !important;
-    }
-
-    /* Adjust button text on mobile */
-    .flex-between {
-        flex-wrap: wrap;
-        gap: 0.5rem;
-    }
-
-    /* Keep calendar header buttons on sides */
     .calendar-header {
         flex-wrap: nowrap !important;
         justify-content: space-between !important;
@@ -272,34 +378,49 @@ input[type="checkbox"] {
     }
 
     .calendar-header h4 {
-        font-size: 1.1rem;
+        font-size: 1rem;
         white-space: nowrap;
     }
 
     .calendar-header .btn {
         width: auto !important;
-        padding: 0.5rem 1rem !important;
         flex-shrink: 0;
     }
 
-    /* Make modal content fit mobile screens */
     .modal-content {
         max-width: 95% !important;
-        margin: 1rem;
-        padding: 1rem !important;
+        margin: 0.75rem;
     }
 
-    /* Adjust calendar for mobile */
     .admin-dashboard .card {
         padding: 1rem;
     }
 
-    /* Stats cards text size adjustment */
-    .card.text-center h3 {
-        font-size: 0.9rem;
+    .content-container {
+        flex-direction: column;
     }
 
-    .card.text-center p[style*="fontSize: '2rem'"] {
-        font-size: 1.5rem !important;
+    .content-img,
+    .content-content {
+        width: 90%;
+    }
+
+    .content-img img {
+        width: 100%;
+    }
+
+    .cards-container {
+        flex-direction: column;
+    }
+
+    .sm {
+        width: 100%;
+    }
+
+    .foot {
+        flex-direction: column;
+        gap: 20px;
+        text-align: center;
+
     }
 }
