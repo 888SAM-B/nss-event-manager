@@ -1,11 +1,21 @@
-import React from "react";
+import React, { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import ThemeToggle from "./ThemeToggle";
 import { useTheme } from "../context/ThemeContext";
+import "aos/dist/aos.css";
+import AOS from "aos";
 
 const Home = () => {
     const navigate = useNavigate();
     const { theme } = useTheme();
+
+    useEffect(() => {
+        AOS.init({
+            duration: 1000,
+            once: true,
+            easing: "ease-in-out",
+        });
+    }, []);
 
     const features = [
         {
@@ -112,7 +122,7 @@ const Home = () => {
                 </div>
                 <header style={{ padding: "90px 0 70px", textAlign: "center", position: "relative", overflow: "hidden" }}>
                     {/* Ambient orbs */}
-                    <div className="container" style={{ maxWidth: 780, position: "relative", zIndex: 1 }}>
+                    <div className="container" style={{ maxWidth: 780, position: "relative", zIndex: 1 }} data-aos="fade-up">
                         <h1 style={{
                             fontSize: "clamp(2.4rem, 5vw, 3.8rem)",
                             marginTop: "30px",
@@ -139,12 +149,12 @@ const Home = () => {
                             </span>
                         </h1>
 
-                        <p style={{ fontSize: "1.15rem", color: "var(--txt-2)", marginBottom: "0.75rem", lineHeight: 1.7 }}>
+                        <p style={{ fontSize: "1.15rem", color: "var(--txt-2)", marginBottom: "0.75rem", lineHeight: 1.7 }} data-aos="fade-up" data-aos-delay="200">
                             Official platform for Periyar University, Salem — streamlining NSS
                             unit operations, event tracking, and community service reporting.
                         </p>
 
-                        <div className="flex-center" style={{ gap: "1rem", flexWrap: "wrap", marginTop: "2.5rem" }}>
+                        <div className="flex-center" style={{ gap: "1rem", flexWrap: "wrap", marginTop: "2.5rem" }} data-aos="fade-up" data-aos-delay="400">
                             <button
                                 className="btn btn-primary btn-lg"
                                 onClick={() => navigate("/unit-login")}
@@ -177,13 +187,13 @@ const Home = () => {
             <div className="below-hero" style={{ zIndex: 100, paddingTop: '50px', background: theme === 'light' ? '#fff' : 'inherit' }} >
 
                 <div className="about-nss" id="about-nss">
-                    <h1 style={{ textAlign: "center", fontWeight: 800, fontSize: "2rem", marginBottom: "2rem" }}>NSS - National Service Scheme  </h1>
+                    <h1 style={{ textAlign: "center", fontWeight: 800, fontSize: "2rem", marginBottom: "2rem" }} data-aos="fade-up">NSS - National Service Scheme  </h1>
 
                     <div className="container content-container">
-                        <div className="content-img">
+                        <div className="content-img" data-aos="fade-right">
                             <img src="https://silveroakuni.ac.in/_next/image?url=%2Fassets%2Fimages%2Fbanner-images%2Fm_nss.webp&w=3840&q=80" alt="" />
                         </div>
-                        <div className="content-content">
+                        <div className="content-content" data-aos="fade-left">
                             <p>
                                 The National Service Scheme (NSS) is a Government of India initiative launched in 1969 to develop students’ personality through community service. It aims to create socially responsible and active citizens. The motto of NSS, <span style={{
                                     fontWeight: 800,
@@ -195,8 +205,7 @@ const Home = () => {
                         </div>
                     </div>
                     <div className="container cards-container">
-                        <div className="cards1"
-                        >
+                        <div className="cards1" data-aos="fade-up" data-aos-delay="100">
                             <h2
                                 style={{ color: theme === 'light' ? '#195CC8' : '#195CC8' }}
                             >Objectives</h2>
@@ -209,7 +218,7 @@ const Home = () => {
                             </ul>
                         </div>
 
-                        <div className="cards1">
+                        <div className="cards1" data-aos="fade-up" data-aos-delay="200">
                             <h2 style={{ color: theme === 'light' ? '#195CC8' : '#195CC8' }} >Activities</h2>
                             <ul className="cards1-list">
                                 <li>Organizing awareness programs on health, sanitation, and environment</li>
@@ -220,7 +229,7 @@ const Home = () => {
                             </ul>
                         </div>
 
-                        <div className="cards1">
+                        <div className="cards1" data-aos="fade-up" data-aos-delay="300">
                             <h2
                                 style={{ color: theme === 'light' ? '#195CC8' : '#195CC8' }}
                             >Benefits</h2>
@@ -240,11 +249,11 @@ const Home = () => {
                     <h1 style={{
                         textAlign: "center", fontWeight: 800, fontSize: "2rem", marginBottom: "2rem",
                         marginTop: "2rem"
-                    }}>Periyar University</h1>
+                    }} data-aos="fade-up">Periyar University</h1>
 
                     <div className="container content-container">
 
-                        <div className="content-content">
+                        <div className="content-content" data-aos="fade-right">
                             <p>
                                 The Government of Tamil Nadu established Periyar University in Salem on , <span style={{
                                     fontWeight: 800,
@@ -273,14 +282,13 @@ const Home = () => {
                                 }}>118 affiliated colleges.</span>
                             </p>
                         </div>
-                        <div className="content-img">
+                        <div className="content-img" data-aos="fade-left">
                             <img src="/univ-campus.jpg" alt="" />
                         </div>
                     </div>
 
                     <div className="container cards-container">
-                        <div className="cards1 full"
-                        >
+                        <div className="cards1 full" data-aos="fade-up">
                             <h2
                                 style={{ color: theme === 'light' ? '#195CC8' : '#195CC8' }}
                             >Mission & Vission</h2>
@@ -294,7 +302,7 @@ const Home = () => {
                             </ul>
                         </div>
 
-                        <div className="cards1 sm">
+                        <div className="cards1 sm" data-aos="fade-up" data-aos-delay="100">
                             <h2 style={{ color: theme === 'light' ? '#195CC8' : '#195CC8' }} >Values</h2>
                             <ul className="cards1-list">
                                 <li>Motivation of students to be responsible citizens making them aware of their societal role</li>
@@ -305,7 +313,7 @@ const Home = () => {
                             </ul>
                         </div>
 
-                        <div className="cards1 sm">
+                        <div className="cards1 sm" data-aos="fade-up" data-aos-delay="200">
                             <h2
                                 style={{ color: theme === 'light' ? '#195CC8' : '#195CC8' }}
                             >Benefits</h2>
@@ -338,17 +346,20 @@ const Home = () => {
                         </div>
 
                         <div className="grid-cols-3" style={{ gap: "1.25rem" }}>
-                            {features.map((f) => {
+                            {features.map((f, i) => {
                                 const c = colorMap[f.color];
                                 return (
-                                    <div key={f.title} style={{
-                                        background: 'var(--card)',
-                                        border: '1px solid var(--border)',
-                                        borderRadius: '1rem',
-                                        padding: '1.75rem',
-                                        transition: 'all 0.2s ease',
-                                        cursor: 'default',
-                                    }}
+                                    <div key={f.title}
+                                        data-aos="fade-up"
+                                        data-aos-delay={i * 100}
+                                        style={{
+                                            background: 'var(--card)',
+                                            border: '1px solid var(--border)',
+                                            borderRadius: '1rem',
+                                            padding: '1.75rem',
+                                            transition: 'all 0.2s ease',
+                                            cursor: 'default',
+                                        }}
                                         onMouseEnter={e => {
                                             e.currentTarget.style.transform = 'translateY(-4px)';
                                             e.currentTarget.style.boxShadow = 'var(--sh-md)';

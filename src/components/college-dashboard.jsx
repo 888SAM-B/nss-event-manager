@@ -490,7 +490,7 @@ const CollegeDashboard = () => {
                         <h2>NSS Units Management</h2>
                         <p>Manage your college NSS units and members</p>
                     </div>
-                    <div className="d-flex gap-2">
+                    <div className="d-flex gap-2 flex-wrap" style={{ flex: 1, justifyContent: 'flex-end', minWidth: 'min-content' }}>
                         <button
                             className="btn btn-secondary"
                             onClick={() => {
