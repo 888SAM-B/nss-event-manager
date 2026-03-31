@@ -1393,9 +1393,9 @@ app.get('/unassigned-officers/:collegeCode', verifyToken, async (req, res) => {
         if (!college) return res.status(404).json({ success: false, message: "College not found" });
 
         // Officers with no unit assigned (unit is empty string or field missing)
-        const unassignedOfficers = await ProgramOfficer.find({ 
-            collegeId: college._id, 
-            $or: [{ unit: "" }, { unit: { $exists: false } }] 
+        const unassignedOfficers = await ProgramOfficer.find({
+            collegeId: college._id,
+            $or: [{ unit: "" }, { unit: { $exists: false } }]
         });
 
         res.json({ success: true, officers: unassignedOfficers });
@@ -1408,7 +1408,7 @@ app.get('/unassigned-officers/:collegeCode', verifyToken, async (req, res) => {
 // Assign Program Officer to a Unit
 app.post('/assign-officer-to-unit', verifyToken, async (req, res) => {
     const { officerId, unitNumber, collegeCode } = req.body;
-    
+
     // Only Admin or College users can assign
     if (req.user.role !== 'admin' && req.user.role !== 'college') {
         return res.status(403).json({ success: false, message: "Unauthorized" });
@@ -1466,7 +1466,46 @@ app.post('/assign-officer-to-unit', verifyToken, async (req, res) => {
     }
 });
 
+// Adopting Villages Management
+app.post('/add-village', verifyToken, async (req, res) => {
+    const { username, village } = req.body;
 
+    if (req.user.role !== 'admin' && req.user.userName !== username) {
+        return res.status(403).json({ success: false, message: "Unauthorized" });
+    }
+
+    try {
+        const user = await User.findOne({ userName: username });
+        if (!user) return res.status(404).json({ success: false, message: "College not found" });
+
+        user.adoptingVillages.push(village);
+        await user.save();
+        res.json({ success: true, message: "Village added successfully", user: { adoptingVillages: user.adoptingVillages } });
+    } catch (error) {
+        console.error("Error adding village:", error);
+        res.status(500).json({ success: false, message: "Internal Server Error" });
+    }
+});
+
+app.delete('/delete-village', verifyToken, async (req, res) => {
+    const { username, villageIndex } = req.body;
+
+    if (req.user.role !== 'admin' && req.user.userName !== username) {
+        return res.status(403).json({ success: false, message: "Unauthorized" });
+    }
+
+    try {
+        const user = await User.findOne({ userName: username });
+        if (!user) return res.status(404).json({ success: false, message: "College not found" });
+
+        user.adoptingVillages.splice(villageIndex, 1);
+        await user.save();
+        res.json({ success: true, message: "Village removed successfully", user: { adoptingVillages: user.adoptingVillages } });
+    } catch (error) {
+        console.error("Error deleting village:", error);
+        res.status(500).json({ success: false, message: "Internal Server Error" });
+    }
+});
 
 app.listen(PORT, () => {
     console.log(`Server is running on http://localhost:${PORT}`);
