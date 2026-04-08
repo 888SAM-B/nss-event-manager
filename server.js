@@ -68,7 +68,7 @@ app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
 const PORT = process.env.PORT;
 const mongoURI = process.env.MONGODB_URL;
-console.log("MongoDB URL check:", mongoURI)
+
 
 mongoose.connect(mongoURI, { useNewUrlParser: true, useUnifiedTopology: true })
     .then(() => console.log('Connected to MongoDB'))
@@ -127,6 +127,10 @@ const insLoginScheme = new mongoose.Schema({
     password: String, // Hashed
     insName: String,
     location: String,
+    block: String,
+    taluk: String,
+    district: String,
+    pincode: String,
     universityName: { type: String, default: "" },
     events: { type: Array, default: [] },
     code: String,
@@ -134,6 +138,9 @@ const insLoginScheme = new mongoose.Schema({
     adoptingVillages: [{
         name: String,
         address: String,
+        block: String,
+        taluk: String,
+        district: String,
         pincode: String
     }]
 });
@@ -191,6 +198,10 @@ const programOfficerSchema = new mongoose.Schema({
     email: String,
     mobile: String,
     address: String,
+    block: String,
+    taluk: String,
+    district: String,
+    pincode: String,
     dateOfAppointment: String,
     teachingExperience: String,
 
@@ -213,6 +224,7 @@ const ProgramOfficer = mongoose.model('ProgramOfficer', programOfficerSchema);
 // ... existing code ...
 
 app.post('/register-program-officer', verifyToken, async (req, res) => {
+    const { officerData, collegeCode } = req.body;
     try {
         const college = await User.findOne({ code: collegeCode });
         if (!college) {
@@ -241,6 +253,41 @@ app.post('/register-program-officer', verifyToken, async (req, res) => {
         res.json({ success: true, message: "Program Officer registered successfully", officer: newOfficer });
     } catch (error) {
         console.error("Error registering program officer:", error);
+        res.status(500).json({ success: false, message: "Internal Server Error" });
+    }
+});
+
+app.post('/update-program-officer/:id', verifyToken, async (req, res) => {
+    const { officerData, collegeCode } = req.body;
+    const { id } = req.params;
+    try {
+        const officer = await ProgramOfficer.findById(id);
+        if (!officer) return res.status(404).json({ success: false, message: "Officer not found" });
+
+        const updatedOfficer = await ProgramOfficer.findByIdAndUpdate(id, {
+            ...officerData
+        }, { new: true });
+
+        // Update Unit Head if unit changed or was assigned
+        if (officerData.unit) {
+            const college = await User.findOne({ code: collegeCode });
+            // Clear previous unit head if changed
+            if (officer.unit && officer.unit !== officerData.unit) {
+                await Unit.findOneAndUpdate(
+                    { unitNumber: officer.unit, collegeId: officer.collegeId },
+                    { head: null }
+                );
+            }
+            // Set new unit head
+            await Unit.findOneAndUpdate(
+                { unitNumber: officerData.unit, collegeId: college._id },
+                { head: updatedOfficer._id }
+            );
+        }
+
+        res.json({ success: true, message: "Program Officer updated successfully", officer: updatedOfficer });
+    } catch (error) {
+        console.error("Error updating program officer:", error);
         res.status(500).json({ success: false, message: "Internal Server Error" });
     }
 });
@@ -468,6 +515,10 @@ app.post('/add-organization', async (req, res) => {
             code,
             userName: username,
             password: hashedPassword,
+            block: req.body.block || "",
+            taluk: req.body.taluk || "",
+            district: req.body.district || "",
+            pincode: req.body.pincode || "",
             adoptingVillages: adoptingVillages || []
         });
         await newUser.save();
@@ -1231,7 +1282,7 @@ app.put('/updateEvent', verifyToken, async (req, res) => {
 app.post('/admin/login', (req, res) => {
     const { username, password } = req.body;
     // Simple environment variable check
-    console.log(process.env.ADMIN_USERNAME, process.env.ADMIN_PASSWORD);
+
     if (username === process.env.ADMIN_USERNAME && password === process.env.ADMIN_PASSWORD) {
         const token = jwt.sign({ role: 'admin', username: 'admin' }, process.env.JWT_SECRET, { expiresIn: '1d' });
         res.json({ success: true, token });
