@@ -42,10 +42,11 @@ const CollegeDashboard = () => {
     const [selectedOfficerForAssign, setSelectedOfficerForAssign] = useState(null);
     const [assignTargetUnit, setAssignTargetUnit] = useState("");
     const [isAssigning, setIsAssigning] = useState(false);
+    const [memberCommunityFilter, setMemberCommunityFilter] = useState("");
 
     // Adopting Villages State
     const [showVillageModal, setShowVillageModal] = useState(false);
-    const [newVillage, setNewVillage] = useState({ name: "", address: "", pincode: "" });
+    const [newVillage, setNewVillage] = useState({ name: "", address: "", block: "", taluk: "", district: "", pincode: "" });
     const [isAddingVillage, setIsAddingVillage] = useState(false);
 
     // Check if admin is viewing this dashboard
@@ -313,11 +314,16 @@ const CollegeDashboard = () => {
             m.regNo.toLowerCase().includes(memberSearch.toLowerCase());
         const matchesUnit = filterUnit === "" || m.unitId?.unitNumber === filterUnit;
         const matchesBatch = filterBatch === "" || m.batchFrom === filterBatch || m.batchTo === filterBatch;
-        return matchesSearch && matchesUnit && matchesBatch;
+        const matchesCommunity = memberCommunityFilter === "" || m.community === memberCommunityFilter;
+        return matchesSearch && matchesUnit && matchesBatch && matchesCommunity;
+    }).sort((a, b) => {
+        const unitA = a.unitId?.unitNumber || "ZZZ";
+        const unitB = b.unitId?.unitNumber || "ZZZ";
+        return unitA.localeCompare(unitB);
     });
 
     const handleAddVillage = async () => {
-        if (!newVillage.name || !newVillage.address || !newVillage.pincode) {
+        if (!newVillage.name || !newVillage.address || !newVillage.block || !newVillage.taluk || !newVillage.district || !newVillage.pincode) {
             toast.error("Please fill all village details");
             return;
         }
@@ -334,7 +340,7 @@ const CollegeDashboard = () => {
                 toast.success("Village added successfully!");
                 setCollegeData({ ...collegeData, adoptingVillages: res.data.user.adoptingVillages });
                 setShowVillageModal(false);
-                setNewVillage({ name: "", address: "", pincode: "" });
+                setNewVillage({ name: "", address: "", block: "", taluk: "", district: "", pincode: "" });
             }
         } catch (error) {
             console.error("Error adding village:", error);
@@ -427,10 +433,10 @@ const CollegeDashboard = () => {
                         <h3 className="mb-0">Adopting Villages</h3>
                         <div className="d-flex gap-2">
                             {collegeData?.adoptingVillages && collegeData.adoptingVillages.length > 0 && (
-                                <span className="badge badge-primary">{collegeData.adoptingVillages.length} Villages</span>
+                                <span className="badge badge-primary">{collegeData.adoptingVillages.length} Village(s)</span>
                             )}
-                            <button 
-                                className="btn btn-sm btn-primary" 
+                            <button
+                                className="btn btn-sm btn-primary"
                                 onClick={() => setShowVillageModal(true)}
                             >
                                 + Add Village
@@ -456,8 +462,8 @@ const CollegeDashboard = () => {
                                     }}></div>
                                     <div className="flex-between mb-3">
                                         <h4 className="mb-0 text-primary-400" style={{ fontSize: '1.1rem' }}>{village.name}</h4>
-                                        <button 
-                                            className="text-danger" 
+                                        <button
+                                            className="text-danger"
                                             style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
                                             onClick={() => handleDeleteVillage(idx)}
                                             title="Remove Village"
@@ -469,6 +475,11 @@ const CollegeDashboard = () => {
                                         <div className="d-flex align-items-start gap-2">
                                             <span style={{ fontSize: '0.8rem', opacity: 0.7 }}>📍</span>
                                             <p className="mb-0 text-sm" style={{ opacity: 0.9 }}>{village.address}</p>
+                                        </div>
+                                        <div className="d-flex flex-wrap gap-x-4 gap-y-1">
+                                            <p className="mb-0 text-xs" style={{ opacity: 0.7 }}><strong className="text-white">Block:</strong> {village.block}</p>
+                                            <p className="mb-0 text-xs" style={{ opacity: 0.7 }}><strong className="text-white">Taluk:</strong> {village.taluk}</p>
+                                            <p className="mb-0 text-xs" style={{ opacity: 0.7 }}><strong className="text-white">Dist:</strong> {village.district}</p>
                                         </div>
                                         <div className="d-flex align-items-center gap-2">
                                             <span style={{ fontSize: '0.8rem', opacity: 0.7 }}>📮</span>
@@ -499,6 +510,19 @@ const CollegeDashboard = () => {
                             }}
                         >
                             👥 View Program Officers
+                        </button>
+                        <button
+                            className="btn btn-secondary"
+                            onClick={() => {
+                                setShowOfficersList(false);
+                                if (!showMembersList) {
+                                    fetchAllMembers();
+                                } else {
+                                    setShowMembersList(false);
+                                }
+                            }}
+                        >
+                            👨‍🎓 View All Students
                         </button>
                         <button
                             className="btn btn-primary"
@@ -532,26 +556,26 @@ const CollegeDashboard = () => {
                             <button className="btn btn-sm btn-secondary" onClick={() => setShowOfficersList(false)}>&times; Close</button>
                         </div>
                         <div className="overflow-x-auto">
-                            <table className="table" border={1} style={{ borderCollapse: "collapse" }} cellPadding={30} cellSpacing={50} >
+                            <table className="table w-100">
                                 <thead>
                                     <tr>
-                                        <th>Photo</th>
+                                        <th className="text-center">Photo</th>
                                         <th>ID</th>
                                         <th>Name</th>
                                         <th>Designation</th>
                                         <th>Department</th>
                                         <th>Unit</th>
                                         <th>Contact</th>
-                                        <th>Action</th>
+                                        <th className="text-center">Action</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     {programOfficers.length === 0 ? (
-                                        <tr><td colSpan="9" className="text-center py-4">No officers registered yet.</td></tr>
+                                        <tr><td colSpan="8" className="text-center py-4">No officers registered yet.</td></tr>
                                     ) : (
                                         programOfficers.map((officer) => (
                                             <tr key={officer._id}>
-                                                <td>
+                                                <td className="text-center">
                                                     <img src={officer.image || "https://via.placeholder.com/40"} alt="Officer" style={{ width: '40px', height: '40px', borderRadius: '50%', objectFit: 'cover' }} />
                                                 </td>
                                                 <td><span className="badge badge-secondary">{officer.officerID || "N/A"}</span></td>
@@ -560,33 +584,45 @@ const CollegeDashboard = () => {
                                                 <td>{officer.department}</td>
                                                 <td><span className="badge badge-primary">{officer.unit || "Unassigned"}</span></td>
                                                 <td>{officer.mobile}</td>
-                                                <td className="d-flex gap-2">
-                                                    <button
-                                                        className="btn btn-sm btn-outline-primary"
-                                                        onClick={() => {
-                                                            setSelectedOfficer(officer);
-                                                            setIsOfficerReadOnly(true);
-                                                            setShowOfficerModal(true);
-                                                        }}
-                                                    >
-                                                        📄 View / PDF
-                                                    </button>
-                                                    <button
-                                                        className="btn btn-sm btn-secondary"
-                                                        onClick={() => {
-                                                            setSelectedOfficerForAssign(officer);
-                                                            setAssignTargetUnit(officer.unit || "");
-                                                            setShowAssignModal(true);
-                                                        }}
-                                                    >
-                                                        📌 Assign Unit
-                                                    </button>
-                                                    <button
-                                                        className="btn btn-sm btn-danger"
-                                                        onClick={() => handleDeleteOfficer(officer._id)}
-                                                    >
-                                                        Delete
-                                                    </button>
+                                                <td>
+                                                    <div className="d-flex gap-2 justify-content-center align-items-center h-100">
+                                                        <button
+                                                            className="btn btn-sm btn-outline-primary"
+                                                            onClick={() => {
+                                                                setSelectedOfficer(officer);
+                                                                setIsOfficerReadOnly(true);
+                                                                setShowOfficerModal(true);
+                                                            }}
+                                                        >
+                                                            View
+                                                        </button>
+                                                        <button
+                                                            className="btn btn-sm btn-primary"
+                                                            onClick={() => {
+                                                                setSelectedOfficer(officer);
+                                                                setIsOfficerReadOnly(false);
+                                                                setShowOfficerModal(true);
+                                                            }}
+                                                        >
+                                                            Edit
+                                                        </button>
+                                                        <button
+                                                            className="btn btn-sm btn-secondary"
+                                                            onClick={() => {
+                                                                setSelectedOfficerForAssign(officer);
+                                                                setAssignTargetUnit(officer.unit || "");
+                                                                setShowAssignModal(true);
+                                                            }}
+                                                        >
+                                                            Assign Unit
+                                                        </button>
+                                                        <button
+                                                            className="btn btn-sm btn-danger"
+                                                            onClick={() => handleDeleteOfficer(officer._id)}
+                                                        >
+                                                            Delete
+                                                        </button>
+                                                    </div>
                                                 </td>
                                             </tr>
                                         ))
@@ -635,6 +671,22 @@ const CollegeDashboard = () => {
                                     onChange={(e) => setFilterBatch(e.target.value)}
                                 />
                             </div>
+                            <div className="form-group">
+                                <label className="text-xs">Filter by Community</label>
+                                <select
+                                    className="form-input"
+                                    value={memberCommunityFilter}
+                                    onChange={(e) => setMemberCommunityFilter(e.target.value)}
+                                >
+                                    <option value="">All Communities</option>
+                                    <option value="General">General</option>
+                                    <option value="OBC">OBC</option>
+                                    <option value="MBC">MBC</option>
+                                    <option value="BC">BC</option>
+                                    <option value="SC">SC</option>
+                                    <option value="ST">ST</option>
+                                </select>
+                            </div>
                         </div>
 
                         <div style={{ overflowX: 'auto' }}>
@@ -646,6 +698,7 @@ const CollegeDashboard = () => {
                                         <th>Reg No</th>
                                         <th>Unit</th>
                                         <th>Dept</th>
+                                        <th>Community</th>
                                         <th>Batch</th>
                                         <th>Contact</th>
                                         <th>Action</th>
@@ -659,6 +712,7 @@ const CollegeDashboard = () => {
                                             <td><span className="badge badge-secondary">{m.regNo}</span></td>
                                             <td>{m.unitId?.unitNumber || "N/A"}</td>
                                             <td>{m.dept}</td>
+                                            <td><span className="badge badge-secondary">{m.community || "N/A"}</span></td>
                                             <td>{m.batchFrom} - {m.batchTo}</td>
                                             <td>{m.contact}</td>
                                             <td>
@@ -841,12 +895,12 @@ const CollegeDashboard = () => {
                             <button className="btn btn-sm btn-secondary" onClick={() => setShowAssignModal(false)}>&times;</button>
                         </div>
                         <p className="mb-4">Select the unit you want to assign <strong>{selectedOfficerForAssign?.name}</strong> to.</p>
-                        
+
                         <div className="form-group mb-4">
                             <label className="form-label">Select Unit</label>
-                            <select 
-                                className="form-input" 
-                                value={assignTargetUnit} 
+                            <select
+                                className="form-input"
+                                value={assignTargetUnit}
                                 onChange={(e) => setAssignTargetUnit(e.target.value)}
                             >
                                 <option value="">--- Select Unit ---</option>
@@ -865,9 +919,9 @@ const CollegeDashboard = () => {
 
                         <div className="flex-between pt-4" style={{ borderTop: '1px solid var(--border-color)' }}>
                             <button className="btn btn-secondary" onClick={() => setShowAssignModal(false)}>Cancel</button>
-                            <button 
-                                className="btn btn-primary" 
-                                onClick={handleAssignOfficer} 
+                            <button
+                                className="btn btn-primary"
+                                onClick={handleAssignOfficer}
                                 disabled={isAssigning || !assignTargetUnit}
                             >
                                 {isAssigning ? 'Assigning...' : 'Assign Officer'}
@@ -885,42 +939,50 @@ const CollegeDashboard = () => {
                             <h2 className="mb-0">Adopt a New Village</h2>
                             <button className="btn btn-sm btn-secondary" onClick={() => setShowVillageModal(false)}>&times;</button>
                         </div>
-                        
+
                         <div className="form-group mb-3">
                             <label className="form-label">Village Name</label>
-                            <input 
+                            <input
                                 className="form-input"
                                 placeholder="e.g. Melpattu Village"
                                 value={newVillage.name}
-                                onChange={(e) => setNewVillage({...newVillage, name: e.target.value})}
+                                onChange={(e) => setNewVillage({ ...newVillage, name: e.target.value })}
                             />
                         </div>
 
                         <div className="form-group mb-3">
                             <label className="form-label">Location / Address</label>
-                            <input 
+                            <input
                                 className="form-input"
                                 placeholder="e.g. Near Taluk Office"
                                 value={newVillage.address}
-                                onChange={(e) => setNewVillage({...newVillage, address: e.target.value})}
+                                onChange={(e) => setNewVillage({ ...newVillage, address: e.target.value })}
                             />
                         </div>
 
-                        <div className="form-group mb-4">
-                            <label className="form-label">Pincode</label>
-                            <input 
-                                className="form-input"
-                                placeholder="6-digit pincode"
-                                value={newVillage.pincode}
-                                onChange={(e) => setNewVillage({...newVillage, pincode: e.target.value})}
-                                maxLength={6}
-                            />
+                        <div className="grid-cols-2 gap-3 mb-3">
+                            <div className="form-group">
+                                <label className="form-label">Block</label>
+                                <input className="form-input" placeholder="Block" value={newVillage.block} onChange={(e) => setNewVillage({ ...newVillage, block: e.target.value })} />
+                            </div>
+                            <div className="form-group">
+                                <label className="form-label">Taluk</label>
+                                <input className="form-input" placeholder="Taluk" value={newVillage.taluk} onChange={(e) => setNewVillage({ ...newVillage, taluk: e.target.value })} />
+                            </div>
+                            <div className="form-group">
+                                <label className="form-label">District</label>
+                                <input className="form-input" placeholder="District" value={newVillage.district} onChange={(e) => setNewVillage({ ...newVillage, district: e.target.value })} />
+                            </div>
+                            <div className="form-group">
+                                <label className="form-label">Pincode</label>
+                                <input className="form-input" placeholder="Pincode" value={newVillage.pincode} onChange={(e) => setNewVillage({ ...newVillage, pincode: e.target.value })} maxLength={6} />
+                            </div>
                         </div>
 
                         <div className="flex-between pt-4" style={{ borderTop: '1px solid var(--border-color)' }}>
                             <button className="btn btn-secondary" onClick={() => setShowVillageModal(false)}>Cancel</button>
-                            <button 
-                                className="btn btn-primary" 
+                            <button
+                                className="btn btn-primary"
                                 onClick={handleAddVillage}
                                 disabled={isAddingVillage}
                             >

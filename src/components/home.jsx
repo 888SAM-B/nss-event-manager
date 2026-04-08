@@ -69,120 +69,121 @@ const Home = () => {
         <div className="home-container" style={{ minHeight: "100vh", background: "var(--bg)", display: "flex", flexDirection: "column" }}>
 
             {/* ── Navbar ── */}
-            <nav style={{
-                padding: "1rem 0",
-                borderBottom: "1px solid var(--border)",
-                background: "#195cc8ff",
-                backdropFilter: "blur(24px) saturate(180%)",
-                WebkitBackdropFilter: "blur(24px) saturate(180%)",
-                position: "sticky",
-                top: 0,
-                zIndex: 200,
-            }}>
-                <div className="container flex-between">
-                    <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
-                        <div style={{
-                            width: 36, height: 6,
-                            display: "flex", alignItems: "center", justifyContent: "flex-end",
-                            flexShrink: 0,
-                        }}><img style={{ width: 56, height: 56 }} src="/periyar-univ-logo.png" alt="NSS Logo" /></div>
-                        <div>
-                            <span style={{
-                                fontWeight: 800, fontSize: "1.1rem",
-                                letterSpacing: "-0.03em",
-                                color: "#ffffff",
-                            }}>NSS Portal</span>
-                            <span style={{ fontSize: "0.65rem", display: "block", color: "#ffffff", marginTop: "-2px", letterSpacing: "0.08em" }}>PERIYAR UNIVERSITY</span>
+            <div className="nav-and-hero">
+                <nav style={{
+                    padding: "1rem 0",
+                    borderBottom: "1px solid var(--border)",
+                    background: "#195cc8ff",
+                    backdropFilter: "blur(24px) saturate(180%)",
+                    WebkitBackdropFilter: "blur(24px) saturate(180%)",
+                    position: "sticky",
+                    top: 0,
+                    zIndex: 200,
+                }}>
+                    <div className="container flex-between">
+                        <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
+                            <div style={{
+                                width: 36, height: 6,
+                                display: "flex", alignItems: "center", justifyContent: "flex-end",
+                                flexShrink: 0,
+                            }}><img style={{ width: 56, height: 56 }} src="/periyar-univ-logo.png" alt="NSS Logo" /></div>
+                            <div>
+                                <span style={{
+                                    fontWeight: 800, fontSize: "1.1rem",
+                                    letterSpacing: "-0.03em",
+                                    color: "#ffffff",
+                                }}>NSS Portal</span>
+                                <span style={{ fontSize: "0.65rem", display: "block", color: "#ffffff", marginTop: "-2px", letterSpacing: "0.08em" }}>PERIYAR UNIVERSITY</span>
+                            </div>
+                        </div>
+                        <div className="d-flex align-items-center" style={{ gap: "0.75rem" }}>
+                            <ThemeToggle />
+                            <button
+                                className="btn  btn-sm"
+                                onClick={() => navigate("/admin-login")}
+                            >
+                                Admin Login
+                                <span style={{ opacity: 0.7 }}>→</span>
+                            </button>
                         </div>
                     </div>
-                    <div className="d-flex align-items-center" style={{ gap: "0.75rem" }}>
-                        <ThemeToggle />
-                        <button
-                            className="btn  btn-sm"
-                            onClick={() => navigate("/admin-login")}
-                        >
-                            Admin Login
-                            <span style={{ opacity: 0.7 }}>→</span>
-                        </button>
+                </nav>
+
+                {/* ── Hero ── */}
+                <div className="hero"
+                    style={{
+                        backgroundImage: theme === "light" ? "linear-gradient(#FFF, #bdbabaff)" : "none",
+
+                    }}
+                >
+                    <div className="bg-container">
+                        <div className="bg-logo">
+                            <img src="./nss-logo.png" alt="" />
+                        </div>
                     </div>
-                </div>
-            </nav>
+                    <header style={{ padding: "90px 0 70px", textAlign: "center", position: "relative", overflow: "hidden" }}>
+                        {/* Ambient orbs */}
+                        <div className="container" style={{ maxWidth: 780, position: "relative", zIndex: 1 }} data-aos="fade-up">
+                            <h1 style={{
+                                fontSize: "clamp(2.4rem, 5vw, 3.8rem)",
+                                marginTop: "30px",
+                                marginBottom: "1.5rem",
+                                lineHeight: 1.2,
+                                letterSpacing: "-0.04em",
+                                display: 'flex',
+                                flexDirection: 'column',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                fontWeight: 800,
 
-            {/* ── Hero ── */}
-            <div className="hero"
-                style={{
-                    backgroundImage: theme === "light" ? "linear-gradient(#FFF, #bdbabaff)" : "none",
-
-                }}
-            >
-                <div className="bg-container">
-                    <div className="bg-logo">
-                        <img src="./nss-logo.png" alt="" />
-                    </div>
-                </div>
-                <header style={{ padding: "90px 0 70px", textAlign: "center", position: "relative", overflow: "hidden" }}>
-                    {/* Ambient orbs */}
-                    <div className="container" style={{ maxWidth: 780, position: "relative", zIndex: 1 }} data-aos="fade-up">
-                        <h1 style={{
-                            fontSize: "clamp(2.4rem, 5vw, 3.8rem)",
-                            marginTop: "30px",
-                            marginBottom: "1.5rem",
-                            lineHeight: 1.2,
-                            letterSpacing: "-0.04em",
-                            display: 'flex',
-                            flexDirection: 'column',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            fontWeight: 800,
-
-                        }}>
-                            <span style={{
-                                color: theme === "light" ? "#154ba2ff" : "#458cffff",
-                                marginBottom: "-90px",
-                            }}>Periyar University</span>
-
-                            <span style={{
-                                color: "var(--txt-1)",
-                                marginTop: "100px",
                             }}>
-                                NSS Portal
-                            </span>
-                        </h1>
+                                <span style={{
+                                    color: theme === "light" ? "#154ba2ff" : "#458cffff",
+                                    marginBottom: "-90px",
+                                }}>Periyar University</span>
 
-                        <p style={{ fontSize: "1.15rem", color: "var(--txt-2)", marginBottom: "0.75rem", lineHeight: 1.7 }} data-aos="fade-up" data-aos-delay="200">
-                            Official platform for Periyar University, Salem — streamlining NSS
-                            unit operations, event tracking, and community service reporting.
-                        </p>
+                                <span style={{
+                                    color: "var(--txt-1)",
+                                    marginTop: "100px",
+                                }}>
+                                    NSS Portal
+                                </span>
+                            </h1>
 
-                        <div className="flex-center" style={{ gap: "1rem", flexWrap: "wrap", marginTop: "2.5rem" }} data-aos="fade-up" data-aos-delay="400">
-                            <button
-                                className="btn btn-primary btn-lg"
-                                onClick={() => navigate("/unit-login")}
-                                style={{ minWidth: 185, gap: "0.5rem" }}
-                            >
-                                <span>Unit Login </span>
-                                <span style={{ opacity: 0.7 }}>→</span>
-                            </button>
-                            <button
-                                className="btn btn-tretiary btn-lg"
-                                onClick={() => navigate("/login")}
-                                style={{ minWidth: 185 }}
-                            >
-                                <span>College Login </span>
-                                <span style={{ opacity: 0.7 }}>→</span>
-                            </button>
+                            <p style={{ fontSize: "1.15rem", color: "var(--txt-2)", marginBottom: "0.75rem", lineHeight: 1.7 }} data-aos="fade-up" data-aos-delay="200">
+                                Official platform for Periyar University, Salem — streamlining NSS
+                                unit operations, event tracking, and community service reporting.
+                            </p>
+
+                            <div className="flex-center" style={{ gap: "1rem", flexWrap: "wrap", marginTop: "2.5rem" }} data-aos="fade-up" data-aos-delay="400">
+                                <button
+                                    className="btn btn-primary btn-lg"
+                                    onClick={() => navigate("/unit-login")}
+                                    style={{ minWidth: 185, gap: "0.5rem" }}
+                                >
+                                    <span>Unit Login </span>
+                                    <span style={{ opacity: 0.7 }}>→</span>
+                                </button>
+                                <button
+                                    className="btn btn-tretiary btn-lg"
+                                    onClick={() => navigate("/login")}
+                                    style={{ minWidth: 185 }}
+                                >
+                                    <span>College Login </span>
+                                    <span style={{ opacity: 0.7 }}>→</span>
+                                </button>
+                            </div>
+
+                            {/* Decorative divider */}
+                            <div style={{
+                                marginTop: "4rem",
+                                height: 1,
+
+                            }} />
                         </div>
-
-                        {/* Decorative divider */}
-                        <div style={{
-                            marginTop: "4rem",
-                            height: 1,
-
-                        }} />
-                    </div>
-                </header>
+                    </header>
+                </div>
             </div>
-
             {/* ── Stats Strip ── */}
             <div className="below-hero" style={{ zIndex: 100, paddingTop: '50px', background: theme === 'light' ? '#fff' : 'inherit' }} >
 
@@ -330,12 +331,51 @@ const Home = () => {
                 </div>
 
 
+                {/*=== Form download ===*/}
+
+                <div className="form-section">
+                    <div className="container">
+                        <div style={{ textAlign: "center", marginBottom: "3.5rem" }}>
+                            <span style={{ fontSize: "0.72rem", fontWeight: 700, letterSpacing: "0.12em", color: "var(--brand-400)", textTransform: "uppercase" }}>Resources</span>
+                            <h2 style={{ fontSize: "clamp(1.8rem, 4vw, 2.5rem)", marginTop: "0.75rem", marginBottom: "1rem", fontWeight: 800 }}>
+                                National Service Scheme Forms
+                            </h2>
+                            <p style={{ color: "var(--txt-2)", maxWidth: 600, margin: "0 auto", fontSize: "1.1rem" }}>
+                                Download official NSS forms and documents for special camps, regular activities, and volunteer enrollment.
+                            </p>
+                        </div>
+
+                        <div className="form-conteiner">
+                            {[
+                                { name: "Form 1 - Special Camp", file: "form1-special-camp.docx" },
+                                { name: "Form 2 - Submission of Camp Report and Account", file: "form2-camp-report.docx" },
+                                { name: "Form 3 - Statement of Accounts and UC for NSS Special Camp", file: "form3-statement-of-accounts.docx" },
+                                { name: "Form 4 - Accounts and Regular NSS Activities", file: "form4-accounts-and-regular-nss-activities.docx" },
+                                { name: "Form 5 - Nomination of New Programme Officer", file: "form5-nomination-of-new-programme-officer.docx" },
+                                { name: "Form 6 - NSS Volunteer Enrolment - Annexure - A", file: "form6-nss-volunteer-enrolement-annexure-a.docx" },
+                                { name: "Form 7 - Enrolment Particulars to the Programme Co-ordinator - Annexure - B", file: "form7-enrolement-particulars-to-the-programme-co-ordinator-annexure-b.docx" },
+                                { name: "Form 8 - Enrolment Particulars to the Programme Co-ordinator - Annexure - C", file: "form8-enrolement-particulars-to-the-programme-coordinator-annexure-c.docx" },
+                                { name: "Form 9 - NSS Volunteers Work Diary", file: "form9-nss-volunteers-work-diary.docx" }
+                            ].map((form, idx) => (
+                                <div className="forms" key={idx} data-aos="fade-up" data-aos-delay={idx * 50}>
+                                    <div className="form-name">{form.name}</div>
+                                    <button
+                                        onClick={() => window.open(`/forms/${form.file}`, "_blank")}
+                                    >
+                                        <span>Download Form</span>
+                                        <span style={{ fontSize: '1.1rem' }}>📥</span>
+                                    </button>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                </div>
 
 
                 {/* ── Features ── */}
                 <section style={{ padding: "0 0 90px" }}>
                     <div className="container">
-                        <div style={{ textAlign: "center", marginBottom: "3rem" }}>
+                        <div style={{ textAlign: "center", marginBottom: "3rem", marginTop: "2rem" }}>
                             <span style={{ fontSize: "0.72rem", fontWeight: 700, letterSpacing: "0.12em", color: "var(--brand-400)", textTransform: "uppercase" }}>Platform Features</span>
                             <h2 style={{ fontSize: "clamp(1.6rem, 3vw, 2.2rem)", marginTop: "0.75rem", marginBottom: "0.75rem", letterSpacing: "-0.03em" }}>
                                 Everything you need, in one place

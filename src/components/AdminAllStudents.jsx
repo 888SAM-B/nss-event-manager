@@ -11,6 +11,7 @@ const AdminAllStudents = () => {
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState("");
     const [collegeFilter, setCollegeFilter] = useState("");
+    const [communityFilter, setCommunityFilter] = useState("");
     const [selectedStudent, setSelectedStudent] = useState(null);
     const [showEnrolmentModal, setShowEnrolmentModal] = useState(false);
 
@@ -49,7 +50,13 @@ const AdminAllStudents = () => {
         const collegeMatch = collegeFilter === "" || 
             s.collegeId?.insName.toLowerCase().includes(collegeFilter.toLowerCase()) ||
             s.collegeId?.code === collegeFilter;
-        return (nameMatch || regNoMatch) && collegeMatch;
+        const communityMatch = communityFilter === "" || 
+            s.community === communityFilter;
+        return (nameMatch || regNoMatch) && collegeMatch && communityMatch;
+    }).sort((a, b) => {
+        const collegeA = a.collegeId?.insName || "";
+        const collegeB = b.collegeId?.insName || "";
+        return collegeA.localeCompare(collegeB);
     });
 
     if (loading) return <div className="flex-center" style={{ height: '100vh' }}>Loading Students...</div>;
@@ -90,6 +97,22 @@ const AdminAllStudents = () => {
                                 onChange={(e) => setCollegeFilter(e.target.value)}
                             />
                         </div>
+                        <div className="form-group">
+                            <label className="form-label">Filter by Community</label>
+                            <select 
+                                className="form-input" 
+                                value={communityFilter}
+                                onChange={(e) => setCommunityFilter(e.target.value)}
+                            >
+                                <option value="">All Communities</option>
+                                <option value="General">General</option>
+                                <option value="OBC">OBC</option>
+                                <option value="MBC">MBC</option>
+                                <option value="BC">BC</option>
+                                <option value="SC">SC</option>
+                                <option value="ST">ST</option>
+                            </select>
+                        </div>
                     </div>
                 </div>
 
@@ -103,13 +126,14 @@ const AdminAllStudents = () => {
                                     <th>College (Code)</th>
                                     <th>Unit</th>
                                     <th>Dept</th>
+                                    <th>Community</th>
                                     <th>Batch</th>
                                     <th>Action</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 {filteredStudents.length === 0 ? (
-                                    <tr><td colSpan="7" className="text-center">No students found matching criteria.</td></tr>
+                                    <tr><td colSpan="8" className="text-center">No students found matching criteria.</td></tr>
                                 ) : (
                                     filteredStudents.map((s) => (
                                         <tr key={s._id}>
@@ -121,6 +145,7 @@ const AdminAllStudents = () => {
                                             </td>
                                             <td><span className="badge badge-primary">{s.unitId?.unitNumber || "N/A"}</span></td>
                                             <td>{s.dept}</td>
+                                            <td><span className="badge badge-secondary">{s.community || "N/A"}</span></td>
                                             <td>{s.batchFrom} - {s.batchTo}</td>
                                             <td>
                                                 <button 

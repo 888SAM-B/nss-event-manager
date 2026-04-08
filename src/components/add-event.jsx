@@ -277,19 +277,11 @@ const AddEvent = () => {
     };
 
     return (
-        <div style={{ minHeight: '100vh', background: 'var(--bg-color)' }}>
-            <header className="dashboard-header">
-                <div className="container flex-between">
-                    <h2 className="mb-0">{eventToEdit ? "Edit Event" : "Create New Event"}</h2>
-                    <div className="d-flex align-items-center gap-3">
-                        <ThemeToggle />
-                        <button className="btn btn-secondary" onClick={() => navigate(-1)}>Back</button>
+            <div className="container animate-fadeIn" style={{ maxWidth: '850px', marginTop: '110px', paddingBottom: '4rem' }}>
+                <div className="card" style={{ padding: '2.5rem' }}>
+                    <div className="form-section-header">
+                        <span>📋</span> Basic Information
                     </div>
-                </div>
-            </header>
-
-            <div className="container  evt-container" style={{ maxWidth: '800px' }}>
-                <div className="card">
                     <form onSubmit={handleSubmit}>
                         {/* Event Name */}
                         <div className="form-group mb-3">
@@ -435,7 +427,7 @@ const AddEvent = () => {
                         </div>
 
                         {/* Venue */}
-                        <div className="form-group mb-3">
+                        <div className="form-group mb-8">
                             <label htmlFor="venue">Venue <span className="text-danger">*</span></label>
                             <input
                                 type="text"
@@ -446,6 +438,10 @@ const AddEvent = () => {
                                 onChange={handleChange}
                                 required
                             />
+                        </div>
+
+                        <div className="form-section-header">
+                            <span>🖼️</span> Media & Documents
                         </div>
 
                         {/* Image Upload Section */}
@@ -540,7 +536,9 @@ const AddEvent = () => {
                             )}
                         </div>
 
-                        {/* Collaborating Units Section */}
+                        <div className="form-section-header">
+                            <span>🤝</span> Collaboration
+                        </div>
                         <div className="form-group mb-4 p-3" style={{ border: '1px dashed var(--border-color)', borderRadius: 'var(--radius-md)' }}>
                             <label className="mb-2 fw-bold">Collaborating Units (Optional)</label>
                             <div className="d-flex gap-2 mb-2">
@@ -581,16 +579,15 @@ const AddEvent = () => {
                             <small className="text-muted">Selected units will receive an invitation to collaborate on this event.</small>
                         </div>
 
-                        <div className="flex-between">
+                        <div className="flex-between mt-10 pt-8" style={{ borderTop: "1px solid var(--border)" }}>
                             <button type="button" className="btn btn-secondary" onClick={() => navigate(-1)} disabled={uploading}>
                                 Cancel
                             </button>
-                            <button type="submit" className="btn btn-primary btn-lg" disabled={uploading || uploadingBrochure || submitting}>
+                            <button type="submit" className="btn btn-primary btn-lg" disabled={uploading || uploadingBrochure || submitting} style={{ minWidth: '180px' }}>
                                 {submitting ? (eventToEdit ? "Updating..." : "Creating...") : (eventToEdit ? "Update Event" : "Create Event")}
                             </button>
                         </div>
-                    </form>
-                </div>
+        </form>
             </div>
         </div>
     );

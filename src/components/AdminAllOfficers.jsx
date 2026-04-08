@@ -13,6 +13,7 @@ const AdminAllOfficers = () => {
     const [collegeFilter, setCollegeFilter] = useState("");
     const [selectedOfficer, setSelectedOfficer] = useState(null);
     const [showModal, setShowModal] = useState(false);
+    const [isReadOnly, setIsReadOnly] = useState(true);
 
     useEffect(() => {
         const fetchAllOfficers = async () => {
@@ -122,15 +123,28 @@ const AdminAllOfficers = () => {
                                             <td>{officer.department}</td>
                                             <td>{officer.mobile}</td>
                                             <td>
-                                                <button 
-                                                    className="btn btn-sm btn-outline-primary"
-                                                    onClick={() => {
-                                                        setSelectedOfficer(officer);
-                                                        setShowModal(true);
-                                                    }}
-                                                >
-                                                    View Details
-                                                </button>
+                                                <div className="d-flex gap-2">
+                                                    <button 
+                                                        className="btn btn-sm btn-outline-primary"
+                                                        onClick={() => {
+                                                            setSelectedOfficer(officer);
+                                                            setIsReadOnly(true);
+                                                            setShowModal(true);
+                                                        }}
+                                                    >
+                                                        View
+                                                    </button>
+                                                    <button 
+                                                        className="btn btn-sm btn-primary"
+                                                        onClick={() => {
+                                                            setSelectedOfficer(officer);
+                                                            setIsReadOnly(false);
+                                                            setShowModal(true);
+                                                        }}
+                                                    >
+                                                        Edit
+                                                    </button>
+                                                </div>
                                             </td>
                                         </tr>
                                     ))
@@ -149,7 +163,16 @@ const AdminAllOfficers = () => {
                     insCode={selectedOfficer.collegeId?.code}
                     units={[]} // Not adding units for read-only view
                     initialData={selectedOfficer}
-                    readOnly={true}
+                    readOnly={isReadOnly}
+                    onSuccess={() => {
+                        // Refresh data
+                        const token = localStorage.getItem("adminToken");
+                        axios.get(`${import.meta.env.VITE_API_URL}/admin/all-program-officers`, {
+                            headers: { Authorization: `Bearer ${token}` }
+                        }).then(res => {
+                            if (res.data.success) setOfficers(res.data.officers);
+                        });
+                    }}
                 />
             )}
         </div>

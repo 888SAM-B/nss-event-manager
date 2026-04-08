@@ -7,10 +7,10 @@ import ThemeToggle from './ThemeToggle';
 const AddOrg = () => {
     const navigate = useNavigate();
     const [isLoading, setIsLoading] = useState(false);
-    const [villages, setVillages] = useState([{ name: '', address: '', pincode: '' }]);
+    const [villages, setVillages] = useState([{ name: '', address: '', block: '', taluk: '', district: '', pincode: '' }]);
 
     const addVillage = () => {
-        setVillages([...villages, { name: '', address: '', pincode: '' }]);
+        setVillages([...villages, { name: '', address: '', block: '', taluk: '', district: '', pincode: '' }]);
     };
 
     const removeVillage = (index) => {
@@ -18,7 +18,7 @@ const AddOrg = () => {
             const newVillages = villages.filter((_, i) => i !== index);
             setVillages(newVillages);
         } else {
-            setVillages([{ name: '', address: '', pincode: '' }]);
+            setVillages([{ name: '', address: '', block: '', taluk: '', district: '', pincode: '' }]);
         }
     };
 
@@ -39,6 +39,10 @@ const AddOrg = () => {
         const data = {
             insName: formData.get("insName"),
             location: formData.get("location"),
+            block: formData.get("block"),
+            taluk: formData.get("taluk"),
+            district: formData.get("district"),
+            pincode: formData.get("pincode"),
             code: formData.get("code"),
             username: formData.get("username"),
             password: formData.get("password"),
@@ -49,7 +53,7 @@ const AddOrg = () => {
             .then((response) => {
                 toast.success("College Registered Successfully");
                 e.target.reset();
-                setVillages([{ name: '', address: '', pincode: '' }]);
+                setVillages([{ name: '', address: '', block: '', taluk: '', district: '', pincode: '' }]);
                 navigate('/admin-dashboard');
             })
             .catch((error) => {
@@ -109,6 +113,25 @@ const AddOrg = () => {
                             placeholder="e.g. Salem"
                             required
                         />
+                    </div>
+
+                    <div className="grid-cols-2">
+                        <div className="form-group">
+                            <label className="form-label">Block</label>
+                            <input type="text" name="block" className="form-input" placeholder="Block name" />
+                        </div>
+                        <div className="form-group">
+                            <label className="form-label">Taluk</label>
+                            <input type="text" name="taluk" className="form-input" placeholder="Taluk name" />
+                        </div>
+                        <div className="form-group">
+                            <label className="form-label">District</label>
+                            <input type="text" name="district" className="form-input" placeholder="District name" />
+                        </div>
+                        <div className="form-group">
+                            <label className="form-label">Pincode</label>
+                            <input type="text" name="pincode" className="form-input" placeholder="6-digit pincode" maxLength={6} />
+                        </div>
                     </div>
 
                     <div className="grid-cols-2">
@@ -196,6 +219,33 @@ const AddOrg = () => {
                                             value={village.address}
                                             onChange={(e) => handleVillageChange(index, 'address', e.target.value)}
                                             required
+                                        />
+                                    </div>
+                                    <div className="form-group">
+                                        <input
+                                            type="text"
+                                            placeholder="Block"
+                                            className="form-input"
+                                            value={village.block}
+                                            onChange={(e) => handleVillageChange(index, 'block', e.target.value)}
+                                        />
+                                    </div>
+                                    <div className="form-group">
+                                        <input
+                                            type="text"
+                                            placeholder="Taluk"
+                                            className="form-input"
+                                            value={village.taluk}
+                                            onChange={(e) => handleVillageChange(index, 'taluk', e.target.value)}
+                                        />
+                                    </div>
+                                    <div className="form-group">
+                                        <input
+                                            type="text"
+                                            placeholder="District"
+                                            className="form-input"
+                                            value={village.district}
+                                            onChange={(e) => handleVillageChange(index, 'district', e.target.value)}
                                         />
                                     </div>
                                     <div className="form-group">

@@ -17,6 +17,10 @@ const ProgramOfficerModal = ({ isOpen, onClose, insName, insCode, units, initial
         email: "",
         mobile: "",
         address: "",
+        block: "",
+        taluk: "",
+        district: "",
+        pincode: "",
         dateOfAppointment: "",
         teachingExperience: "",
         qualification: "",
@@ -48,6 +52,10 @@ const ProgramOfficerModal = ({ isOpen, onClose, insName, insCode, units, initial
                 email: "",
                 mobile: "",
                 address: "",
+                block: "",
+                taluk: "",
+                district: "",
+                pincode: "",
                 dateOfAppointment: "",
                 teachingExperience: "",
                 qualification: "",
@@ -138,7 +146,11 @@ const ProgramOfficerModal = ({ isOpen, onClose, insName, insCode, units, initial
         e.preventDefault();
         setIsSubmitting(true);
         try {
-            const res = await axios.post(`${import.meta.env.VITE_API_URL}/register-program-officer`, {
+            const url = initialData
+                ? `${import.meta.env.VITE_API_URL}/update-program-officer/${initialData._id}`
+                : `${import.meta.env.VITE_API_URL}/register-program-officer`;
+
+            const res = await axios.post(url, {
                 officerData: formData,
                 collegeCode: insCode
             }, {
@@ -146,7 +158,7 @@ const ProgramOfficerModal = ({ isOpen, onClose, insName, insCode, units, initial
             });
 
             if (res.data.success) {
-                toast.success("Program Officer Registered Successfully!");
+                toast.success(initialData ? "Program Officer Updated Successfully!" : "Program Officer Registered Successfully!");
                 if (onSuccess) onSuccess();
                 onClose();
             } else {
@@ -164,14 +176,16 @@ const ProgramOfficerModal = ({ isOpen, onClose, insName, insCode, units, initial
         <div className="modal-overlay">
             <div className="modal-content" style={{ maxWidth: "800px" }}>
                 <div className="flex-between mb-6">
-                    <h2 className="mb-0">{readOnly ? "Program Officer Details" : "Register Program Officer Pro-forma"}</h2>
+                    <h2 className="mb-0">{readOnly ? "Program Officer Details" : "Register Program Officer Pro-form-a"}</h2>
                     <button className="btn btn-sm btn-secondary" onClick={onClose}>&times;</button>
                 </div>
 
                 <form onSubmit={handleSubmit}>
                     {/* Main Details */}
                     <div className="mb-8">
-                        <h3 className="section-title text-primary mb-4" style={{ borderBottom: "2px solid var(--primary-color)", paddingBottom: "5px" }}>Main Details</h3>
+                        <div className="form-section-header">
+                            <span>👔</span> Main Details
+                        </div>
                         <div className="grid-cols-2">
                             {formData.officerID && (
                                 <div className="form-group col-span-2" style={{ gridColumn: "1 / -1" }}>
@@ -203,7 +217,9 @@ const ProgramOfficerModal = ({ isOpen, onClose, insName, insCode, units, initial
 
                     {/* Personal Details */}
                     <div className="mb-8">
-                        <h3 className="section-title text-primary mb-4" style={{ borderBottom: "2px solid var(--primary-color)", paddingBottom: "5px" }}>Personal Details</h3>
+                        <div className="form-section-header">
+                            <span>👤</span> Personal Details
+                        </div>
                         <div className="grid-cols-2">
                             {!readOnly && (
                                 <div className="form-group">
@@ -248,14 +264,32 @@ const ProgramOfficerModal = ({ isOpen, onClose, insName, insCode, units, initial
                             </div>
                             <div className="form-group col-span-2" style={{ gridColumn: "1 / -1" }}>
                                 <label>Address</label>
-                                <textarea className="form-input" name="address" value={formData.address} onChange={handleInputChange} rows="3" required disabled={readOnly}></textarea>
+                                <textarea className="form-input" name="address" value={formData.address} onChange={handleInputChange} rows="2" required disabled={readOnly}></textarea>
+                            </div>
+                            <div className="form-group">
+                                <label>Block</label>
+                                <input className="form-input" name="block" value={formData.block} onChange={handleInputChange} disabled={readOnly} />
+                            </div>
+                            <div className="form-group">
+                                <label>Taluk</label>
+                                <input className="form-input" name="taluk" value={formData.taluk} onChange={handleInputChange} disabled={readOnly} />
+                            </div>
+                            <div className="form-group">
+                                <label>District</label>
+                                <input className="form-input" name="district" value={formData.district} onChange={handleInputChange} disabled={readOnly} />
+                            </div>
+                            <div className="form-group">
+                                <label>Pincode</label>
+                                <input className="form-input" name="pincode" value={formData.pincode} onChange={handleInputChange} disabled={readOnly} maxLength={6} />
                             </div>
                         </div>
                     </div>
 
                     {/* Academic */}
                     <div className="mb-8">
-                        <h3 className="section-title text-primary mb-4" style={{ borderBottom: "2px solid var(--primary-color)", paddingBottom: "5px" }}>Academic</h3>
+                        <div className="form-section-header">
+                            <span>🎓</span> Academic & Training
+                        </div>
                         <div className="form-group">
                             <label>Qualification</label>
                             <input className="form-input" name="qualification" value={formData.qualification} onChange={handleInputChange} required disabled={readOnly} />
@@ -289,7 +323,9 @@ const ProgramOfficerModal = ({ isOpen, onClose, insName, insCode, units, initial
 
                     {/* General */}
                     <div className="mb-8">
-                        <h3 className="section-title text-primary mb-4" style={{ borderBottom: "2px solid var(--primary-color)", paddingBottom: "5px" }}>General</h3>
+                        <div className="form-section-header">
+                            <span>🌟</span> General Experience
+                        </div>
                         <div className="form-group">
                             <label className="flex-between">
                                 Previous Experience in NSS
@@ -320,14 +356,16 @@ const ProgramOfficerModal = ({ isOpen, onClose, insName, insCode, units, initial
                         </div>
                     </div>
 
-                    <div className="flex-between sticky-bottom pt-4" style={{ borderTop: "1px solid var(--border-color)", background: "var(--card-bg)", position: "sticky", bottom: "-32px", zIndex: 10 }}>
+                    <div className="flex-between sticky-bottom pt-6" style={{ borderTop: "1px solid var(--border)", background: "var(--card)", position: "sticky", bottom: "-32px", zIndex: 10 }}>
                         <div className="d-flex gap-2">
-                            <button type="button" className="btn btn-success" onClick={generatePDF}>Download Form PDF</button>
+                            <button type="button" className="btn btn-outline-primary" onClick={generatePDF}>
+                                <span>📥</span> Download Form PDF
+                            </button>
                         </div>
-                        <div className="d-flex gap-2">
+                        <div className="d-flex gap-3">
                             <button type="button" className="btn btn-secondary" onClick={onClose}>Close</button>
                             {!readOnly && (
-                                <button type="submit" className="btn btn-primary" disabled={isSubmitting}>
+                                <button type="submit" className="btn btn-primary" disabled={isSubmitting} style={{ minWidth: "150px" }}>
                                     {isSubmitting ? "Registering..." : "Register Officer"}
                                 </button>
                             )}
@@ -388,10 +426,14 @@ const ProgramOfficerModal = ({ isOpen, onClose, insName, insCode, units, initial
                         <p><strong>Community:</strong> {formData.community}</p>
                         <p><strong>Email:</strong> {formData.email}</p>
                         <p><strong>Mobile:</strong> {formData.mobile}</p>
+                        <p><strong>Block:</strong> {formData.block}</p>
+                        <p><strong>Taluk:</strong> {formData.taluk}</p>
+                        <p><strong>District:</strong> {formData.district}</p>
+                        <p><strong>Pincode:</strong> {formData.pincode}</p>
                         <p><strong>Date of Appointment:</strong> {formData.dateOfAppointment}</p>
                         <p><strong>Teaching Experience:</strong> {formData.teachingExperience}</p>
                     </div>
-                    <p style={{ marginTop: "10px" }}><strong>Residential Address:</strong> {formData.address}</p>
+                    <p style={{ marginTop: "10px" }}><strong>Address:</strong> {formData.address}</p>
 
                     <h4 style={{ borderBottom: "1px solid #000", marginTop: "20px" }}>ACADEMIC & ETI</h4>
                     <p><strong>Educational Qualification:</strong> {formData.qualification}</p>

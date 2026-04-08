@@ -219,10 +219,10 @@ const VolunteerEnrolmentModal = ({ isOpen, onClose, member, collegeData, unitDat
 
                 <form onSubmit={handleSubmit}>
                     {/* SECTION 1: Basic Details */}
-                    <div style={{ marginBottom: "18px" }}>
-                        <h4 style={{ borderBottom: "2px solid var(--primary-color)", paddingBottom: "6px", marginBottom: "14px", color: "var(--primary-color)" }}>
-                            📋 Basic Details
-                        </h4>
+                    <div style={{ marginBottom: "2rem" }}>
+                        <div className="form-section-header">
+                            <span>📋</span> Basic Details
+                        </div>
                         <div className="grid-cols-2">
                             <div className="form-group">
                                 <label>Name <span style={{ color: "red" }}>*</span></label>
@@ -285,10 +285,10 @@ const VolunteerEnrolmentModal = ({ isOpen, onClose, member, collegeData, unitDat
                     </div>
 
                     {/* SECTION 2: Enrolment Details */}
-                    <div style={{ marginBottom: "18px" }}>
-                        <h4 style={{ borderBottom: "2px solid var(--primary-color)", paddingBottom: "6px", marginBottom: "14px", color: "var(--primary-color)" }}>
-                            📝 Enrolment Details
-                        </h4>
+                    <div style={{ marginBottom: "2rem" }}>
+                        <div className="form-section-header">
+                            <span>📝</span> Enrolment Details
+                        </div>
                         <div className="grid-cols-2">
                             <div className="form-group">
                                 <label>Sex <span style={{ color: "red" }}>*</span></label>
@@ -345,14 +345,16 @@ const VolunteerEnrolmentModal = ({ isOpen, onClose, member, collegeData, unitDat
                         </div>
                     </div>
 
-                    <div className="flex-between mt-6">
-                        <button type="button" className="btn btn-success" onClick={() => generatePDF(false)}>⬇ Download Enrolment PDF</button>
-                        <div className="d-flex gap-2">
+                    <div className="flex-between mt-8 pt-6" style={{ borderTop: "1px solid var(--border)" }}>
+                        <button type="button" className="btn btn-outline-primary" onClick={() => generatePDF(false)}>
+                            <span>📥</span> Download Enrolment PDF
+                        </button>
+                        <div className="d-flex gap-3">
                             <button type="button" className="btn btn-secondary" onClick={onClose}>
                                 {mode === "view" ? "Close" : "Cancel"}
                             </button>
                             {mode !== "view" && (
-                                <button type="submit" className="btn btn-primary" disabled={isSubmitting}>
+                                <button type="submit" className="btn btn-primary" disabled={isSubmitting} style={{ minWidth: "120px" }}>
                                     {isSubmitting ? "Saving..." : (isNewMember ? "Add & Enrol" : "Save & Update")}
                                 </button>
                             )}
