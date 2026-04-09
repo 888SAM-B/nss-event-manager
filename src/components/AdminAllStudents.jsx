@@ -14,6 +14,8 @@ const AdminAllStudents = () => {
     const [communityFilter, setCommunityFilter] = useState("");
     const [selectedStudent, setSelectedStudent] = useState(null);
     const [showEnrolmentModal, setShowEnrolmentModal] = useState(false);
+    const [currentPage, setCurrentPage] = useState(1);
+    const itemsPerPage = 50;
 
     useEffect(() => {
         const fetchAllStudents = async () => {
@@ -58,6 +60,17 @@ const AdminAllStudents = () => {
         const collegeB = b.collegeId?.insName || "";
         return collegeA.localeCompare(collegeB);
     });
+
+    // Reset to page 1 when filters change
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [searchTerm, collegeFilter, communityFilter]);
+
+    const totalPages = Math.ceil(filteredStudents.length / itemsPerPage);
+    const paginatedStudents = filteredStudents.slice(
+        (currentPage - 1) * itemsPerPage,
+        currentPage * itemsPerPage
+    );
 
     if (loading) return <div className="flex-center" style={{ height: '100vh' }}>Loading Students...</div>;
 
@@ -132,10 +145,10 @@ const AdminAllStudents = () => {
                                 </tr>
                             </thead>
                             <tbody>
-                                {filteredStudents.length === 0 ? (
+                                {paginatedStudents.length === 0 ? (
                                     <tr><td colSpan="8" className="text-center">No students found matching criteria.</td></tr>
                                 ) : (
-                                    filteredStudents.map((s) => (
+                                    paginatedStudents.map((s) => (
                                         <tr key={s._id}>
                                             <td><span className="badge badge-secondary">{s.regNo}</span></td>
                                             <td className="fw-bold">{s.name}</td>
@@ -165,6 +178,55 @@ const AdminAllStudents = () => {
                         </table>
                     </div>
                 </div>
+
+                {filteredStudents.length > itemsPerPage && (
+                    <div className="pagination-container flex-between mt-4 mb-8">
+                        <div className="text-sm text-muted">
+                            Showing <span className="fw-bold">{(currentPage - 1) * itemsPerPage + 1}</span> to <span className="fw-bold">{Math.min(currentPage * itemsPerPage, filteredStudents.length)}</span> of <span className="fw-bold">{filteredStudents.length}</span> students
+                        </div>
+                        <div className="flex-center gap-2">
+                            <button
+                                className="btn btn-secondary btn-sm"
+                                onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                                disabled={currentPage === 1}
+                            >
+                                Previous
+                            </button>
+                            <div className="flex-center gap-1">
+                                {[...Array(Math.min(5, totalPages))].map((_, i) => {
+                                    let pageNum;
+                                    if (totalPages <= 5) {
+                                        pageNum = i + 1;
+                                    } else if (currentPage <= 3) {
+                                        pageNum = i + 1;
+                                    } else if (currentPage >= totalPages - 2) {
+                                        pageNum = totalPages - 4 + i;
+                                    } else {
+                                        pageNum = currentPage - 2 + i;
+                                    }
+
+                                    return (
+                                        <button
+                                            key={pageNum}
+                                            className={`btn btn-sm ${currentPage === pageNum ? 'btn-primary' : 'btn-secondary'}`}
+                                            style={{ minWidth: '36px' }}
+                                            onClick={() => setCurrentPage(pageNum)}
+                                        >
+                                            {pageNum}
+                                        </button>
+                                    );
+                                })}
+                            </div>
+                            <button
+                                className="btn btn-secondary btn-sm"
+                                onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                                disabled={currentPage === totalPages}
+                            >
+                                Next
+                            </button>
+                        </div>
+                    </div>
+                )}
             </main>
 
             {showEnrolmentModal && selectedStudent && (

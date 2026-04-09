@@ -1656,3 +1656,48 @@ input[type="checkbox"] {
         display: none;
     }
 }
+
+/* ============================================
+   PAGINATION
+   ============================================ */
+.pagination-container {
+    padding: var(--sp-4) 0;
+}
+
+.pagination-container .flex-center {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.pagination-container .btn {
+    min-width: 36px;
+    height: 36px;
+    padding: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 500;
+}
+
+.pagination-container .btn-secondary {
+    background: var(--card);
+}
+
+.pagination-container .btn-secondary:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.pagination-container .btn-sm {
+    padding: 0 0.75rem;
+    min-width: 38px;
+}
+
+@media (max-width: 640px) {
+    .pagination-container {
+        flex-direction: column;
+        gap: var(--sp-4);
+        text-align: center;
+    }
+}

@@ -10,6 +10,8 @@ const AdminAllEvents = () => {
     const [searchTerm, setSearchTerm] = useState('');
     const [filterCategory, setFilterCategory] = useState('all');
     const [selectedEvent, setSelectedEvent] = useState(null);
+    const [currentPage, setCurrentPage] = useState(1);
+    const itemsPerPage = 50;
 
     useEffect(() => {
         const fetchEvents = async () => {
@@ -49,6 +51,17 @@ const AdminAllEvents = () => {
         const matchesCategory = filterCategory === 'all' || event.category === filterCategory;
         return matchesSearch && matchesCategory;
     });
+
+    // Reset to page 1 when filters change
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [searchTerm, filterCategory]);
+
+    const totalPages = Math.ceil(filteredEvents.length / itemsPerPage);
+    const paginatedEvents = filteredEvents.slice(
+        (currentPage - 1) * itemsPerPage,
+        currentPage * itemsPerPage
+    );
 
     const formatDate = (event) => {
         if (event.singleDay) {
@@ -148,7 +161,7 @@ const AdminAllEvents = () => {
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {filteredEvents.map((event) => (
+                                    {paginatedEvents.map((event) => (
                                         <tr key={event._id}>
                                             <td>
                                                 <span className="badge badge-primary">{event.eventCode}</span>
@@ -188,6 +201,55 @@ const AdminAllEvents = () => {
                         </div>
                     )}
                 </div>
+
+                {filteredEvents.length > itemsPerPage && (
+                    <div className="pagination-container flex-between mt-4 mb-8">
+                        <div className="text-sm text-muted">
+                            Showing <span className="fw-bold">{(currentPage - 1) * itemsPerPage + 1}</span> to <span className="fw-bold">{Math.min(currentPage * itemsPerPage, filteredEvents.length)}</span> of <span className="fw-bold">{filteredEvents.length}</span> events
+                        </div>
+                        <div className="flex-center gap-2">
+                            <button
+                                className="btn btn-secondary btn-sm"
+                                onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                                disabled={currentPage === 1}
+                            >
+                                Previous
+                            </button>
+                            <div className="flex-center gap-1">
+                                {[...Array(Math.min(5, totalPages))].map((_, i) => {
+                                    let pageNum;
+                                    if (totalPages <= 5) {
+                                        pageNum = i + 1;
+                                    } else if (currentPage <= 3) {
+                                        pageNum = i + 1;
+                                    } else if (currentPage >= totalPages - 2) {
+                                        pageNum = totalPages - 4 + i;
+                                    } else {
+                                        pageNum = currentPage - 2 + i;
+                                    }
+
+                                    return (
+                                        <button
+                                            key={pageNum}
+                                            className={`btn btn-sm ${currentPage === pageNum ? 'btn-primary' : 'btn-secondary'}`}
+                                            style={{ minWidth: '36px' }}
+                                            onClick={() => setCurrentPage(pageNum)}
+                                        >
+                                            {pageNum}
+                                        </button>
+                                    );
+                                })}
+                            </div>
+                            <button
+                                className="btn btn-secondary btn-sm"
+                                onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                                disabled={currentPage === totalPages}
+                            >
+                                Next
+                            </button>
+                        </div>
+                    </div>
+                )}
             </main>
 
             {/* Event Details Modal */}

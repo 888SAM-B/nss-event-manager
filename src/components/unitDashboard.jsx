@@ -21,6 +21,8 @@ const UnitDashboard = () => {
     const [editingIndex, setEditingIndex] = useState(null);
     const [invites, setInvites] = useState([]);
     const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
+    const [currentPage, setCurrentPage] = useState(1);
+    const itemsPerPage = 50;
     const [selectedMemberIds, setSelectedMemberIds] = useState([]);
     const [isUploading, setIsUploading] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
@@ -203,6 +205,17 @@ const UnitDashboard = () => {
         `${m.name} ${m.dept} ${m.regNo} ${m.course} ${m.batchFrom} ${m.batchTo}`
             .toLowerCase()
             .includes(search.toLowerCase())
+    ) || [];
+
+    // Reset to page 1 when search changes
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [search]);
+
+    const totalPages = Math.ceil(filteredMembers.length / itemsPerPage);
+    const paginatedMembers = filteredMembers.slice(
+        (currentPage - 1) * itemsPerPage,
+        currentPage * itemsPerPage
     );
 
     const handleAddClick = () => {
@@ -688,50 +701,53 @@ const UnitDashboard = () => {
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {filteredMembers.map((member, index) => (
-                                        <tr key={member._id}>
-                                            <td>
-                                                <input
-                                                    type="checkbox"
-                                                    checked={selectedMemberIds.includes(member._id)}
-                                                    onChange={() => toggleSelectMember(member._id)}
-                                                />
-                                            </td>
-                                            <td>{index + 1}</td>
-                                            <td>{member.name}</td>
-                                            <td><span className="badge badge-secondary">{member.regNo}</span></td>
-                                            <td>{member.dept}</td>
-                                            <td>{member.batchFrom} - {member.batchTo}</td>
-                                            <td>{member.contact}</td>
-                                            <td>
-                                                <div className="d-flex ed gap-2">
-                                                    <button
-                                                        onClick={() => handleUpdateClick(member)}
-                                                        className={`btn btn-sm ${member.isEnrolled ? 'btn-success' : 'btn-primary'}`}
-                                                        title="Edit Details"
-                                                    >
-                                                        {member.isEnrolled ? "✓ Edit" : "Edit"}
-                                                    </button>
-                                                    <button
-                                                        onClick={() => handleDeleteClick(member)}
-                                                        className="btn btn-sm btn-danger"
-                                                        title="Delete Member"
-                                                    >
-                                                        Delete
-                                                    </button>
-                                                    {member.isEnrolled && (
+                                    {paginatedMembers.map((member, index) => {
+                                        const globalIndex = (currentPage - 1) * itemsPerPage + index;
+                                        return (
+                                            <tr key={member._id}>
+                                                <td>
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={selectedMemberIds.includes(member._id)}
+                                                        onChange={() => toggleSelectMember(member._id)}
+                                                    />
+                                                </td>
+                                                <td>{globalIndex + 1}</td>
+                                                <td>{member.name}</td>
+                                                <td><span className="badge badge-secondary">{member.regNo}</span></td>
+                                                <td>{member.dept}</td>
+                                                <td>{member.batchFrom} - {member.batchTo}</td>
+                                                <td>{member.contact}</td>
+                                                <td>
+                                                    <div className="d-flex ed gap-2">
                                                         <button
-                                                            onClick={() => handleDownloadClick(member)}
-                                                            className="btn btn-sm btn-outline-success"
-                                                            title="Download Enrolment Form PDF"
+                                                            onClick={() => handleUpdateClick(member)}
+                                                            className={`btn btn-sm ${member.isEnrolled ? 'btn-success' : 'btn-primary'}`}
+                                                            title="Edit Details"
                                                         >
-                                                            ⬇ PDF
+                                                            {member.isEnrolled ? "✓ Edit" : "Edit"}
                                                         </button>
-                                                    )}
-                                                </div>
-                                            </td>
-                                        </tr>
-                                    ))}
+                                                        <button
+                                                            onClick={() => handleDeleteClick(member)}
+                                                            className="btn btn-sm btn-danger"
+                                                            title="Delete Member"
+                                                        >
+                                                            Delete
+                                                        </button>
+                                                        {member.isEnrolled && (
+                                                            <button
+                                                                onClick={() => handleDownloadClick(member)}
+                                                                className="btn btn-sm btn-outline-success"
+                                                                title="Download Enrolment Form PDF"
+                                                            >
+                                                                ⬇ PDF
+                                                            </button>
+                                                        )}
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        );
+                                    })}
                                 </tbody>
                             </table>
                         </div>
@@ -741,6 +757,55 @@ const UnitDashboard = () => {
                         </div>
                     )}
                 </div>
+
+                {filteredMembers.length > itemsPerPage && (
+                    <div className="pagination-container flex-between mt-4 mb-8">
+                        <div className="text-sm text-muted">
+                            Showing <span className="fw-bold">{(currentPage - 1) * itemsPerPage + 1}</span> to <span className="fw-bold">{Math.min(currentPage * itemsPerPage, filteredMembers.length)}</span> of <span className="fw-bold">{filteredMembers.length}</span> students
+                        </div>
+                        <div className="flex-center gap-2">
+                            <button
+                                className="btn btn-secondary btn-sm"
+                                onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                                disabled={currentPage === 1}
+                            >
+                                Previous
+                            </button>
+                            <div className="flex-center gap-1">
+                                {[...Array(Math.min(5, totalPages))].map((_, i) => {
+                                    let pageNum;
+                                    if (totalPages <= 5) {
+                                        pageNum = i + 1;
+                                    } else if (currentPage <= 3) {
+                                        pageNum = i + 1;
+                                    } else if (currentPage >= totalPages - 2) {
+                                        pageNum = totalPages - 4 + i;
+                                    } else {
+                                        pageNum = currentPage - 2 + i;
+                                    }
+
+                                    return (
+                                        <button
+                                            key={pageNum}
+                                            className={`btn btn-sm ${currentPage === pageNum ? 'btn-primary' : 'btn-secondary'}`}
+                                            style={{ minWidth: '36px' }}
+                                            onClick={() => setCurrentPage(pageNum)}
+                                        >
+                                            {pageNum}
+                                        </button>
+                                    );
+                                })}
+                            </div>
+                            <button
+                                className="btn btn-secondary btn-sm"
+                                onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                                disabled={currentPage === totalPages}
+                            >
+                                Next
+                            </button>
+                        </div>
+                    </div>
+                )}
             </main>
 
 

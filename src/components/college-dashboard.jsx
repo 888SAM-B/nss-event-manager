@@ -43,6 +43,8 @@ const CollegeDashboard = () => {
     const [assignTargetUnit, setAssignTargetUnit] = useState("");
     const [isAssigning, setIsAssigning] = useState(false);
     const [memberCommunityFilter, setMemberCommunityFilter] = useState("");
+    const [currentMemberPage, setCurrentMemberPage] = useState(1);
+    const membersPerPage = 50;
 
     // Adopting Villages State
     const [showVillageModal, setShowVillageModal] = useState(false);
@@ -315,12 +317,19 @@ const CollegeDashboard = () => {
         const matchesUnit = filterUnit === "" || m.unitId?.unitNumber === filterUnit;
         const matchesBatch = filterBatch === "" || m.batchFrom === filterBatch || m.batchTo === filterBatch;
         const matchesCommunity = memberCommunityFilter === "" || m.community === memberCommunityFilter;
-        return matchesSearch && matchesUnit && matchesBatch && matchesCommunity;
-    }).sort((a, b) => {
-        const unitA = a.unitId?.unitNumber || "ZZZ";
-        const unitB = b.unitId?.unitNumber || "ZZZ";
         return unitA.localeCompare(unitB);
     });
+
+    // Reset member page when filters change
+    useEffect(() => {
+        setCurrentMemberPage(1);
+    }, [memberSearch, filterUnit, filterBatch, memberCommunityFilter]);
+
+    const totalMemberPages = Math.ceil(filteredAllMembers.length / membersPerPage);
+    const paginatedAllMembers = filteredAllMembers.slice(
+        (currentMemberPage - 1) * membersPerPage,
+        currentMemberPage * membersPerPage
+    );
 
     const handleAddVillage = async () => {
         if (!newVillage.name || !newVillage.address || !newVillage.block || !newVillage.taluk || !newVillage.district || !newVillage.pincode) {
@@ -705,35 +714,87 @@ const CollegeDashboard = () => {
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {filteredAllMembers.map((m, index) => (
-                                        <tr key={m._id}  >
-                                            <td>{index + 1}</td>
-                                            <td>{m.name}</td>
-                                            <td><span className="badge badge-secondary">{m.regNo}</span></td>
-                                            <td>{m.unitId?.unitNumber || "N/A"}</td>
-                                            <td>{m.dept}</td>
-                                            <td><span className="badge badge-secondary">{m.community || "N/A"}</span></td>
-                                            <td>{m.batchFrom} - {m.batchTo}</td>
-                                            <td>{m.contact}</td>
-                                            <td>
-                                                <button
-                                                    className={`btn btn-sm ${m.isEnrolled ? 'btn-success' : 'btn-outline-primary'}`}
-                                                    onClick={() => {
-                                                        setSelectedMember(m);
-                                                        setShowEnrolmentModal(true);
-                                                    }}
-                                                >
-                                                    {m.isEnrolled ? "✓ View Enrolment" : "📝 Enrolment"}
-                                                </button>
-                                            </td>
-                                        </tr>
-                                    ))}
+                                    {paginatedAllMembers.map((m, index) => {
+                                        const globalIndex = (currentMemberPage - 1) * membersPerPage + index;
+                                        return (
+                                            <tr key={m._id}  >
+                                                <td>{globalIndex + 1}</td>
+                                                <td>{m.name}</td>
+                                                <td><span className="badge badge-secondary">{m.regNo}</span></td>
+                                                <td>{m.unitId?.unitNumber || "N/A"}</td>
+                                                <td>{m.dept}</td>
+                                                <td><span className="badge badge-secondary">{m.community || "N/A"}</span></td>
+                                                <td>{m.batchFrom} - {m.batchTo}</td>
+                                                <td>{m.contact}</td>
+                                                <td>
+                                                    <button
+                                                        className={`btn btn-sm ${m.isEnrolled ? 'btn-success' : 'btn-outline-primary'}`}
+                                                        onClick={() => {
+                                                            setSelectedMember(m);
+                                                            setShowEnrolmentModal(true);
+                                                        }}
+                                                    >
+                                                        {m.isEnrolled ? "✓ View Enrolment" : "📝 Enrolment"}
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                        );
+                                    })}
                                 </tbody>
                             </table>
                             {filteredAllMembers.length === 0 && (
                                 <p className="text-center p-4">No members found.</p>
                             )}
                         </div>
+
+                        {filteredAllMembers.length > membersPerPage && (
+                            <div className="pagination-container flex-between mt-4">
+                                <div className="text-sm text-muted">
+                                    Showing <span className="fw-bold">{(currentMemberPage - 1) * membersPerPage + 1}</span> to <span className="fw-bold">{Math.min(currentMemberPage * membersPerPage, filteredAllMembers.length)}</span> of <span className="fw-bold">{filteredAllMembers.length}</span> students
+                                </div>
+                                <div className="flex-center gap-2">
+                                    <button
+                                        className="btn btn-secondary btn-sm"
+                                        onClick={() => setCurrentMemberPage(prev => Math.max(prev - 1, 1))}
+                                        disabled={currentMemberPage === 1}
+                                    >
+                                        Previous
+                                    </button>
+                                    <div className="flex-center gap-1">
+                                        {[...Array(Math.min(5, totalMemberPages))].map((_, i) => {
+                                            let pageNum;
+                                            if (totalMemberPages <= 5) {
+                                                pageNum = i + 1;
+                                            } else if (currentMemberPage <= 3) {
+                                                pageNum = i + 1;
+                                            } else if (currentMemberPage >= totalMemberPages - 2) {
+                                                pageNum = totalMemberPages - 4 + i;
+                                            } else {
+                                                pageNum = currentMemberPage - 2 + i;
+                                            }
+
+                                            return (
+                                                <button
+                                                    key={pageNum}
+                                                    className={`btn btn-sm ${currentMemberPage === pageNum ? 'btn-primary' : 'btn-secondary'}`}
+                                                    style={{ minWidth: '36px' }}
+                                                    onClick={() => setCurrentMemberPage(pageNum)}
+                                                >
+                                                    {pageNum}
+                                                </button>
+                                            );
+                                        })}
+                                    </div>
+                                    <button
+                                        className="btn btn-secondary btn-sm"
+                                        onClick={() => setCurrentMemberPage(prev => Math.min(prev + 1, totalMemberPages))}
+                                        disabled={currentMemberPage === totalMemberPages}
+                                    >
+                                        Next
+                                    </button>
+                                </div>
+                            </div>
+                        )}
                     </div>
                 ) : null}
 
