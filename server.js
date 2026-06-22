@@ -1,6 +1,18 @@
 const express = require('express');
 const mongoose = require('mongoose');
 require('dotenv').config();
+
+// Validate required environment variables on startup
+const requiredEnvVars = ['JWT_SECRET', 'MONGODB_URL', 'PORT'];
+const missingVars = requiredEnvVars.filter(v => !process.env[v]);
+if (missingVars.length > 0) {
+    console.error(`❌ CRITICAL STARTUP ERROR: Missing required environment variables: ${missingVars.join(', ')}`);
+    process.exit(1);
+}
+if (process.env.JWT_SECRET.length < 32) {
+    console.warn('⚠️ WARNING: JWT_SECRET is weaker than recommended (less than 256 bits / 32 characters).');
+}
+
 const jwt = require('jsonwebtoken');
 const cors = require("cors");
 const bcrypt = require('bcryptjs');
@@ -221,11 +233,55 @@ const programOfficerSchema = new mongoose.Schema({
 
 const ProgramOfficer = mongoose.model('ProgramOfficer', programOfficerSchema);
 
-// ... existing code ...
+// Gallery Image Schema and Model
+const galleryImageSchema = new mongoose.Schema({
+    image: { type: String, required: true }, // Base64 representation of the image
+    description: { type: String, required: true },
+    createdAt: { type: Date, default: Date.now }
+});
+
+const GalleryImage = mongoose.model('GalleryImage', galleryImageSchema);
+
+// Helper to verify that req.user is authorized to modify/read resources for a specific collegeCode and optionally unitCode
+const verifyOwnership = async (req, collegeCode, unitCode = null) => {
+    // Admin has full access
+    if (req.user.role === 'admin') {
+        return true;
+    }
+
+    // College role authorization
+    if (req.user.role === 'college') {
+        const college = await User.findOne({ code: collegeCode });
+        if (!college) return false;
+        // Verify token user owns this college
+        return req.user.userName === college.userName;
+    }
+
+    // Unit role authorization
+    if (req.user.role === 'unit') {
+        // If unitCode is provided, unitNumber in token must match it
+        if (unitCode && req.user.unitNumber !== unitCode) {
+            return false;
+        }
+        // Verify unit belongs to the specified collegeCode
+        const college = await User.findOne({ code: collegeCode });
+        if (!college) return false;
+        const unit = await Unit.findOne({ unitNumber: req.user.unitNumber, collegeId: college._id });
+        if (!unit) return false;
+
+        return true;
+    }
+
+    return false;
+};
 
 app.post('/register-program-officer', verifyToken, async (req, res) => {
     const { officerData, collegeCode } = req.body;
     try {
+        if (!(await verifyOwnership(req, collegeCode))) {
+            return res.status(403).json({ success: false, message: "Forbidden: Unauthorized access to this college" });
+        }
+
         const college = await User.findOne({ code: collegeCode });
         if (!college) {
             return res.status(404).json({ success: false, message: "College not found" });
@@ -261,8 +317,17 @@ app.post('/update-program-officer/:id', verifyToken, async (req, res) => {
     const { officerData, collegeCode } = req.body;
     const { id } = req.params;
     try {
+        if (!(await verifyOwnership(req, collegeCode))) {
+            return res.status(403).json({ success: false, message: "Forbidden: Unauthorized access to this college" });
+        }
+
         const officer = await ProgramOfficer.findById(id);
         if (!officer) return res.status(404).json({ success: false, message: "Officer not found" });
+
+        const college = await User.findOne({ code: collegeCode });
+        if (!college || String(officer.collegeId) !== String(college._id)) {
+            return res.status(403).json({ success: false, message: "Forbidden: Officer does not belong to this college" });
+        }
 
         const updatedOfficer = await ProgramOfficer.findByIdAndUpdate(id, {
             ...officerData
@@ -312,6 +377,13 @@ app.delete('/program-officer/:id', verifyToken, async (req, res) => {
         const officer = await ProgramOfficer.findById(id);
         if (!officer) return res.status(404).json({ success: false, message: "Officer not found" });
 
+        const college = await User.findById(officer.collegeId);
+        if (!college) return res.status(404).json({ success: false, message: "College not found" });
+
+        if (!(await verifyOwnership(req, college.code))) {
+            return res.status(403).json({ success: false, message: "Forbidden: Unauthorized access" });
+        }
+
         // If officer was assigned to a unit, clear that unit's head
         if (officer.unit) {
             await Unit.findOneAndUpdate(
@@ -331,9 +403,13 @@ app.delete('/program-officer/:id', verifyToken, async (req, res) => {
 // ... existing code ...
 
 // Helper route to get all units for a college (for the dropdown in add-event)
-app.get('/units/:collegeCode', async (req, res) => {
+app.get('/units/:collegeCode', verifyToken, async (req, res) => {
     const { collegeCode } = req.params;
     try {
+        if (!(await verifyOwnership(req, collegeCode))) {
+            return res.status(403).json({ success: false, message: "Forbidden: Unauthorized access" });
+        }
+
         const college = await User.findOne({ code: collegeCode }).populate('units', 'unitNumber name _id');
         if (!college) {
             return res.status(404).json({ success: false, message: "College not found" });
@@ -493,7 +569,11 @@ app.post('/login', async (req, res) => {
     }
 });
 
-app.post('/add-organization', async (req, res) => {
+app.post('/add-organization', verifyToken, async (req, res) => {
+    if (req.user.role !== 'admin') {
+        return res.status(403).json({ success: false, message: "Forbidden: Admin access required" });
+    }
+
     const { insName, location, code, username, password, adoptingVillages } = req.body;
     console.log("Add Organization Request:", req.body);
     try {
@@ -733,11 +813,24 @@ app.put('/update-unit-member', verifyToken, async (req, res) => {
     const { memberId, memberData } = req.body;
 
     try {
-        const updatedMember = await Member.findByIdAndUpdate(memberId, memberData, { new: true });
-        if (!updatedMember) {
+        const member = await Member.findById(memberId);
+        if (!member) {
             return res.status(404).json({ success: false, message: "Member not found" });
         }
 
+        const college = await User.findById(member.collegeId);
+        if (!college) {
+            return res.status(404).json({ success: false, message: "College not found" });
+        }
+
+        const unit = await Unit.findById(member.unitId);
+        const unitCode = unit ? unit.unitNumber : null;
+
+        if (!(await verifyOwnership(req, college.code, unitCode))) {
+            return res.status(403).json({ success: false, message: "Forbidden: Unauthorized access" });
+        }
+
+        const updatedMember = await Member.findByIdAndUpdate(memberId, memberData, { new: true });
         res.json({ success: true, message: "Member updated successfully", member: updatedMember });
     } catch (error) {
         console.error("Error updating member:", error);
@@ -749,6 +842,10 @@ app.get('/college-members/:collegeCode', verifyToken, async (req, res) => {
     const { collegeCode } = req.params;
 
     try {
+        if (!(await verifyOwnership(req, collegeCode))) {
+            return res.status(403).json({ success: false, message: "Forbidden: Unauthorized access" });
+        }
+
         const college = await User.findOne({ code: collegeCode });
         if (!college) {
             return res.status(404).json({ success: false, message: "College not found" });
@@ -765,7 +862,9 @@ app.get('/college-members/:collegeCode', verifyToken, async (req, res) => {
 app.delete('/bulk-delete-members', verifyToken, async (req, res) => {
     const { unitCode, memberIds, collegeCode } = req.body;
 
-    if (req.user.unitNumber && req.user.unitNumber !== unitCode) return res.status(403).json({ message: "Unauthorized" });
+    if (!(await verifyOwnership(req, collegeCode, unitCode))) {
+        return res.status(403).json({ success: false, message: "Forbidden: Unauthorized access" });
+    }
 
     const collegeObject = await User.findOne({ code: collegeCode });
     if (!collegeObject) return res.status(404).json({ success: false, message: "College not found" });
@@ -792,7 +891,9 @@ app.delete('/bulk-delete-members', verifyToken, async (req, res) => {
 app.post('/bulk-add-members', verifyToken, async (req, res) => {
     const { unitCode, collegeCode, members } = req.body;
 
-    if (req.user.unitNumber && req.user.unitNumber !== unitCode) return res.status(403).json({ message: "Unauthorized" });
+    if (!(await verifyOwnership(req, collegeCode, unitCode))) {
+        return res.status(403).json({ success: false, message: "Forbidden: Unauthorized access" });
+    }
 
     try {
         const user = await User.findOne({ code: collegeCode });
@@ -833,7 +934,9 @@ app.post('/bulk-add-members', verifyToken, async (req, res) => {
 app.post('/add-unit-member', verifyToken, async (req, res) => {
     const { unitCode, member, collegeCode } = req.body;
 
-    if (req.user.unitNumber && req.user.unitNumber !== unitCode) return res.status(403).json({ message: "Unauthorized" });
+    if (!(await verifyOwnership(req, collegeCode, unitCode))) {
+        return res.status(403).json({ success: false, message: "Forbidden: Unauthorized access" });
+    }
 
     const collegeObject = await User.findOne({ code: collegeCode });
     if (!collegeObject) return res.status(404).json({ success: false, message: "College not found" });
@@ -867,7 +970,9 @@ app.post('/add-unit-member', verifyToken, async (req, res) => {
 app.delete('/delete-unit-member', verifyToken, async (req, res) => {
     const { unitCode, memberId, collegeCode } = req.body;
 
-    if (req.user.unitNumber && req.user.unitNumber !== unitCode) return res.status(403).json({ message: "Unauthorized" });
+    if (!(await verifyOwnership(req, collegeCode, unitCode))) {
+        return res.status(403).json({ success: false, message: "Forbidden: Unauthorized access" });
+    }
 
     const collegeObject = await User.findOne({ code: collegeCode });
     if (!collegeObject) return res.status(404).json({ success: false, message: "College not found" });
@@ -901,14 +1006,11 @@ app.post('/addEvent', verifyToken, async (req, res) => {
     }
 
     // Auth Check
-    if (req.user.role === 'unit') {
-        if (req.user.unitNumber !== eventData.unitCode) return res.status(403).json({ message: "Unauthorized" });
+    if (!(await verifyOwnership(req, eventData.collegeCode, eventData.unitCode))) {
+        return res.status(403).json({ success: false, message: "Forbidden: Unauthorized access" });
     }
 
     const collegeObject = await User.findOne({ code: eventData.collegeCode });
-    if (!collegeObject) return res.status(404).json({ message: "College found" }); // Typo in original? Keeping flow.
-
-    // Fix: checking collegeObject existence properly
     if (!collegeObject) return res.status(404).json({ success: false, message: "College not found" });
 
     const collegeCodeId = collegeObject._id;
@@ -1070,17 +1172,16 @@ app.post('/respond-collaboration', verifyToken, async (req, res) => {
 });
 
 
-app.get('/getEvents/:collegeCode/:unitCode', async (req, res) => {
-    // This might be public? Or protected? 
-    // Assuming public for "Explore" functionality, but let's check frontend.
-    // 'explore-event.jsx' uses it.
-    // If it's public, I won't add verifiedToken, OR make it optional.
-    // I'll leave it public for now as "Explore" usually implies public visibility.
-
+app.get('/getEvents/:collegeCode/:unitCode', verifyToken, async (req, res) => {
     const { collegeCode, unitCode } = req.params;
     console.log(`Getting events for College: ${collegeCode}, Unit: ${unitCode}`);
 
     try {
+        const uCode = (unitCode && unitCode !== 'null' && unitCode !== 'undefined' && unitCode !== 'COLLEGE') ? unitCode : null;
+        if (!(await verifyOwnership(req, collegeCode, uCode))) {
+            return res.status(403).json({ success: false, message: "Forbidden: Unauthorized access" });
+        }
+
         const college = await User.findOne({ code: collegeCode });
         if (!college) {
             return res.status(401).json({ success: false, message: "Invalid college code" });
@@ -1152,8 +1253,8 @@ app.post('/deleteEvent', verifyToken, async (req, res) => {
         return res.status(400).json({ success: false, message: "Missing required fields" });
     }
 
-    if (req.user.role === 'unit' && req.user.unitNumber !== unitCode) {
-        return res.status(403).json({ message: "Unauthorized" });
+    if (!(await verifyOwnership(req, collegeCode, unitCode))) {
+        return res.status(403).json({ success: false, message: "Forbidden: Unauthorized access" });
     }
 
     try {
@@ -1206,8 +1307,12 @@ app.put('/updateEvent', verifyToken, async (req, res) => {
 
         // Check ownership via unit
         const unit = event.unitId;
-        if (req.user.role === 'unit' && req.user.unitNumber !== unit.unitNumber) {
-            return res.status(403).json({ message: "Unauthorized" });
+        const college = await User.findById(event.collegeId);
+        if (!college) {
+            return res.status(404).json({ success: false, message: "College not found" });
+        }
+        if (!(await verifyOwnership(req, college.code, unit ? unit.unitNumber : null))) {
+            return res.status(403).json({ success: false, message: "Forbidden: Unauthorized access" });
         }
 
         // Detect major changes (date/time) for email notification
@@ -1224,8 +1329,14 @@ app.put('/updateEvent', verifyToken, async (req, res) => {
         // Send Email Notification to ALL Unit Heads if major details updated
         if (isMajorUpdate) {
             try {
-                const allUnits = await Unit.find({}, 'mail');
-                const recipientEmails = allUnits.map(u => u.mail).filter(email => email);
+                const collaboratorUnitIds = event.collaborators ? event.collaborators.map(c => c.unitId).filter(Boolean) : [];
+                const unitsToNotify = await Unit.find({
+                    $or: [
+                        { collegeId: event.collegeId },
+                        { _id: { $in: collaboratorUnitIds } }
+                    ]
+                }, 'mail');
+                const recipientEmails = unitsToNotify.map(u => u.mail).filter(email => email);
 
                 if (recipientEmails.length > 0) {
                     const mailOptions = {
@@ -1466,11 +1577,19 @@ app.post('/assign-officer-to-unit', verifyToken, async (req, res) => {
     }
 
     try {
+        if (!(await verifyOwnership(req, collegeCode))) {
+            return res.status(403).json({ success: false, message: "Forbidden: Unauthorized access" });
+        }
+
         const college = await User.findOne({ code: collegeCode });
         if (!college) return res.status(404).json({ success: false, message: "College not found" });
 
         const officer = await ProgramOfficer.findById(officerId);
         if (!officer) return res.status(404).json({ success: false, message: "Officer not found" });
+
+        if (String(officer.collegeId) !== String(college._id)) {
+            return res.status(403).json({ success: false, message: "Forbidden: Officer does not belong to this college" });
+        }
 
         // Handle Unassignment
         if (unitNumber === "UNASSIGNED") {
@@ -1554,6 +1673,85 @@ app.delete('/delete-village', verifyToken, async (req, res) => {
         res.json({ success: true, message: "Village removed successfully", user: { adoptingVillages: user.adoptingVillages } });
     } catch (error) {
         console.error("Error deleting village:", error);
+        res.status(500).json({ success: false, message: "Internal Server Error" });
+    }
+});
+
+// --- GALLERY ROUTES ---
+
+// Public: Get all gallery images
+app.get('/gallery', async (req, res) => {
+    try {
+        const images = await GalleryImage.find({}).sort({ createdAt: -1 });
+        res.json({ success: true, images });
+    } catch (error) {
+        console.error("Error fetching gallery images:", error);
+        res.status(500).json({ success: false, message: "Internal Server Error" });
+    }
+});
+
+// Admin: Add a gallery image
+app.post('/admin/gallery', verifyToken, async (req, res) => {
+    if (req.user.role !== 'admin') {
+        return res.status(403).json({ success: false, message: "Unauthorized: Admin access required" });
+    }
+
+    const { image, description } = req.body;
+    if (!image || !description) {
+        return res.status(400).json({ success: false, message: "Image and description are required" });
+    }
+
+    try {
+        const newImage = new GalleryImage({ image, description });
+        await newImage.save();
+        res.json({ success: true, message: "Gallery image uploaded successfully", image: newImage });
+    } catch (error) {
+        console.error("Error adding gallery image:", error);
+        res.status(500).json({ success: false, message: "Internal Server Error" });
+    }
+});
+
+// Admin: Update a gallery image description
+app.put('/admin/gallery/:id', verifyToken, async (req, res) => {
+    if (req.user.role !== 'admin') {
+        return res.status(403).json({ success: false, message: "Unauthorized: Admin access required" });
+    }
+
+    const { description } = req.body;
+    const { id } = req.params;
+
+    if (!description) {
+        return res.status(400).json({ success: false, message: "Description is required" });
+    }
+
+    try {
+        const updatedImage = await GalleryImage.findByIdAndUpdate(id, { description }, { new: true });
+        if (!updatedImage) {
+            return res.status(404).json({ success: false, message: "Gallery image not found" });
+        }
+        res.json({ success: true, message: "Gallery image updated successfully", image: updatedImage });
+    } catch (error) {
+        console.error("Error updating gallery image:", error);
+        res.status(500).json({ success: false, message: "Internal Server Error" });
+    }
+});
+
+// Admin: Delete a gallery image
+app.delete('/admin/gallery/:id', verifyToken, async (req, res) => {
+    if (req.user.role !== 'admin') {
+        return res.status(403).json({ success: false, message: "Unauthorized: Admin access required" });
+    }
+
+    const { id } = req.params;
+
+    try {
+        const deletedImage = await GalleryImage.findByIdAndDelete(id);
+        if (!deletedImage) {
+            return res.status(404).json({ success: false, message: "Gallery image not found" });
+        }
+        res.json({ success: true, message: "Gallery image deleted successfully" });
+    } catch (error) {
+        console.error("Error deleting gallery image:", error);
         res.status(500).json({ success: false, message: "Internal Server Error" });
     }
 });
