@@ -9,7 +9,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    background: var(--bg-2);
+    background: #F1F5F9;
     padding: 1rem;
     position: relative;
 }
@@ -35,7 +35,7 @@
     background: var(--card);
     border: 1px solid var(--border);
     padding: 1.5rem;
-    border-radius: 1rem;
+    border-radius: 0.5rem;
     display: flex;
     flex-direction: column;
     gap: 0.5rem;
@@ -47,7 +47,7 @@
     font-size: 2.25rem;
     font-weight: 800;
     letter-spacing: -0.04em;
-    color: var(--brand-600);
+    color: #0F172A;
     line-height: 1;
 }
 
@@ -73,14 +73,14 @@
     padding: 1.25rem;
     align-items: center;
     width: 85%;
-    border-radius: 1.25rem;
+    border-radius: 0.5rem;
     background: var(--bg-2);
     transition: all 0.2s ease;
 }
 
 .one:hover {
-    border-color: var(--brand-300);
-    background: #eff6ff;
+    border-color: #BFDBFE;
+    background: #EFF6FF;
 }
 
 .main-container {
@@ -439,5 +439,181 @@ input[type="checkbox"] {
         gap: 20px;
         text-align: center;
 
+    }
+}
+
+/* ============================================
+   SIDEBAR LAYOUT SYSTEM
+   ============================================ */
+.dashboard-layout-wrapper {
+    display: flex;
+    min-height: 100vh;
+    background: var(--bg);
+    overflow: hidden;
+    position: relative;
+    width: 100%;
+}
+
+.sidebar {
+    width: 260px;
+    background: var(--sidebar-bg);
+    border-right: 1px solid var(--sidebar-border);
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    position: fixed;
+    left: 0;
+    top: 0;
+    z-index: 150;
+    transition: transform 0.3s ease, width 0.3s ease;
+}
+
+.sidebar-brand {
+    padding: 1.5rem 1.5rem;
+    border-bottom: 1px solid var(--sidebar-border);
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.sidebar-brand-logo {
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 6px;
+    background: rgba(59, 130, 246, 0.2);
+    border: 1px solid rgba(59, 130, 246, 0.3);
+    color: #93C5FD;
+}
+
+.sidebar-brand-name {
+    font-weight: 700;
+    font-size: 0.9375rem;
+    letter-spacing: -0.01em;
+    color: #F1F5F9;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.sidebar-menu {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    padding: 1.25rem 0.75rem;
+    overflow-y: auto;
+}
+
+.sidebar-item {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.65rem 0.875rem;
+    border-radius: 0.375rem;
+    font-weight: 500;
+    font-size: 0.875rem;
+    color: var(--sidebar-txt);
+    opacity: 0.85;
+    transition: all 0.15s ease;
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    text-align: left;
+    width: 100%;
+}
+
+.sidebar-item:hover {
+    opacity: 1;
+    background: var(--sidebar-hover-bg);
+    color: #E2E8F0;
+}
+
+.sidebar-item.active {
+    opacity: 1;
+    background: var(--sidebar-active-bg);
+    color: var(--sidebar-active-txt);
+    box-shadow: inset 3px 0 0 #3B82F6;
+    font-weight: 600;
+}
+
+.sidebar-footer {
+    padding: 1rem 0.75rem;
+    border-top: 1px solid var(--sidebar-border);
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    background: var(--sidebar-bg);
+}
+
+.main-content-pane {
+    flex: 1;
+    margin-left: 260px;
+    padding: 2rem;
+    min-height: 100vh;
+    box-sizing: border-box;
+    position: relative;
+    overflow-y: auto;
+    transition: margin-left 0.3s ease;
+    background: var(--bg);
+}
+
+.mobile-nav-header {
+    display: none;
+    width: 100%;
+    height: 60px;
+    background: var(--sidebar-bg);
+    border-bottom: 1px solid var(--sidebar-border);
+    position: fixed;
+    top: 0;
+    left: 0;
+    z-index: 140;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 1rem;
+}
+
+.mobile-toggle-btn {
+    background: transparent;
+    border: none;
+    color: #CBD5E1;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.5rem;
+}
+
+.sidebar-overlay {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.4);
+    backdrop-filter: blur(4px);
+    z-index: 145;
+}
+
+@media screen and (max-width: 991px) {
+    .sidebar {
+        transform: translateX(-100%);
+    }
+    .sidebar.open {
+        transform: translateX(0);
+    }
+    .main-content-pane {
+        margin-left: 0;
+        padding: 1.5rem;
+        padding-top: 5.5rem;
+    }
+    .mobile-nav-header {
+        display: flex;
+    }
+    .sidebar-overlay.show {
+        display: block;
     }
 }

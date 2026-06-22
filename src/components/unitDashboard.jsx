@@ -39,6 +39,9 @@ const UnitDashboard = () => {
     // Check if accessed from college dashboard (admin or college user)
     const isAccessedFromCollege = localStorage.getItem("nsstoken") !== null;
 
+    const [activeTab, setActiveTab] = useState("overview");
+    const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+
     useEffect(() => {
         const token = localStorage.getItem("unitToken");
         if (!token) {
@@ -503,347 +506,469 @@ const UnitDashboard = () => {
 
 
     return (
-        <div style={{ minHeight: '100vh', background: 'var(--bg)' }}>
-            <header className="dashboard-header">
-                <div className="container flex-between">
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.875rem' }}>
-                        <div style={{
-                            width: 38, height: 38,
-                            background: 'linear-gradient(135deg, rgba(20,184,166,0.2), rgba(99,102,241,0.15))',
-                            border: '1px solid rgba(20,184,166,0.25)',
-                            borderRadius: '11px',
-                            display: 'flex', alignItems: 'center', justifyContent: 'center',
-                            fontSize: '1.1rem', flexShrink: 0,
-                            boxShadow: '0 0 20px rgba(20,184,166,0.15)',
-                        }}>🏫</div>
-                        <div>
-                            <div style={{
-                                fontWeight: 800, fontSize: '1rem', letterSpacing: '-0.02em',
-                                background: 'linear-gradient(135deg, #2dd4bf, #818cf8)',
-                                WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text',
-                            }}>{unit?.name || 'Unit Dashboard'}</div>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', marginTop: '1px' }}>
-                                <span className="badge badge-success" style={{ fontSize: '0.6rem', letterSpacing: '0.1em' }}>{unit?.unitNumber}</span>
-                                <span style={{ fontSize: '0.68rem', color: 'var(--txt-3)' }}>{college?.insName}</span>
-                            </div>
-                        </div>
-                    </div>
+        <div className="dashboard-layout-wrapper">
+            {/* Sidebar overlay for mobile */}
+            <div className={`sidebar-overlay ${isSidebarOpen ? 'show' : ''}`} onClick={() => setIsSidebarOpen(false)}></div>
 
-                    {isAccessedFromCollege ? (
-                        <div className="d-flex align-items-center" style={{ gap: '0.625rem' }}>
-                            <ThemeToggle />
-                            <button className="btn btn-secondary btn-sm" onClick={() => navigate('/college-dashboard')}>
-                                ← College Dashboard
-                            </button>
-                        </div>
-                    ) : (
-                        <div className="d-flex align-items-center" style={{ gap: '0.625rem' }}>
-                            <ThemeToggle />
-                            <div style={{ position: 'relative', cursor: 'pointer' }} onClick={() => setIsInviteModalOpen(true)}>
-                                <button className="btn btn-secondary btn-sm" style={{ position: 'relative', minWidth: 42 }}>
-                                    🔔
-                                    {invites.length > 0 && (
-                                        <span style={{
-                                            position: 'absolute', top: -6, right: -6,
-                                            background: '#ef4444',
-                                            color: 'white',
-                                            borderRadius: '50%',
-                                            width: 18, height: 18,
-                                            display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                            fontSize: '0.65rem', fontWeight: 700,
-                                            border: '2px solid var(--bg)',
-                                        }}>{invites.length}</span>
-                                    )}
-                                </button>
-                            </div>
-                            <button className="btn btn-danger btn-sm" onClick={handleLogout}>Sign Out</button>
-                        </div>
-                    )}
+            {/* Mobile Header */}
+            <header className="mobile-nav-header">
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <div className="sidebar-brand-logo">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c0 2 2 3 6 3s6-1 6-3v-5"/></svg>
+                    </div>
+                    <span className="sidebar-brand-name" style={{ fontSize: '0.9rem' }}>{unit?.name || 'Unit Portal'}</span>
+                </div>
+                <div className="d-flex align-items-center gap-2">
+                    <ThemeToggle />
+                    <button className="mobile-toggle-btn" onClick={() => setIsSidebarOpen(!isSidebarOpen)}>
+                        {isSidebarOpen ? (
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                        ) : (
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+                        )}
+                    </button>
                 </div>
             </header>
 
-            <main className="container main-container" >
-                <div className="grid-cols-2 mb-6">
-                    <div className="card">
-                        <h3 className="mb-4">Unit Details</h3>
-                        <div className="grid-cols-2">
-                            <div>
-                                <p className="text-xs text-muted mb-1">UNIT CODE</p>
-                                <p className="fw-bold">{unit?.unitNumber}</p>
-                            </div>
-                            <div>
-                                <p className="text-xs text-muted mb-1">UNIT NAME</p>
-                                <p className="fw-bold">{unit?.name}</p>
-                            </div>
-                            <div>
-                                <p className="text-xs text-muted mb-1">UNIT HEAD</p>
-                                <div className="d-flex align-items-center gap-2">
-                                    <p className="fw-bold mb-0">{unit?.head?.name || unit?.head || "N/A"}</p>
-                                    {isAccessedFromCollege && (!unit?.head || (typeof unit.head === 'string' && unit.head.trim() === '')) && (
-                                        <button 
-                                            className="btn btn-sm btn-outline-primary" 
-                                            style={{ padding: '0.1rem 0.4rem', fontSize: '0.7rem' }}
-                                            onClick={() => {
-                                                fetchUnassignedOfficers();
-                                                setIsAssignModalOpen(true);
-                                            }}
-                                        >
-                                            Assign Officer
-                                        </button>
-                                    )}
-                                </div>
-                            </div>
-                            <div>
-                                <p className="text-xs text-muted mb-1">CONTACT</p>
-                                <p className="fw-bold">{unit?.head?.mobile || unit?.contact}</p>
-                            </div>
-                            <div style={{ gridColumn: '1 / -1' }}>
-                                <p className="text-xs text-muted mb-1">EMAIL</p>
-                                <p className="fw-bold">{unit?.head?.email || unit?.mail}</p>
-                            </div>
-                        </div>
+            {/* Left Sidebar */}
+            <aside className={`sidebar ${isSidebarOpen ? 'open' : ''}`}>
+                <div className="sidebar-brand">
+                    <div className="sidebar-brand-logo">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c0 2 2 3 6 3s6-1 6-3v-5"/></svg>
                     </div>
-                    <div className="card  flex-column text-center">
-                        <h3 className="mb-4">Quick Actions</h3>
-                        <div className="flex-center actionbuttons" >
-                            <div className="one">
-                                <button className="btn btn-primary btn-lg w-100 mb-3" onClick={handleAddEventClick}>
-                                    Create Events
-                                </button>
-                                <p className="text-sm text-muted">Manage events, volunteers and more from here.</p>
-                            </div>
-                            <div className="one">
-                                <button className="btn btn-primary btn-lg w-100 mb-3" onClick={handleExploreEventClick}>
-                                    Explore Events
-                                </button>
-                                <p className="text-sm text-muted">Explore events created by other units.</p>
-                            </div>
-                        </div>
+                    <div style={{ overflow: 'hidden' }}>
+                        <span className="sidebar-brand-name" style={{ display: 'block' }}>NSS PORTAL</span>
+                        <span style={{ fontSize: '0.65rem', color: 'var(--txt-3)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Unit Admin</span>
                     </div>
                 </div>
 
-                <div className="flex-between member mb-4 align-items-end">
-                    <div className="unit-members-header" >
-                        <h3 className="mb-1 ">Unit Members</h3>
-                        <p className="text-sm">Manage student volunteers</p>
-                    </div>
-                    <div className="d-flex gap-2 add-member ">
-                        <input
-                            type="text"
-                            className="filter-input"
-                            placeholder="Search members..."
-                            value={search}
-                            onChange={(e) => setSearch(e.target.value)}
-                        />
-                        {selectedMemberIds.length > 0 && (
-                            <button className="btn btn-danger" onClick={handleBulkDelete} disabled={isDeleting}>
-                                {isDeleting ? "Deleting..." : `Delete Selected (${selectedMemberIds.length})`}
-                            </button>
+                <div className="sidebar-menu">
+                    <button className={`sidebar-item ${activeTab === 'overview' ? 'active' : ''}`} onClick={() => { setActiveTab('overview'); setIsSidebarOpen(false); }}>
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/></svg>
+                        Overview
+                    </button>
+                    <button className={`sidebar-item ${activeTab === 'events' ? 'active' : ''}`} onClick={() => { setActiveTab('events'); setIsSidebarOpen(false); }}>
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+                        NSS Events
+                    </button>
+                    <button className={`sidebar-item ${activeTab === 'volunteers' ? 'active' : ''}`} onClick={() => { setActiveTab('volunteers'); setIsSidebarOpen(false); }}>
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                        Volunteers
+                    </button>
+                    <button className={`sidebar-item ${activeTab === 'collaborations' ? 'active' : ''}`} onClick={() => { setActiveTab('collaborations'); setIsSidebarOpen(false); }}>
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+                        Collaborations
+                        {invites.length > 0 && (
+                            <span className="badge badge-danger" style={{ marginLeft: 'auto', borderRadius: '50%', padding: '0.1rem 0.4rem', fontSize: '0.65rem' }}>
+                                {invites.length}
+                            </span>
                         )}
-                        <button className="btn btn-success" onClick={handleExportExcel} style={{ marginRight: '10px' }}>
-                            Excel Export
-                        </button>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '5px', marginRight: '10px' }}>
-                            <label className={`btn excel btn-secondary ${isUploading ? 'disabled' : ''}`} style={{ cursor: 'pointer', marginBottom: 0 }}>
-                                {isUploading ? "Uploading..." : "Upload via Excel"}
-                                <input
-                                    type="file"
-                                    accept=".xlsx, .xls"
-                                    onChange={handleBulkUpload}
-                                    disabled={isUploading}
-                                    style={{ display: 'none' }}
-                                />
-                            </label>
-                            <span
-                                onClick={() => setShowExcelInfo(true)}
-                                style={{
-                                    cursor: 'pointer',
-                                    background: 'var(--primary-color)',
-                                    color: 'white',
-                                    borderRadius: '50%',
-                                    width: '20px',
-                                    height: '20px',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'center',
-                                    fontSize: '12px',
-                                    fontWeight: 'bold'
-                                }}
-                                title="Excel Format Info"
-                            >i</span>
-                        </div>
-                        <button className="btn add-btn btn-primary" onClick={handleAddClick}>
-                            + Add Member
-                        </button>
-                    </div>
+                    </button>
                 </div>
 
-                <div className="card p-0 overflow-hidden">
-                    {filteredMembers?.length > 0 ? (
-                        <div style={{ overflowX: 'auto' }}>
-                            <table className="styled-table" style={{ margin: 0, boxShadow: 'none' }}>
-                                <thead>
-                                    <tr>
-                                        <th>
-                                            <input
-                                                type="checkbox"
-                                                checked={filteredMembers.length > 0 && selectedMemberIds.length === filteredMembers.length}
-                                                onChange={toggleSelectAll}
-                                            />
-                                        </th>
-                                        <th>S.No</th>
-                                        <th>Name</th>
-                                        <th>Reg No</th>
-                                        <th>Department</th>
-                                        <th>Batch</th>
-                                        <th>Contact</th>
-                                        <th>Action</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {paginatedMembers.map((member, index) => {
-                                        const globalIndex = (currentPage - 1) * itemsPerPage + index;
-                                        return (
-                                            <tr key={member._id}>
-                                                <td>
-                                                    <input
-                                                        type="checkbox"
-                                                        checked={selectedMemberIds.includes(member._id)}
-                                                        onChange={() => toggleSelectMember(member._id)}
-                                                    />
-                                                </td>
-                                                <td>{globalIndex + 1}</td>
-                                                <td>{member.name}</td>
-                                                <td><span className="badge badge-secondary">{member.regNo}</span></td>
-                                                <td>{member.dept}</td>
-                                                <td>{member.batchFrom} - {member.batchTo}</td>
-                                                <td>{member.contact}</td>
-                                                <td>
-                                                    <div className="d-flex ed gap-2">
-                                                        <button
-                                                            onClick={() => handleUpdateClick(member)}
-                                                            className={`btn btn-sm ${member.isEnrolled ? 'btn-success' : 'btn-primary'}`}
-                                                            title="Edit Details"
-                                                        >
-                                                            {member.isEnrolled ? "✓ Edit" : "Edit"}
-                                                        </button>
-                                                        <button
-                                                            onClick={() => handleDeleteClick(member)}
-                                                            className="btn btn-sm btn-danger"
-                                                            title="Delete Member"
-                                                        >
-                                                            Delete
-                                                        </button>
-                                                        {member.isEnrolled && (
-                                                            <button
-                                                                onClick={() => handleDownloadClick(member)}
-                                                                className="btn btn-sm btn-outline-success"
-                                                                title="Download Enrolment Form PDF"
-                                                            >
-                                                                ⬇ PDF
-                                                            </button>
-                                                        )}
-                                                    </div>
-                                                </td>
-                                            </tr>
-                                        );
-                                    })}
-                                </tbody>
-                            </table>
-                        </div>
+                <div className="sidebar-footer">
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 0.5rem 0.5rem', borderBottom: '1px solid var(--border)' }}>
+                        <span style={{ fontSize: '0.8rem', color: 'var(--txt-1)', fontWeight: 600 }}>Theme</span>
+                        <ThemeToggle />
+                    </div>
+                    {isAccessedFromCollege ? (
+                        <button className="sidebar-item" onClick={() => navigate('/college-dashboard')} style={{ opacity: 0.9 }}>
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="15 18 9 12 15 6"/></svg>
+                            Back to College
+                        </button>
                     ) : (
-                        <div className="p-6 text-center">
-                            <p className="mb-0">No members found matching your search.</p>
-                        </div>
+                        <button className="sidebar-item" onClick={handleLogout} style={{ color: 'var(--danger-500)', opacity: 0.9 }}>
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+                            Sign Out
+                        </button>
                     )}
                 </div>
+            </aside>
 
-                {filteredMembers.length > itemsPerPage && (
-                    <div className="pagination-container flex-between mt-4 mb-8">
-                        <div className="text-sm text-muted">
-                            Showing <span className="fw-bold">{(currentPage - 1) * itemsPerPage + 1}</span> to <span className="fw-bold">{Math.min(currentPage * itemsPerPage, filteredMembers.length)}</span> of <span className="fw-bold">{filteredMembers.length}</span> students
-                        </div>
-                        <div className="flex-center gap-2">
-                            <button
-                                className="btn btn-secondary btn-sm"
-                                onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
-                                disabled={currentPage === 1}
-                            >
-                                Previous
-                            </button>
-                            <div className="flex-center gap-1">
-                                {[...Array(Math.min(5, totalPages))].map((_, i) => {
-                                    let pageNum;
-                                    if (totalPages <= 5) {
-                                        pageNum = i + 1;
-                                    } else if (currentPage <= 3) {
-                                        pageNum = i + 1;
-                                    } else if (currentPage >= totalPages - 2) {
-                                        pageNum = totalPages - 4 + i;
-                                    } else {
-                                        pageNum = currentPage - 2 + i;
-                                    }
-
-                                    return (
-                                        <button
-                                            key={pageNum}
-                                            className={`btn btn-sm ${currentPage === pageNum ? 'btn-primary' : 'btn-secondary'}`}
-                                            style={{ minWidth: '36px' }}
-                                            onClick={() => setCurrentPage(pageNum)}
-                                        >
-                                            {pageNum}
-                                        </button>
-                                    );
-                                })}
+            {/* Right Main Content Pane */}
+            <main className="main-content-pane">
+                {activeTab === "overview" && (
+                    <div>
+                        {/* Header */}
+                        <div className="flex-between mb-6" style={{ flexWrap: 'wrap', gap: '1rem' }}>
+                            <div>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ color: 'var(--brand-600)' }}><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c0 2 2 3 6 3s6-1 6-3v-5"/></svg>
+                                    <h1 style={{ fontSize: '1.75rem', fontWeight: 800, margin: 0, color: 'var(--txt-1)' }}>{unit?.name || 'Unit Dashboard'}</h1>
+                                </div>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', marginTop: '4px' }}>
+                                    <span className="badge badge-success" style={{ fontSize: '0.65rem', letterSpacing: '0.1em' }}>{unit?.unitNumber}</span>
+                                    <span style={{ fontSize: '0.75rem', color: 'var(--txt-3)' }}>{college?.insName}</span>
+                                </div>
                             </div>
-                            <button
-                                className="btn btn-secondary btn-sm"
-                                onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
-                                disabled={currentPage === totalPages}
-                            >
-                                Next
-                            </button>
+                            {isAccessedFromCollege && (
+                                <button className="btn btn-secondary" onClick={() => navigate('/college-dashboard')}>
+                                    ← College Dashboard
+                                </button>
+                            )}
+                        </div>
+
+                        {/* Quick Stats Cards */}
+                        <div className="grid-cols-3 mb-6" style={{ gap: '1rem' }}>
+                            <div className="card p-4 d-flex align-items-center" style={{ gap: '1rem', background: 'var(--card-bg)' }}>
+                                <div style={{ width: '44px', height: '44px', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(20,184,166,0.1)', color: 'var(--success-color)' }}>
+                                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                                </div>
+                                <div>
+                                    <div style={{ fontSize: '0.8rem', color: 'var(--txt-3)', fontWeight: 500 }}>Total Volunteers</div>
+                                    <div style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--txt-1)' }}>{unit?.members?.length || 0}</div>
+                                </div>
+                            </div>
+
+                            <div className="card p-4 d-flex align-items-center" style={{ gap: '1rem', background: 'var(--card-bg)' }}>
+                                <div style={{ width: '44px', height: '44px', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(99,102,241,0.1)', color: 'var(--primary-color)' }}>
+                                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+                                </div>
+                                <div>
+                                    <div style={{ fontSize: '0.8rem', color: 'var(--txt-3)', fontWeight: 500 }}>Active Collaborations</div>
+                                    <div style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--txt-1)' }}>{invites.length}</div>
+                                </div>
+                            </div>
+
+                            <div className="card p-4 d-flex align-items-center" style={{ gap: '1rem', background: 'var(--card-bg)' }}>
+                                <div style={{ width: '44px', height: '44px', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(245,158,11,0.1)', color: 'var(--warning-color)' }}>
+                                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+                                </div>
+                                <div>
+                                    <div style={{ fontSize: '0.8rem', color: 'var(--txt-3)', fontWeight: 500 }}>NSS College Code</div>
+                                    <div style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--txt-1)' }}>{college?.code}</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Unit Details Card */}
+                        <div className="card p-6" style={{ background: 'var(--card-bg)' }}>
+                            <h3 className="mb-4 text-lg">Unit details</h3>
+                            <div className="grid-cols-2 gap-4">
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                                    <span style={{ fontSize: '0.75rem', color: 'var(--txt-3)' }}>UNIT CODE</span>
+                                    <span style={{ fontWeight: 600, color: 'var(--txt-1)' }}>{unit?.unitNumber}</span>
+                                </div>
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                                    <span style={{ fontSize: '0.75rem', color: 'var(--txt-3)' }}>UNIT NAME</span>
+                                    <span style={{ fontWeight: 600, color: 'var(--txt-1)' }}>{unit?.name}</span>
+                                </div>
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                                    <span style={{ fontSize: '0.75rem', color: 'var(--txt-3)' }}>UNIT HEAD / PROGRAM OFFICER</span>
+                                    <div className="d-flex align-items-center gap-2">
+                                        <span style={{ fontWeight: 600, color: 'var(--txt-1)' }}>{unit?.head?.name || unit?.head || "Not Assigned"}</span>
+                                        {isAccessedFromCollege && (!unit?.head || (typeof unit.head === 'string' && unit.head.trim() === '')) && (
+                                            <button 
+                                                className="btn btn-sm btn-outline-primary" 
+                                                style={{ padding: '0.1rem 0.4rem', fontSize: '0.7rem' }}
+                                                onClick={() => {
+                                                    fetchUnassignedOfficers();
+                                                    setIsAssignModalOpen(true);
+                                                }}
+                                            >
+                                                Assign Officer
+                                            </button>
+                                        )}
+                                    </div>
+                                </div>
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                                    <span style={{ fontSize: '0.75rem', color: 'var(--txt-3)' }}>CONTACT NUMBER</span>
+                                    <span style={{ fontWeight: 600, color: 'var(--txt-1)' }}>{unit?.head?.mobile || unit?.contact || "N/A"}</span>
+                                </div>
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem', gridColumn: '1 / -1' }}>
+                                    <span style={{ fontSize: '0.75rem', color: 'var(--txt-3)' }}>EMAIL ADDRESS</span>
+                                    <span style={{ fontWeight: 600, color: 'var(--txt-1)' }}>{unit?.head?.email || unit?.mail || "N/A"}</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {activeTab === "events" && (
+                    <div>
+                        <div className="flex-between mb-6" style={{ flexWrap: 'wrap', gap: '1rem' }}>
+                            <div>
+                                <h1 style={{ fontSize: '1.75rem', fontWeight: 800, margin: 0, color: 'var(--txt-1)' }}>NSS Events Portal</h1>
+                                <p style={{ margin: 0, color: 'var(--txt-3)', fontSize: '0.9rem' }}>Create events and explore activities across other college units</p>
+                            </div>
+                        </div>
+
+                        <div className="grid-cols-2 gap-4">
+                            <div className="card p-6 flex-column align-items-center text-center justify-content-center" style={{ minHeight: '240px' }}>
+                                <div style={{ width: '60px', height: '60px', borderRadius: '50%', background: 'rgba(20,184,166,0.1)', color: 'var(--success-color)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '1.25rem' }}>
+                                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                                </div>
+                                <h3 className="mb-2">Create New Event</h3>
+                                <p className="text-sm text-muted mb-4" style={{ maxWidth: '320px' }}>Create and manage events for your unit, set dates, add descriptions, and track student attendance.</p>
+                                <button className="btn btn-primary btn-lg w-100" onClick={handleAddEventClick} style={{ maxWidth: '240px' }}>
+                                    Create Event
+                                </button>
+                            </div>
+
+                            <div className="card p-6 flex-column align-items-center text-center justify-content-center" style={{ minHeight: '240px' }}>
+                                <div style={{ width: '60px', height: '60px', borderRadius: '50%', background: 'rgba(99,102,241,0.1)', color: 'var(--primary-color)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '1.25rem' }}>
+                                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+                                </div>
+                                <h3 className="mb-2">Explore All Events</h3>
+                                <p className="text-sm text-muted mb-4" style={{ maxWidth: '320px' }}>Browse activities from other units, initiate collaborations, and view state or national level announcements.</p>
+                                <button className="btn btn-primary btn-lg w-100" onClick={handleExploreEventClick} style={{ maxWidth: '240px' }}>
+                                    Explore Events
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {activeTab === "volunteers" && (
+                    <div>
+                        <div className="flex-between mb-6" style={{ flexWrap: 'wrap', gap: '1rem' }}>
+                            <div>
+                                <h1 style={{ fontSize: '1.75rem', fontWeight: 800, margin: 0, color: 'var(--txt-1)' }}>Unit Volunteers</h1>
+                                <p style={{ margin: 0, color: 'var(--txt-3)', fontSize: '0.9rem' }}>Directory and bulk-upload tool for student volunteers</p>
+                            </div>
+                            <div className="d-flex gap-2">
+                                <button className="btn btn-success" onClick={handleExportExcel}>
+                                    Excel Export
+                                </button>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+                                    <label className={`btn excel btn-secondary ${isUploading ? 'disabled' : ''}`} style={{ cursor: 'pointer', marginBottom: 0 }}>
+                                        {isUploading ? "Uploading..." : "Upload Excel"}
+                                        <input
+                                            type="file"
+                                            accept=".xlsx, .xls"
+                                            onChange={handleBulkUpload}
+                                            disabled={isUploading}
+                                            style={{ display: 'none' }}
+                                        />
+                                    </label>
+                                    <span
+                                        onClick={() => setShowExcelInfo(true)}
+                                        style={{
+                                            cursor: 'pointer',
+                                            background: 'var(--primary-color)',
+                                            color: 'white',
+                                            borderRadius: '50%',
+                                            width: '20px',
+                                            height: '20px',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            fontSize: '12px',
+                                            fontWeight: 'bold'
+                                        }}
+                                        title="Excel Format Info"
+                                    >i</span>
+                                </div>
+                                <button className="btn add-btn btn-primary" onClick={handleAddClick}>
+                                    + Add Member
+                                </button>
+                            </div>
+                        </div>
+
+                        <div className="card mb-6">
+                            <div className="flex-between mb-4" style={{ flexWrap: 'wrap', gap: '1rem' }}>
+                                <div className="form-group" style={{ maxWidth: '300px', flex: 1 }}>
+                                    <input
+                                        type="text"
+                                        className="form-input"
+                                        placeholder="Search members (Name/RegNo/Dept)..."
+                                        value={search}
+                                        onChange={(e) => setSearch(e.target.value)}
+                                    />
+                                </div>
+                                {selectedMemberIds.length > 0 && (
+                                    <button className="btn btn-danger" onClick={handleBulkDelete} disabled={isDeleting}>
+                                        {isDeleting ? "Deleting..." : `Delete Selected (${selectedMemberIds.length})`}
+                                    </button>
+                                )}
+                            </div>
+
+                            <div className="card p-0 overflow-hidden" style={{ border: 'none', boxShadow: 'none' }}>
+                                {filteredMembers?.length > 0 ? (
+                                    <div style={{ overflowX: 'auto' }}>
+                                        <table className="styled-table" style={{ margin: 0, boxShadow: 'none' }}>
+                                            <thead>
+                                                <tr>
+                                                    <th style={{ width: '40px' }}>
+                                                        <input
+                                                            type="checkbox"
+                                                            checked={filteredMembers.length > 0 && selectedMemberIds.length === filteredMembers.length}
+                                                            onChange={toggleSelectAll}
+                                                        />
+                                                    </th>
+                                                    <th style={{ width: '60px' }}>S.No</th>
+                                                    <th>Name</th>
+                                                    <th>Reg No</th>
+                                                    <th>Department</th>
+                                                    <th>Batch</th>
+                                                    <th>Contact</th>
+                                                    <th className="text-center">Action</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {paginatedMembers.map((member, index) => {
+                                                    const globalIndex = (currentPage - 1) * itemsPerPage + index;
+                                                    return (
+                                                        <tr key={member._id}>
+                                                            <td>
+                                                                <input
+                                                                    type="checkbox"
+                                                                    checked={selectedMemberIds.includes(member._id)}
+                                                                    onChange={() => toggleSelectMember(member._id)}
+                                                                />
+                                                            </td>
+                                                            <td>{globalIndex + 1}</td>
+                                                            <td>{member.name}</td>
+                                                            <td><span className="badge badge-secondary">{member.regNo}</span></td>
+                                                            <td>{member.dept}</td>
+                                                            <td>{member.batchFrom} - {member.batchTo}</td>
+                                                            <td>{member.contact}</td>
+                                                            <td>
+                                                                <div className="d-flex gap-2 justify-content-center align-items-center h-100">
+                                                                    <button
+                                                                        onClick={() => handleUpdateClick(member)}
+                                                                        className={`btn btn-sm ${member.isEnrolled ? 'btn-success' : 'btn-primary'}`}
+                                                                        title="Edit Details"
+                                                                    >
+                                                                        {member.isEnrolled ? "✓ Edit" : "Edit"}
+                                                                    </button>
+                                                                    <button
+                                                                        onClick={() => handleDeleteClick(member)}
+                                                                        className="btn btn-sm btn-danger"
+                                                                        title="Delete Member"
+                                                                    >
+                                                                        Delete
+                                                                    </button>
+                                                                    {member.isEnrolled && (
+                                                                        <button
+                                                                            onClick={() => handleDownloadClick(member)}
+                                                                            className="btn btn-sm btn-outline-success"
+                                                                            title="Download Enrolment Form PDF"
+                                                                            style={{ display: 'inline-flex', alignItems: 'center' }}
+                                                                        >
+                                                                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ marginRight: '4px' }}><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                                                                            PDF
+                                                                        </button>
+                                                                    )}
+                                                                </div>
+                                                            </td>
+                                                        </tr>
+                                                    );
+                                                })}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                ) : (
+                                    <div className="p-6 text-center">
+                                        <p className="mb-0 text-muted">No members found matching your search.</p>
+                                    </div>
+                                )}
+                            </div>
+
+                            {filteredMembers.length > itemsPerPage && (
+                                <div className="pagination-container flex-between mt-4">
+                                    <div className="text-sm text-muted">
+                                        Showing <span className="fw-bold">{(currentPage - 1) * itemsPerPage + 1}</span> to <span className="fw-bold">{Math.min(currentPage * itemsPerPage, filteredMembers.length)}</span> of <span className="fw-bold">{filteredMembers.length}</span> students
+                                    </div>
+                                    <div className="flex-center gap-2">
+                                        <button
+                                            className="btn btn-secondary btn-sm"
+                                            onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                                            disabled={currentPage === 1}
+                                        >
+                                            Previous
+                                        </button>
+                                        <div className="flex-center gap-1">
+                                            {[...Array(Math.min(5, totalPages))].map((_, i) => {
+                                                let pageNum;
+                                                if (totalPages <= 5) {
+                                                    pageNum = i + 1;
+                                                } else if (currentPage <= 3) {
+                                                    pageNum = i + 1;
+                                                } else if (currentPage >= totalPages - 2) {
+                                                    pageNum = totalPages - 4 + i;
+                                                } else {
+                                                    pageNum = currentPage - 2 + i;
+                                                }
+
+                                                return (
+                                                    <button
+                                                        key={pageNum}
+                                                        className={`btn btn-sm ${currentPage === pageNum ? 'btn-primary' : 'btn-secondary'}`}
+                                                        style={{ minWidth: '36px' }}
+                                                        onClick={() => setCurrentPage(pageNum)}
+                                                    >
+                                                        {pageNum}
+                                                    </button>
+                                                );
+                                            })}
+                                        </div>
+                                        <button
+                                            className="btn btn-secondary btn-sm"
+                                            onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                                            disabled={currentPage === totalPages}
+                                        >
+                                            Next
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                )}
+
+                {activeTab === "collaborations" && (
+                    <div>
+                        <div className="flex-between mb-6" style={{ flexWrap: 'wrap', gap: '1rem' }}>
+                            <div>
+                                <h1 style={{ fontSize: '1.75rem', fontWeight: 800, margin: 0, color: 'var(--txt-1)' }}>Collaboration Invites</h1>
+                                <p style={{ margin: 0, color: 'var(--txt-3)', fontSize: '0.9rem' }}>Respond to joint-event collaboration requests from other NSS units</p>
+                            </div>
+                        </div>
+
+                        <div className="card p-6" style={{ background: 'var(--card-bg)' }}>
+                            {invites.length === 0 ? (
+                                <div className="text-center p-6" style={{ background: 'var(--bg-tertiary)', borderRadius: '8px' }}>
+                                    <p className="text-muted mb-0">No pending collaboration invitations at this time.</p>
+                                </div>
+                            ) : (
+                                <div className="grid-cols-2 gap-4">
+                                    {invites.map(invite => (
+                                        <div key={invite._id} className="p-4 rounded village-card" style={{
+                                            background: 'var(--bg-tertiary)',
+                                            border: '1px solid var(--border-color)',
+                                            position: 'relative',
+                                            overflow: 'hidden'
+                                        }}>
+                                            <div style={{
+                                                position: 'absolute',
+                                                top: 0,
+                                                left: 0,
+                                                width: '4px',
+                                                height: '100%',
+                                                background: 'var(--primary-color)'
+                                            }}></div>
+                                            <div className="flex-between mb-2">
+                                                <h4 className="mb-0 text-primary-400" style={{ fontSize: '1.1rem' }}>{invite.name}</h4>
+                                                <span className="badge badge-primary">{invite.category}</span>
+                                            </div>
+                                            <p className="text-sm mb-1"><strong className="text-white">Invited by:</strong> Unit {invite.unitId?.unitNumber} ({invite.unitId?.name})</p>
+                                            <p className="text-sm mb-4 text-muted" style={{ minHeight: '40px' }}>{invite.description}</p>
+
+                                            <div className="d-flex gap-2 justify-content-end" style={{ borderTop: '1px solid var(--border-color)', paddingTop: '1rem' }}>
+                                                <button className="btn btn-sm btn-success" onClick={() => handleRespondInvite(invite._id, 'accepted')}>Accept</button>
+                                                <button className="btn btn-sm btn-danger" onClick={() => handleRespondInvite(invite._id, 'rejected')}>Decline</button>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
                         </div>
                     </div>
                 )}
             </main>
 
-
-
-            {/* Notifications Modal */}
-            {isInviteModalOpen && (
-                <div className="modal-overlay" onClick={() => setIsInviteModalOpen(false)}>
-                    <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '600px' }}>
-                        <div className="flex-between mb-4">
-                            <h2 className="mb-0">Collaboration Invites</h2>
-                            <button className="btn btn-sm btn-secondary" onClick={() => setIsInviteModalOpen(false)}>&times;</button>
-                        </div>
-
-                        {invites.length === 0 ? (
-                            <p className="text-center text-muted">No pending invitations.</p>
-                        ) : (
-                            <div className="d-flex flex-column gap-3">
-                                {invites.map(invite => (
-                                    <div key={invite._id} className="card p-3 mb-0" style={{ background: 'var(--bg-secondary)' }}>
-                                        <div className="flex-between mb-2">
-                                            <h4 className="mb-0">{invite.name}</h4>
-                                            <span className="badge badge-primary">{invite.category}</span>
-                                        </div>
-                                        <p className="text-sm mb-1"><strong>Invited by:</strong> Unit {invite.unitId?.unitNumber} ({invite.unitId?.name})</p>
-                                        <p className="text-sm mb-3 text-muted">{invite.description.substring(0, 100)}...</p>
-
-                                        <div className="d-flex gap-2 justify-content-end">
-                                            <button className="btn btn-sm btn-success" onClick={() => handleRespondInvite(invite._id, 'accepted')}>Accept</button>
-                                            <button className="btn btn-sm btn-danger" onClick={() => handleRespondInvite(invite._id, 'rejected')}>Decline</button>
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
-                        )}
-                    </div>
-                </div>
-            )}
-
+            {/* Modals & Overlays */}
             <VolunteerEnrolmentModal
                 isOpen={showEnrolmentModal}
                 onClose={() => { setShowEnrolmentModal(false); setSelectedMember(null); }}
@@ -880,7 +1005,7 @@ const UnitDashboard = () => {
                         </div>
                         
                         <div className="p-2">
-                            <p className="text-sm text-muted mb-4">Select an unassigned Program Officer for this unit ({unit.unitNumber}):</p>
+                            <p className="text-sm text-muted mb-4">Select an unassigned Program Officer for this unit ({unit?.unitNumber}):</p>
                             
                             {unassignedOfficers.length === 0 ? (
                                 <div className="text-center p-4">

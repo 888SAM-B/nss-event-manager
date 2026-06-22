@@ -9,6 +9,13 @@ const AddOrg = () => {
     const [isLoading, setIsLoading] = useState(false);
     const [villages, setVillages] = useState([{ name: '', address: '', block: '', taluk: '', district: '', pincode: '' }]);
 
+    React.useEffect(() => {
+        const token = localStorage.getItem("adminToken");
+        if (!token) {
+            navigate("/admin-login");
+        }
+    }, [navigate]);
+
     const addVillage = () => {
         setVillages([...villages, { name: '', address: '', block: '', taluk: '', district: '', pincode: '' }]);
     };
@@ -49,7 +56,10 @@ const AddOrg = () => {
             adoptingVillages: filteredVillages
         };
 
-        axios.post(`${import.meta.env.VITE_API_URL}/add-organization`, data)
+        const token = localStorage.getItem("adminToken");
+        axios.post(`${import.meta.env.VITE_API_URL}/add-organization`, data, {
+            headers: { Authorization: `Bearer ${token}` }
+        })
             .then((response) => {
                 toast.success("College Registered Successfully");
                 e.target.reset();

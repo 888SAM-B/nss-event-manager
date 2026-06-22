@@ -6,6 +6,9 @@ import { Chart as ChartJS, ArcElement, Tooltip, Legend, CategoryScale, LinearSca
 import { Doughnut, Bar } from 'react-chartjs-2';
 import toast from 'react-hot-toast';
 import ThemeToggle from './ThemeToggle';
+import AdminAllEvents from './AdminAllEvents';
+import AdminAllOfficers from './AdminAllOfficers';
+import AdminAllStudents from './AdminAllStudents';
 
 ChartJS.register(ArcElement, Tooltip, Legend, CategoryScale, LinearScale, BarElement, Title);
 
@@ -307,11 +310,134 @@ const AdminDashboard = () => {
     const [deleteError, setDeleteError] = useState("");
     const [isDeleting, setIsDeleting] = useState(false);
 
+    // Sidebar & Navigation States
+    const [activeTab, setActiveTab] = useState("overview");
+    const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+
+    // Gallery States
+    const [showGalleryModal, setShowGalleryModal] = useState(false);
+    const [galleryImages, setGalleryImages] = useState([]);
+    const [loadingGallery, setLoadingGallery] = useState(false);
+    const [newImage, setNewImage] = useState("");
+    const [newDescription, setNewDescription] = useState("");
+    const [uploading, setUploading] = useState(false);
+    const [editingImageId, setEditingImageId] = useState(null);
+    const [editDescription, setEditDescription] = useState("");
+    const [updating, setUpdating] = useState(false);
+
+    const fetchGalleryImages = async () => {
+        setLoadingGallery(true);
+        try {
+            const token = localStorage.getItem("adminToken");
+            const res = await axios.get(`${import.meta.env.VITE_API_URL}/gallery`);
+            if (res.data.success) {
+                setGalleryImages(res.data.images);
+            }
+        } catch (err) {
+            console.error(err);
+            toast.error("Failed to load gallery images");
+        } finally {
+            setLoadingGallery(false);
+        }
+    };
+
+    useEffect(() => {
+        if (showGalleryModal || activeTab === "gallery") {
+            fetchGalleryImages();
+        }
+    }, [showGalleryModal, activeTab]);
+
+    const handleImageChange = (e) => {
+        const file = e.target.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onloadend = () => {
+                setNewImage(reader.result);
+            };
+            reader.readAsDataURL(file);
+        }
+    };
+
+    const handleUploadImage = async (e) => {
+        e.preventDefault();
+        if (!newImage || !newDescription.trim()) {
+            toast.error("Please select an image and enter a description");
+            return;
+        }
+        setUploading(true);
+        try {
+            const token = localStorage.getItem("adminToken");
+            const res = await axios.post(`${import.meta.env.VITE_API_URL}/admin/gallery`, {
+                image: newImage,
+                description: newDescription
+            }, {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+            if (res.data.success) {
+                toast.success("Image uploaded to gallery!");
+                setNewImage("");
+                setNewDescription("");
+                const fileInput = document.getElementById("gallery-file-input");
+                if (fileInput) fileInput.value = "";
+                fetchGalleryImages();
+            }
+        } catch (err) {
+            console.error(err);
+            toast.error(err.response?.data?.message || "Failed to upload image");
+        } finally {
+            setUploading(false);
+        }
+    };
+
+    const handleUpdateDescription = async (id) => {
+        if (!editDescription.trim()) {
+            toast.error("Description cannot be empty");
+            return;
+        }
+        setUpdating(true);
+        try {
+            const token = localStorage.getItem("adminToken");
+            const res = await axios.put(`${import.meta.env.VITE_API_URL}/admin/gallery/${id}`, {
+                description: editDescription
+            }, {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+            if (res.data.success) {
+                toast.success("Description updated successfully!");
+                setEditingImageId(null);
+                setEditDescription("");
+                fetchGalleryImages();
+            }
+        } catch (err) {
+            console.error(err);
+            toast.error(err.response?.data?.message || "Failed to update description");
+        } finally {
+            setUpdating(false);
+        }
+    };
+
+    const handleDeleteImage = async (id) => {
+        if (!window.confirm("Are you sure you want to delete this gallery image?")) return;
+        try {
+            const token = localStorage.getItem("adminToken");
+            const res = await axios.delete(`${import.meta.env.VITE_API_URL}/admin/gallery/${id}`, {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+            if (res.data.success) {
+                toast.success("Image deleted successfully!");
+                fetchGalleryImages();
+            }
+        } catch (err) {
+            console.error(err);
+            toast.error("Failed to delete gallery image");
+        }
+    };
+
     useEffect(() => {
         const fetchStats = async () => {
             const token = localStorage.getItem("adminToken");
             if (!token) {
-                navigate("/admin/login");
+                navigate("/admin-login");
                 return;
             }
 
@@ -331,7 +457,7 @@ const AdminDashboard = () => {
                 localStorage.removeItem("unitToken");
                 localStorage.removeItem("nssunitCode");
                 localStorage.removeItem("nsscollegeCode");
-                
+
                 toast.error("Session expired or error fetching details. Please login again.");
                 navigate("/admin-login");
             } finally {
@@ -366,17 +492,18 @@ const AdminDashboard = () => {
         return null;
     }
 
-    // Chart data — standard professional palette
+    // Chart data — monochromatic navy/blue palette
+    const monoColors = [
+        '#0F172A', '#1E3A8A', '#1D4ED8',
+        '#2563EB', '#3B82F6', '#60A5FA',
+    ];
     const categoryData = {
         labels: stats.eventsByCategory.map(c => c._id),
         datasets: [{
             label: '# of Events',
             data: stats.eventsByCategory.map(c => c.count),
-            backgroundColor: [
-                '#3b82f6', '#22c55e', '#f59e0b',
-                '#ef4444', '#8b5cf6', '#06b6d4',
-            ],
-            borderColor: '#ffffff',
+            backgroundColor: monoColors,
+            borderColor: '#FFFFFF',
             borderWidth: 2,
             hoverOffset: 6,
         }],
@@ -388,18 +515,18 @@ const AdminDashboard = () => {
             {
                 label: 'Units',
                 data: stats.colleges.map(c => c.units.length),
-                backgroundColor: '#3b82f6',
-                borderColor: '#2563eb',
+                backgroundColor: '#2563EB',
+                borderColor: '#1D4ED8',
                 borderWidth: 1,
-                borderRadius: 4,
+                borderRadius: 3,
             },
             {
                 label: 'Events',
                 data: stats.colleges.map(c => c.events.length),
-                backgroundColor: '#22c55e',
-                borderColor: '#16a34a',
+                backgroundColor: '#CBD5E1',
+                borderColor: '#94A3B8',
                 borderWidth: 1,
-                borderRadius: 4,
+                borderRadius: 3,
             }
         ]
     };
@@ -412,7 +539,7 @@ const AdminDashboard = () => {
         },
         scales: {
             x: { ticks: { color: '#64748b' }, grid: { color: 'rgba(0,0,0,0.06)' } },
-            y: { ticks: { color: '#64748b' }, grid: { color: 'rgba(0,0,0,0.06)' }, beginAtZero: true }
+            y: { ticks: { color: '#64748b', precision: 0, stepSize: 1 }, grid: { color: 'rgba(0,0,0,0.06)' }, beginAtZero: true }
         }
     };
 
@@ -467,254 +594,432 @@ const AdminDashboard = () => {
     }).length || 0;
 
     return (
-        <div className="admin-dashboard" style={{ minHeight: '100vh', background: 'var(--bg)' }}>
-            <header className="dashboard-header">
-                <div className="container flex-between">
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.875rem' }}>
-                        <div style={{
-                            width: 38, height: 38,
-                            background: 'linear-gradient(135deg, rgba(99,102,241,0.25), rgba(20,184,166,0.18))',
-                            border: '1px solid rgba(99,102,241,0.3)',
-                            borderRadius: '11px',
-                            display: 'flex', alignItems: 'center', justifyContent: 'center',
-                            fontSize: '1.1rem',
-                            boxShadow: '0 0 20px rgba(99,102,241,0.2)',
-                            flexShrink: 0,
-                        }}>🛡️</div>
-                        <div>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                                <span style={{
-                                    fontWeight: 800, fontSize: '1rem', letterSpacing: '-0.02em',
-                                    background: 'linear-gradient(135deg, #818cf8, #2dd4bf)',
-                                    WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text',
-                                }}>Admin Dashboard</span>
-                                <span className="badge badge-primary" style={{ fontSize: '0.6rem', letterSpacing: '0.1em' }}>SYSTEM</span>
-                            </div>
-                            <p style={{ margin: 0, fontSize: '0.7rem', color: 'var(--txt-3)', marginTop: '-1px' }}>Periyar University NSS Portal</p>
-                        </div>
+        <div className="dashboard-layout-wrapper">
+            {/* Sidebar overlay for mobile */}
+            <div className={`sidebar-overlay ${isSidebarOpen ? 'show' : ''}`} onClick={() => setIsSidebarOpen(false)}></div>
+
+            {/* Mobile Header */}
+            <header className="mobile-nav-header">
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <div className="sidebar-brand-logo">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2" /><path d="M12 2L2 7l10 5 10-5-10-5z" /></svg>
                     </div>
-                    <div className="d-flex align-items-center" style={{ gap: '0.625rem' }}>
-                        <ThemeToggle />
-                        <button className="btn btn-secondary btn-sm" onClick={handleAddOrg}>+ Register College</button>
-                        <button className="btn btn-danger btn-sm" onClick={handleLogout}>Sign Out</button>
-                    </div>
+                    <span className="sidebar-brand-name">NSS Admin</span>
+                </div>
+                <div className="d-flex align-items-center gap-2">
+                    <ThemeToggle />
+                    <button className="mobile-toggle-btn" onClick={() => setIsSidebarOpen(!isSidebarOpen)}>
+                        {isSidebarOpen ? (
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
+                        ) : (
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="3" y1="12" x2="21" y2="12" /><line x1="3" y1="6" x2="21" y2="6" /><line x1="3" y1="18" x2="21" y2="18" /></svg>
+                        )}
+                    </button>
                 </div>
             </header>
 
-            <main className="container main-container">
+            {/* Left Sidebar */}
+            <aside className={`sidebar ${isSidebarOpen ? 'open' : ''}`}>
+                <div className="sidebar-brand">
+                    <div className="sidebar-brand-logo">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2" /><path d="M12 2L2 7l10 5 10-5-10-5z" /></svg>
+                    </div>
+                    <div style={{ overflow: 'hidden' }}>
+                        <span className="sidebar-brand-name" style={{ display: 'block' }}>NSS PORTAL</span>
+                        <span style={{ fontSize: '0.65rem', color: 'var(--txt-3)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Administrator</span>
+                    </div>
+                </div>
 
-                {/* ── Stats Row ── */}
-                <div className="grid-cols-4 mb-6" style={{ gap: '1rem' }}>
-                    {[
-                        { label: 'Colleges',  value: stats.totalColleges, icon: '🏛️', bg: '#dbeafe', clr: '#1d4ed8' },
-                        { label: 'Units',     value: stats.totalUnits,    icon: '🏫', bg: '#dcfce7', clr: '#15803d' },
-                        { label: 'Events',    value: stats.totalEvents,   icon: '📋', bg: '#fef3c7', clr: '#b45309' },
-                        { label: 'Upcoming',  value: upcomingCount,       icon: '📅', bg: '#f0fdf4', clr: '#15803d' },
-                    ].map(s => (
-                        <div key={s.label} style={{
-                            background: 'var(--card)',
-                            border: '1px solid var(--border)',
-                            borderRadius: '1rem',
-                            padding: '1.25rem 1.5rem',
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '1rem',
-                            transition: 'all 0.2s ease',
-                            cursor: 'default',
-                            boxShadow: 'var(--sh)',
-                        }}
-                            onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = 'var(--sh-md)'; }}
-                            onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = 'var(--sh)'; }}
-                        >
-                            <div style={{
-                                width: 48, height: 48, borderRadius: '12px', flexShrink: 0,
-                                background: s.bg,
-                                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                fontSize: '1.3rem',
-                            }}>{s.icon}</div>
+                <div className="sidebar-menu">
+                    <button className={`sidebar-item ${activeTab === 'overview' ? 'active' : ''}`} onClick={() => { setActiveTab('overview'); setIsSidebarOpen(false); }}>
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="7" height="9" /><rect x="14" y="3" width="7" height="5" /><rect x="14" y="12" width="7" height="9" /><rect x="3" y="16" width="7" height="5" /></svg>
+                        Overview
+                    </button>
+                    <button className={`sidebar-item ${activeTab === 'colleges' ? 'active' : ''}`} onClick={() => { setActiveTab('colleges'); setIsSidebarOpen(false); }}>
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 10v6M2 10l10-5 10 5-10 5z" /><path d="M6 12v5c0 2 2 3 6 3s6-1 6-3v-5" /></svg>
+                        Colleges List
+                    </button>
+                    <button className={`sidebar-item ${activeTab === 'events' ? 'active' : ''}`} onClick={() => { setActiveTab('events'); setIsSidebarOpen(false); }}>
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2" /><line x1="16" y1="2" x2="16" y2="6" /><line x1="8" y1="2" x2="8" y2="6" /><line x1="3" y1="10" x2="21" y2="10" /></svg>
+                        Manage Events
+                    </button>
+                    <button className={`sidebar-item ${activeTab === 'officers' ? 'active' : ''}`} onClick={() => { setActiveTab('officers'); setIsSidebarOpen(false); }}>
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M22 21v-2a4 4 0 0 0-3-3.87" /><path d="M16 3.13a4 4 0 0 1 0 7.75" /></svg>
+                        Program Officers
+                    </button>
+                    <button className={`sidebar-item ${activeTab === 'students' ? 'active' : ''}`} onClick={() => { setActiveTab('students'); setIsSidebarOpen(false); }}>
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M23 21v-2a4 4 0 0 0-3-3.87" /><path d="M16 3.13a4 4 0 0 1 0 7.75" /></svg>
+                        Student Records
+                    </button>
+                    <button className={`sidebar-item ${activeTab === 'gallery' ? 'active' : ''}`} onClick={() => { setActiveTab('gallery'); setIsSidebarOpen(false); }}>
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2" /><circle cx="8.5" cy="8.5" r="1.5" /><polyline points="21 15 16 10 5 21" /></svg>
+                        Event Gallery
+                    </button>
+                </div>
+
+                <div className="sidebar-footer">
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 0.5rem 0.5rem', borderBottom: '1px solid var(--border)' }}>
+                        <span style={{ fontSize: '0.8rem', color: 'var(--txt-1)', fontWeight: 600 }}>Theme</span>
+                        <ThemeToggle />
+                    </div>
+                    <button className="sidebar-item" onClick={handleLogout} style={{ color: 'var(--danger-500)', opacity: 0.9 }}>
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" /><polyline points="16 17 21 12 16 7" /><line x1="21" y1="12" x2="9" y2="12" /></svg>
+                        Sign Out
+                    </button>
+                </div>
+            </aside>
+
+            {/* Right Main Content Pane */}
+            <main className="main-content-pane">
+                {activeTab === "overview" && (
+                    <div>
+                        {/* Header area in content */}
+                        <div className="flex-between mb-6" style={{ flexWrap: 'wrap', gap: '1rem' }}>
                             <div>
-                                <div style={{ fontSize: '1.875rem', fontWeight: 800, letterSpacing: '-0.04em', color: s.clr, lineHeight: 1 }}>{s.value}</div>
-                                <div style={{ fontSize: '0.72rem', fontWeight: 600, color: 'var(--txt-3)', textTransform: 'uppercase', letterSpacing: '0.08em', marginTop: '0.25rem' }}>{s.label}</div>
+                                <h1 style={{ fontSize: '1.75rem', fontWeight: 800, margin: 0, color: 'var(--txt-1)' }}>Dashboard Overview</h1>
+                                <p style={{ margin: 0, color: 'var(--txt-3)', fontSize: '0.9rem' }}>Welcome back, System Administrator</p>
                             </div>
+                            <button className="btn btn-primary" onClick={handleAddOrg}>+ Register College</button>
                         </div>
-                    ))}
-                </div>
 
-                {/* ── Charts ── */}
-                <div className="grid-cols-2 mb-6 admin-charts-container">
-                    <div className="card admin-chart-card" style={{ height: 400 }}>
-                        <div className="flex-between mb-4">
-                            <h3 className="mb-0" style={{ fontSize: '1rem' }}>Events by Category</h3>
-                            <span className="badge badge-primary">{stats.eventsByCategory.length} categories</span>
-                        </div>
-                        <div className="chart-wrapper" style={{ height: 300, display: 'flex', justifyContent: 'center' }}>
-                            <Doughnut data={categoryData} options={{ maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { color: '#64748b', font: { family: 'Plus Jakarta Sans', size: 11 }, padding: 12 } } } }} />
-                        </div>
-                    </div>
-                    <div className="card admin-chart-card" style={{ height: 400 }}>
-                        <div className="flex-between mb-4">
-                            <h3 className="mb-0" style={{ fontSize: '1rem' }}>College Overview</h3>
-                            <span className="badge badge-secondary">{stats.colleges.length} colleges</span>
-                        </div>
-                        <div className="chart-wrapper" style={{ height: 300 }}>
-                            <Bar data={collegeData} options={{ ...chartBaseOptions, maintainAspectRatio: false, responsive: true }} />
-                        </div>
-                    </div>
-                </div>
-
-                {/* ── Calendar + Quick Actions ── */}
-                <div className="grid-cols-2 mb-6" style={{ gridTemplateColumns: '2fr 1fr' }}>
-                    <div className="card">
-                        <div className="flex-between mb-4">
-                            <h3 className="mb-0" style={{ fontSize: '1rem' }}>Events Calendar</h3>
-                            <button className="btn btn-primary btn-sm" onClick={() => navigate('/admin/all-events')}>
-                                View All →
-                            </button>
-                        </div>
-                        <EventsCalendar events={stats.allEvents || []} />
-                    </div>
-
-                        <div className="card" style={{ display: 'flex', flexDirection: 'column', gap: '0.875rem' }}>
-                            <h3 className="mb-0" style={{ fontSize: '1rem' }}>Quick Actions</h3>
+                        {/* Stats Row */}
+                        <div className="grid-cols-4 mb-5" style={{ gap: '0.875rem' }}>
                             {[
-                                { label: 'Manage All Events',  icon: '📋', handler: () => navigate('/admin/all-events'),   primary: true },
-                                { label: 'Program Officers',   icon: '👨‍💼', handler: () => navigate('/admin/all-officers'), primary: false },
-                                { label: 'Student Records',    icon: '🎓', handler: () => navigate('/admin/all-students'), primary: false },
-                            ].map(a => (
-                                <button key={a.label}
-                                    className={`btn ${a.primary ? 'btn-primary' : 'btn-secondary'} w-100`}
-                                    onClick={a.handler}
-                                    style={{ justifyContent: 'flex-start', gap: '0.75rem' }}
+                                {
+                                    label: 'Colleges',
+                                    value: stats.totalColleges,
+                                    icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 10v6M2 10l10-5 10 5-10 5z" /><path d="M6 12v5c0 2 2 3 6 3s6-1 6-3v-5" /></svg>,
+                                },
+                                {
+                                    label: 'Units',
+                                    value: stats.totalUnits,
+                                    icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2" /><path d="M12 2L2 7l10 5 10-5-10-5z" /></svg>,
+                                },
+                                {
+                                    label: 'Events',
+                                    value: stats.totalEvents,
+                                    icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2" /><line x1="16" y1="2" x2="16" y2="6" /><line x1="8" y1="2" x2="8" y2="6" /><line x1="3" y1="10" x2="21" y2="10" /></svg>,
+                                },
+                                {
+                                    label: 'Upcoming',
+                                    value: upcomingCount,
+                                    icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" /></svg>,
+                                },
+                            ].map(s => (
+                                <div key={s.label} style={{
+                                    background: 'var(--card)',
+                                    border: '1px solid var(--border)',
+                                    borderRadius: '0.5rem',
+                                    padding: '1.125rem 1.25rem',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '0.875rem',
+                                    boxShadow: 'var(--sh-sm)',
+                                    transition: 'box-shadow 0.2s ease',
+                                }}
+                                    onMouseEnter={e => e.currentTarget.style.boxShadow = 'var(--sh-md)'}
+                                    onMouseLeave={e => e.currentTarget.style.boxShadow = 'var(--sh-sm)'}
                                 >
-                                    <span>{a.icon}</span> {a.label}
-                                </button>
-                            ))}
-                            <div style={{ marginTop: 'auto', paddingTop: '0.75rem', borderTop: '1px solid var(--border)', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                                {[
-                                    { label: 'Total Events',    val: stats.totalEvents },
-                                    { label: 'Upcoming Events', val: upcomingCount },
-                                ].map(s => (
-                                    <div key={s.label} style={{
-                                        display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                                        padding: '0.5rem 0.75rem',
-                                        background: 'var(--bg-2)',
-                                        borderRadius: '0.5rem',
-                                        border: '1px solid var(--border)',
-                                    }}>
-                                        <span style={{ fontSize: '0.8rem', color: 'var(--txt-3)', fontWeight: 600 }}>{s.label}</span>
-                                        <span style={{ fontSize: '1.1rem', fontWeight: 800, color: 'var(--brand-600)' }}>{s.val}</span>
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
-                </div>
-
-                {/* ── College Table ── */}
-                <div className="card">
-                    <div className="flex-between mb-5">
-                        <div>
-                            <h3 className="mb-1" style={{ fontSize: '1.1rem' }}>Registered Colleges</h3>
-                            <p style={{ margin: 0, color: 'var(--txt-3)', fontSize: '0.8rem' }}>Click a row to enter the college dashboard</p>
-                        </div>
-                        <span className="badge badge-primary">{stats.colleges.length} total</span>
-                    </div>
-                    <div style={{ overflowX: 'auto' }}>
-                        <table className="styled-table" style={{ width: '100%' }}>
-                            <thead>
-                                <tr>
-                                    <th>Code</th>
-                                    <th>Institution Name</th>
-                                    <th>Units</th>
-                                    <th>Events</th>
-                                    <th style={{ textAlign: 'right' }}>Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {stats.colleges.map((college) => (
-                                    <tr key={college._id} style={{ cursor: 'pointer' }}>
-                                        <td onClick={() => handleCollegeRedirect(college)}>
-                                            <span className="badge badge-primary" style={{ fontFamily: 'var(--font-mono)', fontSize: '0.7rem' }}>{college.code}</span>
-                                        </td>
-                                        <td onClick={() => handleCollegeRedirect(college)}>
-                                            <span style={{ fontWeight: 600, color: 'var(--txt-1)' }}>{college.insName}</span>
-                                        </td>
-                                        <td onClick={() => handleCollegeRedirect(college)}>
-                                            <span style={{ color: 'var(--brand-400)', fontWeight: 700 }}>{college.units.length}</span>
-                                        </td>
-                                        <td onClick={() => handleCollegeRedirect(college)}>
-                                            <span style={{ color: 'var(--accent-400, #2dd4bf)', fontWeight: 700 }}>{college.events.length}</span>
-                                        </td>
-                                        <td style={{ textAlign: 'right' }}>
-                                            <button className="btn btn-sm btn-danger"
-                                                onClick={(e) => { e.stopPropagation(); setCollegeToDelete(college); }}
-                                            >
-                                                Remove
-                                            </button>
-                                        </td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-
-                {/* ── Delete Modal ── */}
-                {collegeToDelete && (
-                    <div className="modal-overlay" onClick={() => setCollegeToDelete(null)}>
-                        <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 460 }}>
-                            <div style={{ textAlign: 'center', marginBottom: '1.75rem' }}>
-                                <div style={{
-                                    width: 64, height: 64,
-                                    background: 'rgba(239,68,68,0.1)',
-                                    border: '1px solid rgba(239,68,68,0.25)',
-                                    borderRadius: '18px',
-                                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                    margin: '0 auto 1.25rem',
-                                    fontSize: '1.75rem',
-                                }}>🗑️</div>
-                                <h3 style={{ fontSize: '1.3rem', marginBottom: '0.5rem' }}>Delete College</h3>
-                                <p style={{ color: 'var(--txt-2)', marginBottom: '0.375rem' }}>
-                                    You are about to permanently delete <strong style={{ color: 'var(--txt-1)' }}>{collegeToDelete.insName}</strong>.
-                                </p>
-                                <p style={{ color: 'var(--danger-400)', fontSize: '0.8rem', margin: 0 }}>
-                                    ⚠️ This will remove all units, events, and member data.
-                                </p>
-                            </div>
-
-                            <form onSubmit={handleDeleteCollege}>
-                                <div className="form-group">
-                                    <label className="form-label">Admin Username</label>
-                                    <input type="text" className="form-input" placeholder="Confirm your username"
-                                        value={adminUser} onChange={(e) => setAdminUser(e.target.value)} required />
-                                </div>
-                                <div className="form-group" style={{ marginBottom: '1.5rem' }}>
-                                    <label className="form-label">Admin Password</label>
-                                    <input type="password" className="form-input" placeholder="Confirm your password"
-                                        value={adminPass} onChange={(e) => setAdminPass(e.target.value)} required />
-                                </div>
-
-                                {deleteError && (
                                     <div style={{
-                                        padding: '0.75rem 1rem', background: 'rgba(239,68,68,0.07)',
-                                        border: '1px solid rgba(239,68,68,0.2)', borderRadius: '0.75rem',
-                                        color: '#f87171', fontSize: '0.875rem', marginBottom: '1.25rem'
-                                    }}>{deleteError}</div>
-                                )}
-
-                                <div className="flex-between" style={{ paddingTop: '1rem', borderTop: '1px solid var(--border)' }}>
-                                    <button type="button" className="btn btn-secondary"
-                                        onClick={() => { setCollegeToDelete(null); setDeleteError(''); }}>
-                                        Cancel
-                                    </button>
-                                    <button type="submit" className="btn btn-danger" disabled={isDeleting}>
-                                        {isDeleting ? <span className="flex-center" style={{ gap: '0.5rem' }}><span className="loading" />Deleting...</span> : '🗑️ Confirm Delete'}
-                                    </button>
+                                        width: 40, height: 40, borderRadius: '0.375rem', flexShrink: 0,
+                                        background: '#F1F5F9',
+                                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                        color: '#334155'
+                                    }}>{s.icon}</div>
+                                    <div>
+                                        <div style={{ fontSize: '1.625rem', fontWeight: 800, letterSpacing: '-0.04em', color: '#0F172A', lineHeight: 1 }}>{s.value ?? '—'}</div>
+                                        <div style={{ fontSize: '0.68rem', fontWeight: 600, color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.08em', marginTop: '0.2rem' }}>{s.label}</div>
+                                    </div>
                                 </div>
-                            </form>
+                            ))}
+                        </div>
+
+                        {/* Charts */}
+                        <div className="grid-cols-2 mb-5 admin-charts-container">
+                            <div style={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: '0.5rem', padding: '1.25rem', boxShadow: 'var(--sh-sm)', height: 360 }}>
+                                <div className="flex-between" style={{ marginBottom: '1rem' }}>
+                                    <div>
+                                        <h3 style={{ margin: 0, fontSize: '0.875rem', fontWeight: 700, color: '#0F172A' }}>Events by Category</h3>
+                                        <p style={{ margin: 0, fontSize: '0.72rem', color: '#64748B' }}>Distribution across categories</p>
+                                    </div>
+                                    <span style={{ fontSize: '0.68rem', fontWeight: 600, background: '#F1F5F9', color: '#475569', border: '1px solid #CBD5E1', padding: '0.2rem 0.5rem', borderRadius: '3px' }}>{stats.eventsByCategory.length} types</span>
+                                </div>
+                                <div style={{ height: 280, display: 'flex', justifyContent: 'center' }}>
+                                    <Doughnut data={categoryData} options={{ maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { color: '#475569', font: { family: 'Plus Jakarta Sans', size: 10 }, padding: 10 } } } }} />
+                                </div>
+                            </div>
+                            <div style={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: '0.5rem', padding: '1.25rem', boxShadow: 'var(--sh-sm)', height: 360 }}>
+                                <div className="flex-between" style={{ marginBottom: '1rem' }}>
+                                    <div>
+                                        <h3 style={{ margin: 0, fontSize: '0.875rem', fontWeight: 700, color: '#0F172A' }}>College Overview</h3>
+                                        <p style={{ margin: 0, fontSize: '0.72rem', color: '#64748B' }}>Units & events per college</p>
+                                    </div>
+                                    <span style={{ fontSize: '0.68rem', fontWeight: 600, background: '#F1F5F9', color: '#475569', border: '1px solid #CBD5E1', padding: '0.2rem 0.5rem', borderRadius: '3px' }}>{stats.colleges.length} colleges</span>
+                                </div>
+                                <div style={{ height: 280 }}>
+                                    <Bar data={collegeData} options={{ ...chartBaseOptions, maintainAspectRatio: false, responsive: true }} />
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Calendar + Quick Actions */}
+                        <div className="grid-cols-2 mb-5" style={{ gridTemplateColumns: '2fr 1fr', gap: '0.875rem' }}>
+                            <div style={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: '0.5rem', padding: '1.25rem', boxShadow: 'var(--sh-sm)' }}>
+                                <div className="flex-between" style={{ marginBottom: '1rem' }}>
+                                    <h3 style={{ margin: 0, fontSize: '0.875rem', fontWeight: 700, color: '#0F172A' }}>Events Calendar</h3>
+                                    <button style={{ fontSize: '0.75rem', fontWeight: 600, padding: '0.3rem 0.75rem', borderRadius: '4px', border: '1px solid #CBD5E1', background: '#F1F5F9', color: '#334155', cursor: 'pointer' }} onClick={() => setActiveTab('events')}>View All →</button>
+                                </div>
+                                <EventsCalendar events={stats.allEvents || []} />
+                            </div>
+
+                            <div style={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: '0.5rem', padding: '1.25rem', boxShadow: 'var(--sh-sm)', display: 'flex', flexDirection: 'column', gap: '0.625rem' }}>
+                                <h3 style={{ margin: '0 0 0.25rem', fontSize: '0.875rem', fontWeight: 700, color: '#0F172A' }}>Quick Actions</h3>
+                                {[
+                                    {
+                                        label: 'Manage All Events',
+                                        icon: <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2" /><line x1="16" y1="2" x2="16" y2="6" /><line x1="8" y1="2" x2="8" y2="6" /><line x1="3" y1="10" x2="21" y2="10" /></svg>,
+                                        handler: () => setActiveTab('events'),
+                                    },
+                                    {
+                                        label: 'Program Officers',
+                                        icon: <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M22 21v-2a4 4 0 0 0-3-3.87" /><path d="M16 3.13a4 4 0 0 1 0 7.75" /></svg>,
+                                        handler: () => setActiveTab('officers'),
+                                    },
+                                    {
+                                        label: 'Student Records',
+                                        icon: <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M23 21v-2a4 4 0 0 0-3-3.87" /><path d="M16 3.13a4 4 0 0 1 0 7.75" /></svg>,
+                                        handler: () => setActiveTab('students'),
+                                    },
+                                    {
+                                        label: 'Event Gallery',
+                                        icon: <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2" /><circle cx="8.5" cy="8.5" r="1.5" /><polyline points="21 15 16 10 5 21" /></svg>,
+                                        handler: () => setActiveTab('gallery'),
+                                    },
+                                ].map((a, i) => (
+                                    <button key={i}
+                                        onClick={a.handler}
+                                        style={{ display: 'flex', alignItems: 'center', gap: '0.625rem', padding: '0.625rem 0.875rem', fontSize: '0.8125rem', fontWeight: 500, color: '#334155', background: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: '0.375rem', cursor: 'pointer', textAlign: 'left', width: '100%', transition: 'all 0.15s ease' }}
+                                        onMouseEnter={e => { e.currentTarget.style.background = '#F1F5F9'; e.currentTarget.style.color = '#0F172A'; }}
+                                        onMouseLeave={e => { e.currentTarget.style.background = '#F8FAFC'; e.currentTarget.style.color = '#334155'; }}
+                                    >
+                                        <span style={{ color: '#64748B' }}>{a.icon}</span> {a.label}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {activeTab === "colleges" && (
+                    <div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', flexWrap: 'wrap', gap: '0.75rem' }}>
+                            <div>
+                                <h2 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 700, color: 'var(--txt-1)' }}>Registered Colleges</h2>
+                                <p style={{ margin: '0.2rem 0 0', color: 'var(--txt-3)', fontSize: '0.78rem' }}>Click any row to access the college dashboard</p>
+                            </div>
+                            <span style={{ fontSize: '0.72rem', fontWeight: 600, background: 'var(--brand-50)', color: 'var(--brand-700)', border: '1px solid var(--brand-200)', padding: '0.25rem 0.625rem', borderRadius: '3px' }}>{stats.colleges.length} colleges</span>
+                        </div>
+                        <div style={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: '0.5rem', overflow: 'hidden' }}>
+                            <div style={{ overflowX: 'auto' }}>
+                                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.8125rem' }}>
+                                    <thead>
+                                        <tr style={{ background: 'var(--bg-2)', borderBottom: '1px solid var(--border)' }}>
+                                            {['Code', 'Institution Name', 'Units', 'Events', ''].map(h => (
+                                                <th key={h} style={{ padding: '0.625rem 0.875rem', textAlign: 'left', fontSize: '0.675rem', fontWeight: 700, color: 'var(--txt-3)', textTransform: 'uppercase', letterSpacing: '0.07em', whiteSpace: 'nowrap' }}>{h}</th>
+                                            ))}
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {stats.colleges.map((college, i) => (
+                                            <tr key={college._id}
+                                                style={{ borderBottom: '1px solid var(--border)', cursor: 'pointer', background: i % 2 === 0 ? 'transparent' : 'var(--bg)' }}
+                                                onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-2)'}
+                                                onMouseLeave={e => e.currentTarget.style.background = i % 2 === 0 ? 'transparent' : 'var(--bg)'}
+                                            >
+                                                <td style={{ padding: '0.625rem 0.875rem' }} onClick={() => handleCollegeRedirect(college)}>
+                                                    <span style={{ fontFamily: 'var(--font-mono)', fontSize: '0.7rem', background: 'var(--brand-50)', color: 'var(--brand-700)', border: '1px solid var(--brand-200)', padding: '0.15rem 0.4rem', borderRadius: '3px' }}>{college.code}</span>
+                                                </td>
+                                                <td style={{ padding: '0.625rem 0.875rem', fontWeight: 600, color: 'var(--txt-1)' }} onClick={() => handleCollegeRedirect(college)}>{college.insName}</td>
+                                                <td style={{ padding: '0.625rem 0.875rem' }} onClick={() => handleCollegeRedirect(college)}>
+                                                    <span style={{ fontWeight: 700, color: 'var(--brand-600)', fontSize: '0.875rem' }}>{college.units.length}</span>
+                                                </td>
+                                                <td style={{ padding: '0.625rem 0.875rem' }} onClick={() => handleCollegeRedirect(college)}>
+                                                    <span style={{ fontWeight: 700, color: 'var(--success-600)', fontSize: '0.875rem' }}>{college.events.length}</span>
+                                                </td>
+                                                <td style={{ padding: '0.625rem 0.875rem', textAlign: 'right' }}>
+                                                    <button style={{ fontSize: '0.72rem', fontWeight: 600, padding: '0.3rem 0.625rem', borderRadius: '4px', border: '1px solid var(--danger-400)', background: 'var(--danger-50)', color: 'var(--danger-600)', cursor: 'pointer' }}
+                                                        onClick={e => { e.stopPropagation(); setCollegeToDelete(college); }}
+                                                    >Remove</button>
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {activeTab === "events" && (
+                    <div>
+                        <div className="mb-4">
+                            <h2 style={{ fontSize: '1.5rem', fontWeight: 800, margin: 0 }}>All Events Management</h2>
+                            <p style={{ margin: 0, color: 'var(--txt-3)', fontSize: '0.9rem' }}>Monitor and view details of all college and unit events</p>
+                        </div>
+                        <AdminAllEvents subview={true} />
+                    </div>
+                )}
+
+                {activeTab === "officers" && (
+                    <div>
+                        <div className="mb-4">
+                            <h2 style={{ fontSize: '1.5rem', fontWeight: 800, margin: 0 }}>Program Officers List</h2>
+                            <p style={{ margin: 0, color: 'var(--txt-3)', fontSize: '0.9rem' }}>View registered Program Officers across all colleges</p>
+                        </div>
+                        <AdminAllOfficers subview={true} />
+                    </div>
+                )}
+
+                {activeTab === "students" && (
+                    <div>
+                        <div className="mb-4">
+                            <h2 style={{ fontSize: '1.5rem', fontWeight: 800, margin: 0 }}>Student Records Directory</h2>
+                            <p style={{ margin: 0, color: 'var(--txt-3)', fontSize: '0.9rem' }}>Comprehensive database of all enrolled NSS student volunteers</p>
+                        </div>
+                        <AdminAllStudents subview={true} />
+                    </div>
+                )}
+
+                {activeTab === "gallery" && (
+                    <div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', flexWrap: 'wrap', gap: '0.75rem' }}>
+                            <div>
+                                <h2 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 700, color: 'var(--txt-1)' }}>Manage Event Gallery</h2>
+                                <p style={{ margin: '0.2rem 0 0', color: 'var(--txt-3)', fontSize: '0.78rem' }}>Manage photos displayed in the public portal gallery</p>
+                            </div>
+                            <span style={{ fontSize: '0.72rem', fontWeight: 600, background: 'var(--bg-2)', color: 'var(--txt-2)', border: '1px solid var(--border)', padding: '0.25rem 0.625rem', borderRadius: '3px' }}>{galleryImages.length} images</span>
+                        </div>
+
+                        <div style={{ display: 'grid', gridTemplateColumns: '320px 1fr', gap: '1.25rem', alignItems: 'start' }}>
+                            {/* Upload Panel */}
+                            <div style={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: '0.5rem', padding: '1.25rem' }}>
+                                <div style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--txt-3)', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: '1rem', paddingBottom: '0.625rem', borderBottom: '1px solid var(--border)' }}>Upload New Image</div>
+                                <form onSubmit={handleUploadImage}>
+                                    <div style={{ marginBottom: '0.875rem' }}>
+                                        <label style={{ display: 'block', fontSize: '0.7rem', fontWeight: 600, color: 'var(--txt-3)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '0.35rem' }}>Image File</label>
+                                        <input id="gallery-file-input" type="file" className="form-input" style={{ fontSize: '0.8125rem' }} accept="image/*" onChange={handleImageChange} required />
+                                    </div>
+                                    {newImage && (
+                                        <div style={{ marginBottom: '0.875rem' }}>
+                                            <img src={newImage} alt="Preview" style={{ width: '100%', height: 140, objectFit: 'cover', borderRadius: '4px', border: '1px solid var(--border)' }} />
+                                        </div>
+                                    )}
+                                    <div style={{ marginBottom: '0.875rem' }}>
+                                        <label style={{ display: 'block', fontSize: '0.7rem', fontWeight: 600, color: 'var(--txt-3)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '0.35rem' }}>Description</label>
+                                        <textarea className="form-input" style={{ fontSize: '0.8125rem', minHeight: 70 }} rows="2" placeholder="Brief caption for this photo..." value={newDescription} onChange={e => setNewDescription(e.target.value)} required />
+                                    </div>
+                                    <button type="submit" style={{ width: '100%', padding: '0.55rem', fontSize: '0.8125rem', fontWeight: 600, background: 'var(--brand-600)', color: '#fff', border: 'none', borderRadius: '4px', cursor: uploading ? 'not-allowed' : 'pointer', opacity: uploading ? 0.7 : 1 }} disabled={uploading}>
+                                        {uploading ? 'Uploading...' : 'Upload to Gallery'}
+                                    </button>
+                                </form>
+                            </div>
+
+                            {/* Image List */}
+                            <div style={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: '0.5rem', overflow: 'hidden' }}>
+                                {loadingGallery ? (
+                                    <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--txt-3)', fontSize: '0.8125rem' }}>Loading gallery...</div>
+                                ) : galleryImages.length === 0 ? (
+                                    <div style={{ padding: '2.5rem', textAlign: 'center', color: 'var(--txt-3)', fontSize: '0.8125rem' }}>No images uploaded yet.</div>
+                                ) : (
+                                    galleryImages.map((img, i) => (
+                                        <div key={img._id} style={{ display: 'flex', gap: '0.875rem', padding: '0.875rem 1rem', borderBottom: i < galleryImages.length - 1 ? '1px solid var(--border)' : 'none', alignItems: 'flex-start', background: i % 2 === 0 ? 'transparent' : 'var(--bg)' }}>
+                                            <img src={img.image} alt={img.description} style={{ width: 90, height: 68, objectFit: 'cover', borderRadius: '4px', border: '1px solid var(--border)', flexShrink: 0 }} />
+                                            <div style={{ flex: 1, minWidth: 0 }}>
+                                                {editingImageId === img._id ? (
+                                                    <div>
+                                                        <textarea className="form-input" style={{ fontSize: '0.8rem', minHeight: 56, marginBottom: '0.5rem' }} rows="2" value={editDescription} onChange={e => setEditDescription(e.target.value)} />
+                                                        <div style={{ display: 'flex', gap: '0.375rem' }}>
+                                                            <button style={{ fontSize: '0.72rem', fontWeight: 600, padding: '0.3rem 0.625rem', borderRadius: '4px', border: 'none', background: 'var(--brand-600)', color: '#fff', cursor: 'pointer' }} onClick={() => handleUpdateDescription(img._id)} disabled={updating}>{updating ? 'Saving...' : 'Save'}</button>
+                                                            <button style={{ fontSize: '0.72rem', fontWeight: 600, padding: '0.3rem 0.625rem', borderRadius: '4px', border: '1px solid var(--border)', background: 'var(--card)', color: 'var(--txt-2)', cursor: 'pointer' }} onClick={() => { setEditingImageId(null); setEditDescription(''); }}>Cancel</button>
+                                                        </div>
+                                                    </div>
+                                                ) : (
+                                                    <div>
+                                                        <p style={{ margin: '0 0 0.5rem', fontSize: '0.8rem', color: 'var(--txt-1)', lineHeight: 1.5, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>{img.description}</p>
+                                                        <div style={{ display: 'flex', gap: '0.375rem' }}>
+                                                            <button style={{ fontSize: '0.7rem', fontWeight: 600, padding: '0.25rem 0.5rem', borderRadius: '3px', border: '1px solid var(--border)', background: 'var(--card)', color: 'var(--txt-2)', cursor: 'pointer' }} onClick={() => { setEditingImageId(img._id); setEditDescription(img.description); }}>Edit</button>
+                                                            <button style={{ fontSize: '0.7rem', fontWeight: 600, padding: '0.25rem 0.5rem', borderRadius: '3px', border: '1px solid var(--danger-400)', background: 'var(--danger-50)', color: 'var(--danger-600)', cursor: 'pointer' }} onClick={() => handleDeleteImage(img._id)}>Delete</button>
+                                                        </div>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </div>
+                                    ))
+                                )}
+                            </div>
                         </div>
                     </div>
                 )}
             </main>
+
+            {/* Delete Modal */}
+            {collegeToDelete && (
+                <div className="modal-overlay" onClick={() => setCollegeToDelete(null)}>
+                    <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 460 }}>
+                        <div style={{ textAlign: 'center', marginBottom: '1.75rem' }}>
+                            <div style={{
+                                width: 64, height: 64,
+                                background: 'rgba(239,68,68,0.1)',
+                                border: '1px solid rgba(239,68,68,0.25)',
+                                borderRadius: '18px',
+                                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                margin: '0 auto 1.25rem',
+                                color: 'var(--danger-500)',
+                            }}>
+                                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6" /><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" /><line x1="10" y1="11" x2="10" y2="17" /><line x1="14" y1="11" x2="14" y2="17" /></svg>
+                            </div>
+                            <h3 style={{ fontSize: '1.3rem', marginBottom: '0.5rem' }}>Delete College</h3>
+                            <p style={{ color: 'var(--txt-2)', marginBottom: '0.375rem' }}>
+                                You are about to permanently delete <strong style={{ color: 'var(--txt-1)' }}>{collegeToDelete.insName}</strong>.
+                            </p>
+                            <p style={{ color: 'var(--danger-400)', fontSize: '0.8rem', margin: 0 }}>
+                                ⚠️ This will remove all units, events, and member data.
+                            </p>
+                        </div>
+
+                        <form onSubmit={handleDeleteCollege}>
+                            <div className="form-group">
+                                <label className="form-label">Admin Username</label>
+                                <input type="text" className="form-input" placeholder="Confirm your username"
+                                    value={adminUser} onChange={(e) => setAdminUser(e.target.value)} required />
+                            </div>
+                            <div className="form-group" style={{ marginBottom: '1.5rem' }}>
+                                <label className="form-label">Admin Password</label>
+                                <input type="password" className="form-input" placeholder="Confirm your password"
+                                    value={adminPass} onChange={(e) => setAdminPass(e.target.value)} required />
+                            </div>
+
+                            {deleteError && (
+                                <div style={{
+                                    padding: '0.75rem 1rem', background: 'rgba(239,68,68,0.07)',
+                                    border: '1px solid rgba(239,68,68,0.2)', borderRadius: '0.75rem',
+                                    color: '#f87171', fontSize: '0.875rem', marginBottom: '1.25rem'
+                                }}>{deleteError}</div>
+                            )}
+
+                            <div className="flex-between" style={{ paddingTop: '1rem', borderTop: '1px solid var(--border)' }}>
+                                <button type="button" className="btn btn-secondary"
+                                    onClick={() => { setCollegeToDelete(null); setDeleteError(''); }}>
+                                    Cancel
+                                </button>
+                                <button type="submit" className="btn btn-danger" disabled={isDeleting}>
+                                    {isDeleting ? <span className="flex-center" style={{ gap: '0.5rem' }}><span className="loading" />Deleting...</span> : 'Confirm Delete'}
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

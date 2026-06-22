@@ -183,8 +183,8 @@ const ProgramOfficerModal = ({ isOpen, onClose, insName, insCode, units, initial
                 <form onSubmit={handleSubmit}>
                     {/* Main Details */}
                     <div className="mb-8">
-                        <div className="form-section-header">
-                            <span>👔</span> Main Details
+                        <div className="form-section-header" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg> Main Details
                         </div>
                         <div className="grid-cols-2">
                             {formData.officerID && (
@@ -217,8 +217,8 @@ const ProgramOfficerModal = ({ isOpen, onClose, insName, insCode, units, initial
 
                     {/* Personal Details */}
                     <div className="mb-8">
-                        <div className="form-section-header">
-                            <span>👤</span> Personal Details
+                        <div className="form-section-header" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg> Personal Details
                         </div>
                         <div className="grid-cols-2">
                             {!readOnly && (
@@ -287,8 +287,8 @@ const ProgramOfficerModal = ({ isOpen, onClose, insName, insCode, units, initial
 
                     {/* Academic */}
                     <div className="mb-8">
-                        <div className="form-section-header">
-                            <span>🎓</span> Academic & Training
+                        <div className="form-section-header" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c0 2 2 3 6 3s6-1 6-3v-5"/></svg> Academic & Training
                         </div>
                         <div className="form-group">
                             <label>Qualification</label>
@@ -323,8 +323,8 @@ const ProgramOfficerModal = ({ isOpen, onClose, insName, insCode, units, initial
 
                     {/* General */}
                     <div className="mb-8">
-                        <div className="form-section-header">
-                            <span>🌟</span> General Experience
+                        <div className="form-section-header" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg> General Experience
                         </div>
                         <div className="form-group">
                             <label className="flex-between">
@@ -358,8 +358,8 @@ const ProgramOfficerModal = ({ isOpen, onClose, insName, insCode, units, initial
 
                     <div className="flex-between sticky-bottom pt-6" style={{ borderTop: "1px solid var(--border)", background: "var(--card)", position: "sticky", bottom: "-32px", zIndex: 10 }}>
                         <div className="d-flex gap-2">
-                            <button type="button" className="btn btn-outline-primary" onClick={generatePDF}>
-                                <span>📥</span> Download Form PDF
+                            <button type="button" className="btn btn-outline-primary" onClick={generatePDF} style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem' }}>
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg> Download Form PDF
                             </button>
                         </div>
                         <div className="d-flex gap-3">

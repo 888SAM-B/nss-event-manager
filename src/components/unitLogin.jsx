@@ -48,13 +48,15 @@ const UnitLogin = () => {
                     <div style={{ textAlign: 'center', marginBottom: '1.75rem' }}>
                         <div style={{
                             width: 56, height: 56,
-                            background: '#dcfce7',
-                            border: '1px solid #bbf7d0',
+                            background: 'rgba(22, 163, 74, 0.1)',
+                            border: '1px solid rgba(22, 163, 74, 0.25)',
                             borderRadius: '16px',
                             display: 'flex', alignItems: 'center', justifyContent: 'center',
                             margin: '0 auto 1rem',
-                            fontSize: '1.5rem',
-                        }}>🏫</div>
+                            color: '#16a34a',
+                        }}>
+                            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c0 2 2 3 6 3s6-1 6-3v-5"/></svg>
+                        </div>
                         <span className="badge badge-success" style={{ marginBottom: '0.75rem', letterSpacing: '0.08em' }}>
                             NSS UNIT
                         </span>

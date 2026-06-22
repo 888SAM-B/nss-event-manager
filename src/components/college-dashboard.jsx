@@ -54,6 +54,9 @@ const CollegeDashboard = () => {
     // Check if admin is viewing this dashboard
     const isAdminViewing = localStorage.getItem("adminToken") !== null;
 
+    const [activeTab, setActiveTab] = useState("overview");
+    const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+
     const handleAddMember = () => {
         setNewMembers([...newMembers, {
             name: "",
@@ -183,27 +186,45 @@ const CollegeDashboard = () => {
                 // Fetch officers using the code from response
                 fetchProgramOfficers(res.data.user.code);
             } else {
+                if (isAdminViewing) {
+                    localStorage.removeItem("nsstoken");
+                    localStorage.removeItem("nss_username");
+                    localStorage.removeItem("unitToken");
+                    localStorage.removeItem("nssunitCode");
+                    localStorage.removeItem("nsscollegeCode");
+                    toast.error("Failed to fetch dashboard details.");
+                    navigate("/admin-dashboard");
+                } else {
+                    localStorage.removeItem("adminToken");
+                    localStorage.removeItem("nsstoken");
+                    localStorage.removeItem("nss_username");
+                    localStorage.removeItem("unitToken");
+                    localStorage.removeItem("nssunitCode");
+                    localStorage.removeItem("nsscollegeCode");
+                    toast.error("Failed to fetch dashboard details. Please login again.");
+                    navigate("/login");
+                }
+            }
+        } catch (error) {
+            console.error(error);
+            if (isAdminViewing) {
+                localStorage.removeItem("nsstoken");
+                localStorage.removeItem("nss_username");
+                localStorage.removeItem("unitToken");
+                localStorage.removeItem("nssunitCode");
+                localStorage.removeItem("nsscollegeCode");
+                toast.error("Error fetching details.");
+                navigate("/admin-dashboard");
+            } else {
                 localStorage.removeItem("adminToken");
                 localStorage.removeItem("nsstoken");
                 localStorage.removeItem("nss_username");
                 localStorage.removeItem("unitToken");
                 localStorage.removeItem("nssunitCode");
                 localStorage.removeItem("nsscollegeCode");
-
-                toast.error("Failed to fetch dashboard details. Please login again.");
+                toast.error("Error fetching details. Please login again.");
                 navigate("/login");
             }
-        } catch (error) {
-            console.error(error);
-            localStorage.removeItem("adminToken");
-            localStorage.removeItem("nsstoken");
-            localStorage.removeItem("nss_username");
-            localStorage.removeItem("unitToken");
-            localStorage.removeItem("nssunitCode");
-            localStorage.removeItem("nsscollegeCode");
-
-            toast.error("Error fetching details. Please login again.");
-            navigate("/login");
             setLoading(false);
         }
     };
@@ -317,13 +338,20 @@ const CollegeDashboard = () => {
         const matchesUnit = filterUnit === "" || m.unitId?.unitNumber === filterUnit;
         const matchesBatch = filterBatch === "" || m.batchFrom === filterBatch || m.batchTo === filterBatch;
         const matchesCommunity = memberCommunityFilter === "" || m.community === memberCommunityFilter;
-        return unitA.localeCompare(unitB);
+        return matchesSearch && matchesUnit && matchesBatch && matchesCommunity;
     });
 
     // Reset member page when filters change
     useEffect(() => {
         setCurrentMemberPage(1);
     }, [memberSearch, filterUnit, filterBatch, memberCommunityFilter]);
+
+    // Fetch members when student tab is active
+    useEffect(() => {
+        if (activeTab === "students" && insCode) {
+            fetchAllMembers();
+        }
+    }, [activeTab, insCode]);
 
     const totalMemberPages = Math.ceil(filteredAllMembers.length / membersPerPage);
     const paginatedAllMembers = filteredAllMembers.slice(
@@ -377,6 +405,20 @@ const CollegeDashboard = () => {
         }
     };
 
+    const handleLogout = () => {
+        if (isAdminViewing) {
+            navigate("/admin-dashboard");
+        } else {
+            localStorage.removeItem("adminToken");
+            localStorage.removeItem("nsstoken");
+            localStorage.removeItem("nss_username");
+            localStorage.removeItem("unitToken");
+            localStorage.removeItem("nssunitCode");
+            localStorage.removeItem("nsscollegeCode");
+            navigate("/");
+        }
+    };
+
     if (loading) return (
         <div className="flex-center" style={{ height: '100vh', flexDirection: 'column', gap: '1.25rem' }}>
             <div style={{
@@ -391,454 +433,577 @@ const CollegeDashboard = () => {
     );
 
     return (
-        <div style={{ minHeight: '100vh', background: 'var(--bg)' }}>
-            <header className="dashboard-header">
-                <div className="container flex-between">
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.875rem' }}>
-                        <div style={{
-                            width: 38, height: 38,
-                            background: 'linear-gradient(135deg, rgba(99,102,241,0.2), rgba(20,184,166,0.15))',
-                            border: '1px solid rgba(99,102,241,0.25)',
-                            borderRadius: '11px',
-                            display: 'flex', alignItems: 'center', justifyContent: 'center',
-                            fontSize: '1.1rem', flexShrink: 0,
-                            boxShadow: '0 0 20px rgba(99,102,241,0.15)',
-                        }}>🏛️</div>
-                        <div>
-                            <div style={{
-                                fontWeight: 800, fontSize: '1rem', letterSpacing: '-0.02em',
-                                background: 'linear-gradient(135deg, #818cf8, #2dd4bf)',
-                                WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text',
-                            }}>{insName || 'College Dashboard'}</div>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', marginTop: '1px' }}>
-                                <span className="badge badge-primary" style={{ fontSize: '0.6rem', letterSpacing: '0.1em' }}>{insCode}</span>
-                                <span style={{ fontSize: '0.68rem', color: 'var(--txt-3)' }}>NSS Organization</span>
-                            </div>
-                        </div>
+        <div className="dashboard-layout-wrapper">
+            {/* Sidebar overlay for mobile */}
+            <div className={`sidebar-overlay ${isSidebarOpen ? 'show' : ''}`} onClick={() => setIsSidebarOpen(false)}></div>
+
+            {/* Mobile Header */}
+            <header className="mobile-nav-header">
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <div className="sidebar-brand-logo">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c0 2 2 3 6 3s6-1 6-3v-5"/></svg>
                     </div>
-                    <div className="d-flex align-items-center" style={{ gap: '0.625rem' }}>
-                        <ThemeToggle />
-                        <button className="btn btn-secondary btn-sm"
-                            onClick={() => navigate('/explore-events', { state: { collegeCode: insCode, unitCode: 'COLLEGE', fromRole: 'college' } })}>
-                            Explore Events
-                        </button>
-                        {isAdminViewing ? (
-                            <button className="btn btn-secondary btn-sm" onClick={() => navigate('/admin-dashboard')}>
-                                ← Admin
-                            </button>
+                    <span className="sidebar-brand-name" style={{ fontSize: '0.9rem' }}>{insName || 'College Portal'}</span>
+                </div>
+                <div className="d-flex align-items-center gap-2">
+                    <ThemeToggle />
+                    <button className="mobile-toggle-btn" onClick={() => setIsSidebarOpen(!isSidebarOpen)}>
+                        {isSidebarOpen ? (
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
                         ) : (
-                            <button className="btn btn-danger btn-sm" onClick={() => { localStorage.removeItem('nsstoken'); navigate('/'); }}>
-                                Sign Out
-                            </button>
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
                         )}
-                    </div>
+                    </button>
                 </div>
             </header>
 
-            <main className="container main-container">
-                {/* Adopting Villages Section */}
-                <div className="card mb-6">
-                    <div className="flex-between mb-4">
-                        <h3 className="mb-0">Adopting Villages</h3>
-                        <div className="d-flex gap-2">
-                            {collegeData?.adoptingVillages && collegeData.adoptingVillages.length > 0 && (
-                                <span className="badge badge-primary">{collegeData.adoptingVillages.length} Village(s)</span>
-                            )}
+            {/* Left Sidebar */}
+            <aside className={`sidebar ${isSidebarOpen ? 'open' : ''}`}>
+                <div className="sidebar-brand">
+                    <div className="sidebar-brand-logo">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c0 2 2 3 6 3s6-1 6-3v-5"/></svg>
+                    </div>
+                    <div style={{ overflow: 'hidden' }}>
+                        <span className="sidebar-brand-name" style={{ display: 'block' }}>NSS PORTAL</span>
+                        <span style={{ fontSize: '0.65rem', color: 'var(--txt-3)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>College Admin</span>
+                    </div>
+                </div>
+
+                <div className="sidebar-menu">
+                    <button className={`sidebar-item ${activeTab === 'overview' ? 'active' : ''}`} onClick={() => { setActiveTab('overview'); setIsSidebarOpen(false); }}>
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/></svg>
+                        Overview
+                    </button>
+                    <button className={`sidebar-item ${activeTab === 'units' ? 'active' : ''}`} onClick={() => { setActiveTab('units'); setIsSidebarOpen(false); }}>
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M12 2L2 7l10 5 10-5-10-5z"/></svg>
+                        NSS Units
+                    </button>
+                    <button className={`sidebar-item ${activeTab === 'officers' ? 'active' : ''}`} onClick={() => { setActiveTab('officers'); setIsSidebarOpen(false); }}>
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                        Program Officers
+                    </button>
+                    <button className={`sidebar-item ${activeTab === 'students' ? 'active' : ''}`} onClick={() => { setActiveTab('students'); setIsSidebarOpen(false); }}>
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                        Student Records
+                    </button>
+                    <button className={`sidebar-item ${activeTab === 'villages' ? 'active' : ''}`} onClick={() => { setActiveTab('villages'); setIsSidebarOpen(false); }}>
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+                        Adopted Villages
+                    </button>
+                </div>
+
+                <div className="sidebar-footer">
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 0.5rem 0.5rem', borderBottom: '1px solid var(--border)' }}>
+                        <span style={{ fontSize: '0.8rem', color: 'var(--txt-1)', fontWeight: 600 }}>Theme</span>
+                        <ThemeToggle />
+                    </div>
+                    <button className="sidebar-item" onClick={handleLogout} style={{ color: 'var(--danger-500)', opacity: 0.9 }}>
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+                        Sign Out
+                    </button>
+                </div>
+            </aside>
+
+            {/* Right Main Content Pane */}
+            <main className="main-content-pane">
+                {activeTab === "overview" && (
+                    <div>
+                        {/* Header */}
+                        <div className="flex-between mb-6" style={{ flexWrap: 'wrap', gap: '1rem' }}>
+                            <div>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ color: 'var(--brand-600)' }}><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18"/><path d="M9 21V9"/></svg>
+                                    <h1 style={{ fontSize: '1.75rem', fontWeight: 800, margin: 0, color: 'var(--txt-1)' }}>{insName || 'College Dashboard'}</h1>
+                                </div>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', marginTop: '4px' }}>
+                                    <span className="badge badge-primary" style={{ fontSize: '0.65rem', letterSpacing: '0.1em' }}>{insCode}</span>
+                                    <span style={{ fontSize: '0.75rem', color: 'var(--txt-3)' }}>NSS Organization Dashboard</span>
+                                </div>
+                            </div>
+                            <div className="d-flex gap-2">
+                                <button className="btn btn-secondary" onClick={() => navigate('/explore-events', { state: { collegeCode: insCode, unitCode: 'COLLEGE', fromRole: 'college' } })}>
+                                    Explore Events
+                                </button>
+                                {isAdminViewing && (
+                                    <button className="btn btn-secondary" onClick={() => navigate('/admin-dashboard')}>
+                                        ← Admin
+                                    </button>
+                                )}
+                            </div>
+                        </div>
+
+                        {/* Quick Stats Cards */}
+                        <div className="grid-cols-4 mb-6" style={{ gap: '1rem' }}>
+                            <div className="card p-4 d-flex align-items-center" style={{ gap: '1rem', background: 'var(--card-bg)' }}>
+                                <div style={{ width: '44px', height: '44px', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(99,102,241,0.1)', color: 'var(--primary-color)' }}>
+                                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M12 2L2 7l10 5 10-5-10-5z"/></svg>
+                                </div>
+                                <div>
+                                    <div style={{ fontSize: '0.8rem', color: 'var(--txt-3)', fontWeight: 500 }}>Active Units</div>
+                                    <div style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--txt-1)' }}>{units.length} <span style={{ fontSize: '0.8rem', fontWeight: 500, color: 'var(--txt-3)' }}>/ 6</span></div>
+                                </div>
+                            </div>
+
+                            <div className="card p-4 d-flex align-items-center" style={{ gap: '1rem', background: 'var(--card-bg)' }}>
+                                <div style={{ width: '44px', height: '44px', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(16,185,129,0.1)', color: 'var(--success-color)' }}>
+                                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                                </div>
+                                <div>
+                                    <div style={{ fontSize: '0.8rem', color: 'var(--txt-3)', fontWeight: 500 }}>Program Officers</div>
+                                    <div style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--txt-1)' }}>{programOfficers.length}</div>
+                                </div>
+                            </div>
+
+                            <div className="card p-4 d-flex align-items-center" style={{ gap: '1rem', background: 'var(--card-bg)' }}>
+                                <div style={{ width: '44px', height: '44px', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(245,158,11,0.1)', color: 'var(--warning-color)' }}>
+                                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c0 2 2 3 6 3s6-1 6-3v-5"/></svg>
+                                </div>
+                                <div>
+                                    <div style={{ fontSize: '0.8rem', color: 'var(--txt-3)', fontWeight: 500 }}>Total Volunteers</div>
+                                    <div style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--txt-1)' }}>
+                                        {units.reduce((sum, u) => sum + (u.members?.length || 0), 0)}
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="card p-4 d-flex align-items-center" style={{ gap: '1rem', background: 'var(--card-bg)' }}>
+                                <div style={{ width: '44px', height: '44px', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(236,72,153,0.1)', color: 'var(--danger-color)' }}>
+                                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+                                </div>
+                                <div>
+                                    <div style={{ fontSize: '0.8rem', color: 'var(--txt-3)', fontWeight: 500 }}>Adopted Villages</div>
+                                    <div style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--txt-1)' }}>{collegeData?.adoptingVillages?.length || 0}</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* College Info Card */}
+                        <div className="card p-6 mb-6" style={{ background: 'var(--card-bg)' }}>
+                            <h3 className="mb-4 text-lg">College Details</h3>
+                            <div className="grid-cols-2 gap-4">
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                                    <span style={{ fontSize: '0.75rem', color: 'var(--txt-3)' }}>Institution Name</span>
+                                    <span style={{ fontWeight: 600, color: 'var(--txt-1)' }}>{insName || 'N/A'}</span>
+                                </div>
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                                    <span style={{ fontSize: '0.75rem', color: 'var(--txt-3)' }}>Institution Code</span>
+                                    <span style={{ fontWeight: 600, color: 'var(--txt-1)' }}>{insCode || 'N/A'}</span>
+                                </div>
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                                    <span style={{ fontSize: '0.75rem', color: 'var(--txt-3)' }}>Login Username</span>
+                                    <span style={{ fontWeight: 600, color: 'var(--txt-1)' }}>{username || 'N/A'}</span>
+                                </div>
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                                    <span style={{ fontSize: '0.75rem', color: 'var(--txt-3)' }}>NSS Representative</span>
+                                    <span style={{ fontWeight: 600, color: 'var(--txt-1)' }}>Principal / Head of Institution</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {activeTab === "units" && (
+                    <div>
+                        <div className="flex-between mb-6" style={{ flexWrap: 'wrap', gap: '1rem' }}>
+                            <div>
+                                <h1 style={{ fontSize: '1.75rem', fontWeight: 800, margin: 0, color: 'var(--txt-1)' }}>NSS Units Management</h1>
+                                <p style={{ margin: 0, color: 'var(--txt-3)', fontSize: '0.9rem' }}>Manage your college NSS units and members</p>
+                            </div>
                             <button
-                                className="btn btn-sm btn-primary"
+                                className="btn btn-primary"
+                                onClick={() => {
+                                    setSelectedOfficer(null);
+                                    setIsOfficerReadOnly(false);
+                                    setShowUnitModal(true);
+                                }}
+                                disabled={units.length >= 6}
+                                title={units.length >= 6 ? "Maximum limit of 6 units reached" : ""}
+                            >
+                                + Create New Unit
+                            </button>
+                        </div>
+
+                        <div className="units-list grid-cols-3">
+                            {units.length === 0 ? (
+                                <div className="col-span-3 text-center p-6 card">
+                                    <p>No units created yet. Click the button above to create your first unit.</p>
+                                </div>
+                            ) : (
+                                units.map((unit, idx) => (
+                                    <div
+                                        key={unit.id || idx}
+                                        className="unit-card"
+                                        onClick={() => {
+                                            localStorage.setItem("nssunitCode", unit.unitNumber);
+                                            localStorage.setItem("unitToken", localStorage.getItem("nsstoken"));
+                                            localStorage.setItem("nsscollegeCode", insCode);
+                                            navigate('/unit-dashboard')
+                                        }}
+                                        style={{ width: '100%', margin: 0, cursor: 'pointer' }}
+                                    >
+                                        <div className="flex-between mb-3">
+                                            <h4 className="mb-0">{unit.name || unit.unitName}</h4>
+                                            <span className="badge badge-success">{unit.unitNumber}</span>
+                                        </div>
+                                        <div className="mb-4">
+                                            <p className="mb-1 text-sm"><strong className="text-white">Head:</strong> {unit.head?.name || unit.head || "Not Assigned"}</p>
+                                            <p className="mb-1 text-sm"><strong className="text-white">Created:</strong> {unit.createdDate}</p>
+                                            <p className="mb-1 text-sm"><strong className="text-white">Members:</strong> {unit.members ? unit.members.length : 0}</p>
+                                        </div>
+
+                                        <button
+                                            className="btn btn-danger btn-sm w-100"
+                                            onClick={(e) => handleDeleteUnit(unit.unitNumber, e)}
+                                            style={{ width: '100%' }}
+                                        >
+                                            Delete Unit
+                                        </button>
+                                    </div>
+                                ))
+                            )}
+                        </div>
+                    </div>
+                )}
+
+                {activeTab === "officers" && (
+                    <div>
+                        <div className="flex-between mb-6" style={{ flexWrap: 'wrap', gap: '1rem' }}>
+                            <div>
+                                <h1 style={{ fontSize: '1.75rem', fontWeight: 800, margin: 0, color: 'var(--txt-1)' }}>Program Officers</h1>
+                                <p style={{ margin: 0, color: 'var(--txt-3)', fontSize: '0.9rem' }}>Registered Program Officers for college units</p>
+                            </div>
+                            <button
+                                className="btn btn-success"
+                                onClick={() => {
+                                    setSelectedOfficer(null);
+                                    setIsOfficerReadOnly(false);
+                                    setShowOfficerModal(true);
+                                }}
+                            >
+                                + Register Program Officer
+                            </button>
+                        </div>
+
+                        <div className="card mb-6" style={{ background: 'var(--card-bg)', animation: 'fadeIn 0.5s' }}>
+                            <div className="overflow-x-auto">
+                                <table className="table w-100">
+                                    <thead>
+                                        <tr>
+                                            <th className="text-center">Photo</th>
+                                            <th>ID</th>
+                                            <th>Name</th>
+                                            <th>Designation</th>
+                                            <th>Department</th>
+                                            <th>Unit</th>
+                                            <th>Contact</th>
+                                            <th className="text-center">Action</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {programOfficers.length === 0 ? (
+                                            <tr><td colSpan="8" className="text-center py-4">No officers registered yet.</td></tr>
+                                        ) : (
+                                            programOfficers.map((officer) => (
+                                                <tr key={officer._id}>
+                                                    <td className="text-center">
+                                                        <img src={officer.image || "https://via.placeholder.com/40"} alt="Officer" style={{ width: '40px', height: '40px', borderRadius: '50%', objectFit: 'cover' }} />
+                                                    </td>
+                                                    <td><span className="badge badge-secondary">{officer.officerID || "N/A"}</span></td>
+                                                    <td>{officer.name}</td>
+                                                    <td>{officer.designation}</td>
+                                                    <td>{officer.department}</td>
+                                                    <td><span className="badge badge-primary">{officer.unit || "Unassigned"}</span></td>
+                                                    <td>{officer.mobile}</td>
+                                                    <td>
+                                                        <div className="d-flex gap-2 justify-content-center align-items-center h-100">
+                                                            <button
+                                                                className="btn btn-sm btn-outline-primary"
+                                                                onClick={() => {
+                                                                    setSelectedOfficer(officer);
+                                                                    setIsOfficerReadOnly(true);
+                                                                    setShowOfficerModal(true);
+                                                                }}
+                                                            >
+                                                                View
+                                                            </button>
+                                                            <button
+                                                                className="btn btn-sm btn-primary"
+                                                                onClick={() => {
+                                                                    setSelectedOfficer(officer);
+                                                                    setIsOfficerReadOnly(false);
+                                                                    setShowOfficerModal(true);
+                                                                }}
+                                                            >
+                                                                Edit
+                                                            </button>
+                                                            <button
+                                                                className="btn btn-sm btn-secondary"
+                                                                onClick={() => {
+                                                                    setSelectedOfficerForAssign(officer);
+                                                                    setAssignTargetUnit(officer.unit || "");
+                                                                    setShowAssignModal(true);
+                                                                }}
+                                                            >
+                                                                Assign Unit
+                                                            </button>
+                                                            <button
+                                                                className="btn btn-sm btn-danger"
+                                                                onClick={() => handleDeleteOfficer(officer._id)}
+                                                            >
+                                                                Delete
+                                                            </button>
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            ))
+                                        )}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {activeTab === "students" && (
+                    <div>
+                        <div className="flex-between mb-6" style={{ flexWrap: 'wrap', gap: '1rem' }}>
+                            <div>
+                                <h1 style={{ fontSize: '1.75rem', fontWeight: 800, margin: 0, color: 'var(--txt-1)' }}>Student Volunteers</h1>
+                                <p style={{ margin: 0, color: 'var(--txt-3)', fontSize: '0.9rem' }}>Directory of college NSS student volunteers</p>
+                            </div>
+                            <button className="btn btn-success" onClick={() => handleExportExcel(filteredAllMembers, `${insCode}_members`)}>Export to Excel</button>
+                        </div>
+
+                        <div className="card mb-6">
+                            <div className="grid-cols-4 gap-3 mb-4">
+                                <div className="form-group">
+                                    <label className="text-xs">Search (Name/RegNo)</label>
+                                    <input
+                                        className="form-input"
+                                        placeholder="Search..."
+                                        value={memberSearch}
+                                        onChange={(e) => setMemberSearch(e.target.value)}
+                                    />
+                                </div>
+                                <div className="form-group">
+                                    <label className="text-xs">Filter by Unit</label>
+                                    <select className="form-input" value={filterUnit} onChange={(e) => setFilterUnit(e.target.value)}>
+                                        <option value="">All Units</option>
+                                        {units.map(u => (
+                                            <option key={u.unitNumber} value={u.unitNumber}>{u.unitNumber}</option>
+                                        ))}
+                                    </select>
+                                </div>
+                                <div className="form-group">
+                                    <label className="text-xs">Filter by Batch (Year)</label>
+                                    <input
+                                        className="form-input"
+                                        placeholder="e.g. 2022"
+                                        value={filterBatch}
+                                        onChange={(e) => setFilterBatch(e.target.value)}
+                                    />
+                                </div>
+                                <div className="form-group">
+                                    <label className="text-xs">Filter by Community</label>
+                                    <select
+                                        className="form-input"
+                                        value={memberCommunityFilter}
+                                        onChange={(e) => setMemberCommunityFilter(e.target.value)}
+                                    >
+                                        <option value="">All Communities</option>
+                                        <option value="General">General</option>
+                                        <option value="OBC">OBC</option>
+                                        <option value="MBC">MBC</option>
+                                        <option value="BC">BC</option>
+                                        <option value="SC">SC</option>
+                                        <option value="ST">ST</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div style={{ overflowX: 'auto' }}>
+                                <table className="styled-table" style={{ margin: 0, boxShadow: 'none' }}>
+                                    <thead>
+                                        <tr>
+                                            <th>S.No</th>
+                                            <th>Name</th>
+                                            <th>Reg No</th>
+                                            <th>Unit</th>
+                                            <th>Dept</th>
+                                            <th>Community</th>
+                                            <th>Batch</th>
+                                            <th>Contact</th>
+                                            <th>Action</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {paginatedAllMembers.map((m, index) => {
+                                            const globalIndex = (currentMemberPage - 1) * membersPerPage + index;
+                                            return (
+                                                <tr key={m._id}  >
+                                                    <td>{globalIndex + 1}</td>
+                                                    <td>{m.name}</td>
+                                                    <td><span className="badge badge-secondary">{m.regNo}</span></td>
+                                                    <td>{m.unitId?.unitNumber || "N/A"}</td>
+                                                    <td>{m.dept}</td>
+                                                    <td><span className="badge badge-secondary">{m.community || "N/A"}</span></td>
+                                                    <td>{m.batchFrom} - {m.batchTo}</td>
+                                                    <td>{m.contact}</td>
+                                                    <td>
+                                                        <button
+                                                            className={`btn btn-sm ${m.isEnrolled ? 'btn-success' : 'btn-outline-primary'}`}
+                                                            onClick={() => {
+                                                                setSelectedMember(m);
+                                                                setShowEnrolmentModal(true);
+                                                            }}
+                                                            style={{ display: 'inline-flex', alignItems: 'center' }}
+                                                        >
+                                                            {m.isEnrolled ? (
+                                                                <>
+                                                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ marginRight: '4px' }}><polyline points="20 6 9 17 4 12"/></svg>
+                                                                    View Enrolment
+                                                                </>
+                                                            ) : (
+                                                                <>
+                                                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ marginRight: '4px' }}><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 1 1 3 3L12 15l-4 1 1-4z"/></svg>
+                                                                    Enrolment
+                                                                </>
+                                                            )}
+                                                        </button>
+                                                    </td>
+                                                </tr>
+                                            );
+                                        })}
+                                    </tbody>
+                                </table>
+                                {filteredAllMembers.length === 0 && (
+                                    <p className="text-center p-4">No members found.</p>
+                                )}
+                            </div>
+
+                            {filteredAllMembers.length > membersPerPage && (
+                                <div className="pagination-container flex-between mt-4">
+                                    <div className="text-sm text-muted">
+                                        Showing <span className="fw-bold">{(currentMemberPage - 1) * membersPerPage + 1}</span> to <span className="fw-bold">{Math.min(currentMemberPage * membersPerPage, filteredAllMembers.length)}</span> of <span className="fw-bold">{filteredAllMembers.length}</span> students
+                                    </div>
+                                    <div className="flex-center gap-2">
+                                        <button
+                                            className="btn btn-secondary btn-sm"
+                                            onClick={() => setCurrentMemberPage(prev => Math.max(prev - 1, 1))}
+                                            disabled={currentMemberPage === 1}
+                                        >
+                                            Previous
+                                        </button>
+                                        <div className="flex-center gap-1">
+                                            {[...Array(Math.min(5, totalMemberPages))].map((_, i) => {
+                                                let pageNum;
+                                                if (totalMemberPages <= 5) {
+                                                    pageNum = i + 1;
+                                                } else if (currentMemberPage <= 3) {
+                                                    pageNum = i + 1;
+                                                } else if (currentMemberPage >= totalMemberPages - 2) {
+                                                    pageNum = totalMemberPages - 4 + i;
+                                                } else {
+                                                    pageNum = currentMemberPage - 2 + i;
+                                                }
+
+                                                return (
+                                                    <button
+                                                        key={pageNum}
+                                                        className={`btn btn-sm ${currentMemberPage === pageNum ? 'btn-primary' : 'btn-secondary'}`}
+                                                        style={{ minWidth: '36px' }}
+                                                        onClick={() => setCurrentMemberPage(pageNum)}
+                                                    >
+                                                        {pageNum}
+                                                    </button>
+                                                );
+                                            })}
+                                        </div>
+                                        <button
+                                            className="btn btn-secondary btn-sm"
+                                            onClick={() => setCurrentMemberPage(prev => Math.min(prev + 1, totalMemberPages))}
+                                            disabled={currentMemberPage === totalMemberPages}
+                                        >
+                                            Next
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                )}
+
+                {activeTab === "villages" && (
+                    <div>
+                        <div className="flex-between mb-6" style={{ flexWrap: 'wrap', gap: '1rem' }}>
+                            <div>
+                                <h1 style={{ fontSize: '1.75rem', fontWeight: 800, margin: 0, color: 'var(--txt-1)' }}>Adopted Villages</h1>
+                                <p style={{ margin: 0, color: 'var(--txt-3)', fontSize: '0.9rem' }}>NSS adopted villages for community outreach</p>
+                            </div>
+                            <button
+                                className="btn btn-primary"
                                 onClick={() => setShowVillageModal(true)}
                             >
                                 + Add Village
                             </button>
                         </div>
-                    </div>
-                    {collegeData?.adoptingVillages && collegeData.adoptingVillages.length > 0 ? (
-                        <div className="grid-cols-3 gap-4">
-                            {collegeData.adoptingVillages.map((village, idx) => (
-                                <div key={idx} className="p-4 rounded village-card" style={{
-                                    background: 'var(--bg-tertiary)',
-                                    border: '1px solid var(--border-color)',
-                                    position: 'relative',
-                                    overflow: 'hidden'
-                                }}>
-                                    <div style={{
-                                        position: 'absolute',
-                                        top: 0,
-                                        left: 0,
-                                        width: '4px',
-                                        height: '100%',
-                                        background: 'var(--primary-color)'
-                                    }}></div>
-                                    <div className="flex-between mb-3">
-                                        <h4 className="mb-0 text-primary-400" style={{ fontSize: '1.1rem' }}>{village.name}</h4>
-                                        <button
-                                            className="text-danger"
-                                            style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
-                                            onClick={() => handleDeleteVillage(idx)}
-                                            title="Remove Village"
-                                        >
-                                            &times;
-                                        </button>
-                                    </div>
-                                    <div className="d-flex flex-column gap-2">
-                                        <div className="d-flex align-items-start gap-2">
-                                            <span style={{ fontSize: '0.8rem', opacity: 0.7 }}>📍</span>
-                                            <p className="mb-0 text-sm" style={{ opacity: 0.9 }}>{village.address}</p>
+
+                        {collegeData?.adoptingVillages && collegeData.adoptingVillages.length > 0 ? (
+                            <div className="grid-cols-3 gap-4">
+                                {collegeData.adoptingVillages.map((village, idx) => (
+                                    <div key={idx} className="p-4 rounded village-card" style={{
+                                        background: 'var(--bg-tertiary)',
+                                        border: '1px solid var(--border-color)',
+                                        position: 'relative',
+                                        overflow: 'hidden'
+                                    }}>
+                                        <div style={{
+                                            position: 'absolute',
+                                            top: 0,
+                                            left: 0,
+                                            width: '4px',
+                                            height: '100%',
+                                            background: 'var(--primary-color)'
+                                        }}></div>
+                                        <div className="flex-between mb-3">
+                                            <h4 className="mb-0 text-primary-400" style={{ fontSize: '1.1rem' }}>{village.name}</h4>
+                                            <button
+                                                className="text-danger"
+                                                style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
+                                                onClick={() => handleDeleteVillage(idx)}
+                                                title="Remove Village"
+                                            >
+                                                &times;
+                                            </button>
                                         </div>
-                                        <div className="d-flex flex-wrap gap-x-4 gap-y-1">
-                                            <p className="mb-0 text-xs" style={{ opacity: 0.7 }}><strong className="text-white">Block:</strong> {village.block}</p>
-                                            <p className="mb-0 text-xs" style={{ opacity: 0.7 }}><strong className="text-white">Taluk:</strong> {village.taluk}</p>
-                                            <p className="mb-0 text-xs" style={{ opacity: 0.7 }}><strong className="text-white">Dist:</strong> {village.district}</p>
-                                        </div>
-                                        <div className="d-flex align-items-center gap-2">
-                                            <span style={{ fontSize: '0.8rem', opacity: 0.7 }}>📮</span>
-                                            <p className="mb-0 text-sm" style={{ opacity: 0.9 }}>{village.pincode}</p>
+                                        <div className="d-flex flex-column gap-2">
+                                            <div className="d-flex align-items-start gap-2">
+                                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ marginTop: '3px', opacity: 0.7 }}><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+                                                <p className="mb-0 text-sm" style={{ opacity: 0.9 }}>{village.address}</p>
+                                            </div>
+                                            <div className="d-flex flex-wrap gap-x-4 gap-y-1">
+                                                <p className="mb-0 text-xs" style={{ opacity: 0.7 }}><strong className="text-white">Block:</strong> {village.block}</p>
+                                                <p className="mb-0 text-xs" style={{ opacity: 0.7 }}><strong className="text-white">Taluk:</strong> {village.taluk}</p>
+                                                <p className="mb-0 text-xs" style={{ opacity: 0.7 }}><strong className="text-white">Dist:</strong> {village.district}</p>
+                                            </div>
+                                            <div className="d-flex align-items-center gap-2">
+                                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ opacity: 0.7 }}><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+                                                <p className="mb-0 text-sm" style={{ opacity: 0.9 }}>{village.pincode}</p>
+                                            </div>
                                         </div>
                                     </div>
-                                </div>
-                            ))}
-                        </div>
-                    ) : (
-                        <div className="text-center p-6" style={{ background: 'var(--bg-tertiary)', borderRadius: '8px' }}>
-                            <p className="text-muted mb-0">No villages adopted yet. Click the button above to add one.</p>
-                        </div>
-                    )}
-                </div>
-
-                <div className="flex-between mb-6">
-                    <div>
-                        <h2>NSS Units Management</h2>
-                        <p>Manage your college NSS units and members</p>
-                    </div>
-                    <div className="d-flex gap-2 flex-wrap" style={{ flex: 1, justifyContent: 'flex-end', minWidth: 'min-content' }}>
-                        <button
-                            className="btn btn-secondary"
-                            onClick={() => {
-                                setShowMembersList(false);
-                                setShowOfficersList(!showOfficersList);
-                            }}
-                        >
-                            👥 View Program Officers
-                        </button>
-                        <button
-                            className="btn btn-secondary"
-                            onClick={() => {
-                                setShowOfficersList(false);
-                                if (!showMembersList) {
-                                    fetchAllMembers();
-                                } else {
-                                    setShowMembersList(false);
-                                }
-                            }}
-                        >
-                            👨‍🎓 View All Students
-                        </button>
-                        <button
-                            className="btn btn-primary"
-                            onClick={() => {
-                                setSelectedOfficer(null);
-                                setIsOfficerReadOnly(false);
-                                setShowUnitModal(true);
-                            }}
-                            disabled={units.length >= 6}
-                            title={units.length >= 6 ? "Maximum limit of 6 units reached" : ""}
-                        >
-                            + Create New Unit
-                        </button>
-                        <button
-                            className="btn btn-success"
-                            onClick={() => {
-                                setSelectedOfficer(null);
-                                setIsOfficerReadOnly(false);
-                                setShowOfficerModal(true);
-                            }}
-                        >
-                            📋 Register Program Officer
-                        </button>
-                    </div>
-                </div>
-
-                {showOfficersList && (
-                    <div className="card mb-6" style={{ background: 'var(--card-bg)', animation: 'fadeIn 0.5s' }}>
-                        <div className="flex-between mb-4">
-                            <h3>Registered Program Officers</h3>
-                            <button className="btn btn-sm btn-secondary" onClick={() => setShowOfficersList(false)}>&times; Close</button>
-                        </div>
-                        <div className="overflow-x-auto">
-                            <table className="table w-100">
-                                <thead>
-                                    <tr>
-                                        <th className="text-center">Photo</th>
-                                        <th>ID</th>
-                                        <th>Name</th>
-                                        <th>Designation</th>
-                                        <th>Department</th>
-                                        <th>Unit</th>
-                                        <th>Contact</th>
-                                        <th className="text-center">Action</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {programOfficers.length === 0 ? (
-                                        <tr><td colSpan="8" className="text-center py-4">No officers registered yet.</td></tr>
-                                    ) : (
-                                        programOfficers.map((officer) => (
-                                            <tr key={officer._id}>
-                                                <td className="text-center">
-                                                    <img src={officer.image || "https://via.placeholder.com/40"} alt="Officer" style={{ width: '40px', height: '40px', borderRadius: '50%', objectFit: 'cover' }} />
-                                                </td>
-                                                <td><span className="badge badge-secondary">{officer.officerID || "N/A"}</span></td>
-                                                <td>{officer.name}</td>
-                                                <td>{officer.designation}</td>
-                                                <td>{officer.department}</td>
-                                                <td><span className="badge badge-primary">{officer.unit || "Unassigned"}</span></td>
-                                                <td>{officer.mobile}</td>
-                                                <td>
-                                                    <div className="d-flex gap-2 justify-content-center align-items-center h-100">
-                                                        <button
-                                                            className="btn btn-sm btn-outline-primary"
-                                                            onClick={() => {
-                                                                setSelectedOfficer(officer);
-                                                                setIsOfficerReadOnly(true);
-                                                                setShowOfficerModal(true);
-                                                            }}
-                                                        >
-                                                            View
-                                                        </button>
-                                                        <button
-                                                            className="btn btn-sm btn-primary"
-                                                            onClick={() => {
-                                                                setSelectedOfficer(officer);
-                                                                setIsOfficerReadOnly(false);
-                                                                setShowOfficerModal(true);
-                                                            }}
-                                                        >
-                                                            Edit
-                                                        </button>
-                                                        <button
-                                                            className="btn btn-sm btn-secondary"
-                                                            onClick={() => {
-                                                                setSelectedOfficerForAssign(officer);
-                                                                setAssignTargetUnit(officer.unit || "");
-                                                                setShowAssignModal(true);
-                                                            }}
-                                                        >
-                                                            Assign Unit
-                                                        </button>
-                                                        <button
-                                                            className="btn btn-sm btn-danger"
-                                                            onClick={() => handleDeleteOfficer(officer._id)}
-                                                        >
-                                                            Delete
-                                                        </button>
-                                                    </div>
-                                                </td>
-                                            </tr>
-                                        ))
-                                    )}
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                )}
-
-                {showMembersList ? (
-                    <div className="card mb-6">
-                        <div className="flex-between mb-4">
-                            <h3>College Students List</h3>
-                            <div className="d-flex gap-2">
-                                <button className="btn btn-success btn-sm" onClick={() => handleExportExcel(filteredAllMembers, `${insCode}_members`)}>Export to Excel</button>
-                                <button className="btn btn-secondary btn-sm" onClick={() => setShowMembersList(false)}>Close List</button>
+                                ))}
                             </div>
-                        </div>
-
-                        <div className="grid-cols-4 gap-3 mb-4">
-                            <div className="form-group">
-                                <label className="text-xs">Search (Name/RegNo)</label>
-                                <input
-                                    className="form-input"
-                                    placeholder="Search..."
-                                    value={memberSearch}
-                                    onChange={(e) => setMemberSearch(e.target.value)}
-                                />
-                            </div>
-                            <div className="form-group">
-                                <label className="text-xs">Filter by Unit</label>
-                                <select className="form-input" value={filterUnit} onChange={(e) => setFilterUnit(e.target.value)}>
-                                    <option value="">All Units</option>
-                                    {units.map(u => (
-                                        <option key={u.unitNumber} value={u.unitNumber}>{u.unitNumber}</option>
-                                    ))}
-                                </select>
-                            </div>
-                            <div className="form-group">
-                                <label className="text-xs">Filter by Batch (Year)</label>
-                                <input
-                                    className="form-input"
-                                    placeholder="e.g. 2022"
-                                    value={filterBatch}
-                                    onChange={(e) => setFilterBatch(e.target.value)}
-                                />
-                            </div>
-                            <div className="form-group">
-                                <label className="text-xs">Filter by Community</label>
-                                <select
-                                    className="form-input"
-                                    value={memberCommunityFilter}
-                                    onChange={(e) => setMemberCommunityFilter(e.target.value)}
-                                >
-                                    <option value="">All Communities</option>
-                                    <option value="General">General</option>
-                                    <option value="OBC">OBC</option>
-                                    <option value="MBC">MBC</option>
-                                    <option value="BC">BC</option>
-                                    <option value="SC">SC</option>
-                                    <option value="ST">ST</option>
-                                </select>
-                            </div>
-                        </div>
-
-                        <div style={{ overflowX: 'auto' }}>
-                            <table className="styled-table" style={{ margin: 0, boxShadow: 'none' }}>
-                                <thead>
-                                    <tr>
-                                        <th>S.No</th>
-                                        <th>Name</th>
-                                        <th>Reg No</th>
-                                        <th>Unit</th>
-                                        <th>Dept</th>
-                                        <th>Community</th>
-                                        <th>Batch</th>
-                                        <th>Contact</th>
-                                        <th>Action</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {paginatedAllMembers.map((m, index) => {
-                                        const globalIndex = (currentMemberPage - 1) * membersPerPage + index;
-                                        return (
-                                            <tr key={m._id}  >
-                                                <td>{globalIndex + 1}</td>
-                                                <td>{m.name}</td>
-                                                <td><span className="badge badge-secondary">{m.regNo}</span></td>
-                                                <td>{m.unitId?.unitNumber || "N/A"}</td>
-                                                <td>{m.dept}</td>
-                                                <td><span className="badge badge-secondary">{m.community || "N/A"}</span></td>
-                                                <td>{m.batchFrom} - {m.batchTo}</td>
-                                                <td>{m.contact}</td>
-                                                <td>
-                                                    <button
-                                                        className={`btn btn-sm ${m.isEnrolled ? 'btn-success' : 'btn-outline-primary'}`}
-                                                        onClick={() => {
-                                                            setSelectedMember(m);
-                                                            setShowEnrolmentModal(true);
-                                                        }}
-                                                    >
-                                                        {m.isEnrolled ? "✓ View Enrolment" : "📝 Enrolment"}
-                                                    </button>
-                                                </td>
-                                            </tr>
-                                        );
-                                    })}
-                                </tbody>
-                            </table>
-                            {filteredAllMembers.length === 0 && (
-                                <p className="text-center p-4">No members found.</p>
-                            )}
-                        </div>
-
-                        {filteredAllMembers.length > membersPerPage && (
-                            <div className="pagination-container flex-between mt-4">
-                                <div className="text-sm text-muted">
-                                    Showing <span className="fw-bold">{(currentMemberPage - 1) * membersPerPage + 1}</span> to <span className="fw-bold">{Math.min(currentMemberPage * membersPerPage, filteredAllMembers.length)}</span> of <span className="fw-bold">{filteredAllMembers.length}</span> students
-                                </div>
-                                <div className="flex-center gap-2">
-                                    <button
-                                        className="btn btn-secondary btn-sm"
-                                        onClick={() => setCurrentMemberPage(prev => Math.max(prev - 1, 1))}
-                                        disabled={currentMemberPage === 1}
-                                    >
-                                        Previous
-                                    </button>
-                                    <div className="flex-center gap-1">
-                                        {[...Array(Math.min(5, totalMemberPages))].map((_, i) => {
-                                            let pageNum;
-                                            if (totalMemberPages <= 5) {
-                                                pageNum = i + 1;
-                                            } else if (currentMemberPage <= 3) {
-                                                pageNum = i + 1;
-                                            } else if (currentMemberPage >= totalMemberPages - 2) {
-                                                pageNum = totalMemberPages - 4 + i;
-                                            } else {
-                                                pageNum = currentMemberPage - 2 + i;
-                                            }
-
-                                            return (
-                                                <button
-                                                    key={pageNum}
-                                                    className={`btn btn-sm ${currentMemberPage === pageNum ? 'btn-primary' : 'btn-secondary'}`}
-                                                    style={{ minWidth: '36px' }}
-                                                    onClick={() => setCurrentMemberPage(pageNum)}
-                                                >
-                                                    {pageNum}
-                                                </button>
-                                            );
-                                        })}
-                                    </div>
-                                    <button
-                                        className="btn btn-secondary btn-sm"
-                                        onClick={() => setCurrentMemberPage(prev => Math.min(prev + 1, totalMemberPages))}
-                                        disabled={currentMemberPage === totalMemberPages}
-                                    >
-                                        Next
-                                    </button>
-                                </div>
+                        ) : (
+                            <div className="text-center p-6" style={{ background: 'var(--bg-tertiary)', borderRadius: '8px' }}>
+                                <p className="text-muted mb-0">No villages adopted yet. Click the button above to add one.</p>
                             </div>
                         )}
                     </div>
-                ) : null}
-
-                <div className="units-list grid-cols-3">
-                    {units.length === 0 ? (
-                        <div className="col-span-3 text-center p-6 card">
-                            <p>No units created yet. Click the button above to create your first unit.</p>
-                        </div>
-                    ) : (
-                        units.map((unit, idx) => (
-                            <div
-                                key={unit.id || idx}
-                                className="unit-card"
-                                onClick={() => {
-                                    localStorage.setItem("nssunitCode", unit.unitNumber);
-                                    localStorage.setItem("unitToken", localStorage.getItem("nsstoken"));
-                                    localStorage.setItem("nsscollegeCode", insCode);
-                                    navigate('/unit-dashboard')
-                                }}
-                                style={{ width: '100%', margin: 0 }}
-                            >
-                                <div className="flex-between mb-3">
-                                    <h4 className="mb-0">{unit.name || unit.unitName}</h4>
-                                    <span className="badge badge-success">{unit.unitNumber}</span>
-                                </div>
-                                <div className="mb-4">
-                                    <p className="mb-1 text-sm"><strong className="text-white">Head:</strong> {unit.head?.name || unit.head || "Not Assigned"}</p>
-                                    <p className="mb-1 text-sm"><strong className="text-white">Created:</strong> {unit.createdDate}</p>
-                                    <p className="mb-1 text-sm"><strong className="text-white">Members:</strong> {unit.members ? unit.members.length : 0}</p>
-                                </div>
-
-                                <button
-                                    className="btn btn-danger btn-sm w-100"
-                                    onClick={(e) => handleDeleteUnit(unit.unitNumber, e)}
-                                    style={{ width: '100%' }}
-                                >
-                                    Delete Unit
-                                </button>
-                            </div>
-                        ))
-                    )}
-                </div>
+                )}
             </main>
 
+            {/* Modals & Overlays */}
             {showUnitModal && (
                 <div className="modal-overlay">
                     <div className="modal-content">
@@ -974,8 +1139,9 @@ const CollegeDashboard = () => {
                             </select>
                         </div>
 
-                        <div className="alert alert-warning mb-4" style={{ fontSize: '0.85rem' }}>
-                            ⚠️ Caution: Assigning a new head will automatically unassign the current head of that unit.
+                        <div className="alert alert-warning mb-4" style={{ fontSize: '0.85rem', display: 'flex', alignItems: 'center' }}>
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ marginRight: '8px', flexShrink: 0 }}><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                            <span>Caution: Assigning a new head will automatically unassign the current head of that unit.</span>
                         </div>
 
                         <div className="flex-between pt-4" style={{ borderTop: '1px solid var(--border-color)' }}>

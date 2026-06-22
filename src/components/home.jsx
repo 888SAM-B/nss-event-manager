@@ -1,13 +1,16 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import ThemeToggle from "./ThemeToggle";
 import { useTheme } from "../context/ThemeContext";
 import "aos/dist/aos.css";
 import AOS from "aos";
+import axios from "axios";
 
 const Home = () => {
     const navigate = useNavigate();
     const { theme } = useTheme();
+    const [galleryImages, setGalleryImages] = useState([]);
+    const [selectedImage, setSelectedImage] = useState(null);
 
     useEffect(() => {
         AOS.init({
@@ -15,41 +18,53 @@ const Home = () => {
             once: true,
             easing: "ease-in-out",
         });
+
+        const fetchGallery = async () => {
+            try {
+                const res = await axios.get(`${import.meta.env.VITE_API_URL}/gallery`);
+                if (res.data.success) {
+                    setGalleryImages(res.data.images);
+                }
+            } catch (error) {
+                console.error("Error fetching gallery:", error);
+            }
+        };
+        fetchGallery();
     }, []);
 
     const features = [
         {
-            icon: "📅",
+            icon: <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>,
             title: "Event Tracking",
             desc: "Create, monitor, and report events with photos, attendance records, and real-time analytics.",
             color: "brand",
         },
         {
-            icon: "👥",
+            icon: <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>,
             title: "Volunteer Management",
             desc: "Maintain comprehensive profiles for all NSS volunteers across units with enrollment forms.",
             color: "teal",
         },
         {
-            icon: "📊",
+            icon: <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>,
             title: "Instant Reports",
             desc: "Generate detailed PDF reports for events and export unit performance data in Excel.",
             color: "warning",
         },
         {
-            icon: "🏫",
+            icon: <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c0 2 2 3 6 3s6-1 6-3v-5"/></svg>,
             title: "Unit Management",
             desc: "Structured management of NSS units under each institution with program officer assignment.",
             color: "success",
         },
         {
-            icon: "🌿",
+            icon: <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>,
             title: "Village Adoption",
             desc: "Track and manage village adoption initiatives for community development activities.",
             color: "accent",
         },
         {
-            icon: "🔒",
+            icon: <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>,
             title: "Secure Access",
             desc: "Role-based authentication for Admin, College, and Unit-level access with JWT security.",
             color: "info",
@@ -57,12 +72,12 @@ const Home = () => {
     ];
 
     const colorMap = {
-        brand: { bg: '#dbeafe', clr: '#1d4ed8' },
-        teal: { bg: '#dcfce7', clr: '#16a34a' },
-        warning: { bg: '#fef3c7', clr: '#cd6f27ff' },
-        success: { bg: '#f0fdf4', clr: '#15803d' },
-        accent: { bg: '#ede9fe', clr: '#6d28d9' },
-        info: { bg: '#f0f9ff', clr: '#0369a1' },
+        brand: { bg: 'rgba(29, 78, 216, 0.1)', clr: '#1d4ed8' },
+        teal: { bg: 'rgba(22, 163, 74, 0.1)', clr: '#16a34a' },
+        warning: { bg: 'rgba(205, 111, 39, 0.1)', clr: '#cd6f27ff' },
+        success: { bg: 'rgba(21, 128, 61, 0.1)', clr: '#15803d' },
+        accent: { bg: 'rgba(109, 40, 217, 0.1)', clr: '#6d28d9' },
+        info: { bg: 'rgba(3, 105, 161, 0.1)', clr: '#0369a1' },
     };
 
     return (
@@ -331,6 +346,180 @@ const Home = () => {
                 </div>
 
 
+                {/* ── Event Gallery Section ── */}
+                {galleryImages.length > 0 && (
+                    <div className="gallery-section" style={{ padding: "80px 0 40px", background: "var(--bg)" }}>
+                        <div className="container">
+                            <div style={{ textAlign: "center", marginBottom: "3.5rem" }}>
+                                <span style={{ fontSize: "0.72rem", fontWeight: 700, letterSpacing: "0.12em", color: "var(--brand-400)", textTransform: "uppercase" }}>Gallery</span>
+                                <h2 style={{ fontSize: "clamp(1.8rem, 4vw, 2.5rem)", marginTop: "0.75rem", marginBottom: "1rem", fontWeight: 800 }}>
+                                    Event Gallery
+                                </h2>
+                                <p style={{ color: "var(--txt-2)", maxWidth: 600, margin: "0 auto", fontSize: "1.1rem" }}>
+                                    Highlights and memorable moments from our NSS camps and community activities.
+                                </p>
+                            </div>
+
+                            <div style={{
+                                display: "grid",
+                                gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))",
+                                gap: "2rem",
+                                padding: "0 10px"
+                            }}>
+                                {galleryImages.map((img, idx) => (
+                                    <div 
+                                        key={img._id} 
+                                        data-aos="fade-up"
+                                        data-aos-delay={idx * 50}
+                                        style={{
+                                            background: "var(--card)",
+                                            borderRadius: "16px",
+                                            overflow: "hidden",
+                                            boxShadow: "var(--sh)",
+                                            transition: "all 0.3s ease",
+                                            cursor: "pointer",
+                                            border: "1px solid var(--border)",
+                                            display: "flex",
+                                            flexDirection: "column"
+                                        }}
+                                        onClick={() => setSelectedImage(img)}
+                                        onMouseEnter={e => {
+                                            e.currentTarget.style.transform = "translateY(-6px)";
+                                            e.currentTarget.style.boxShadow = "var(--sh-md)";
+                                        }}
+                                        onMouseLeave={e => {
+                                            e.currentTarget.style.transform = "translateY(0)";
+                                            e.currentTarget.style.boxShadow = "var(--sh)";
+                                        }}
+                                    >
+                                        <div style={{
+                                            width: "100%",
+                                            height: "220px",
+                                            overflow: "hidden",
+                                            position: "relative",
+                                            background: "#f1f5f9"
+                                        }}>
+                                            <img 
+                                                src={img.image} 
+                                                alt={img.description} 
+                                                style={{
+                                                    width: "100%",
+                                                    height: "100%",
+                                                    objectFit: "cover",
+                                                    transition: "transform 0.5s ease"
+                                                }}
+                                                onMouseEnter={e => e.currentTarget.style.transform = "scale(1.08)"}
+                                                onMouseLeave={e => e.currentTarget.style.transform = "scale(1)"}
+                                            />
+                                        </div>
+                                        <div style={{ padding: "1.25rem", flexGrow: 1, display: "flex", alignItems: "center" }}>
+                                            <p style={{ 
+                                                margin: 0, 
+                                                fontSize: "0.95rem", 
+                                                fontWeight: "500", 
+                                                color: "var(--txt-1)",
+                                                lineHeight: "1.5",
+                                                display: "-webkit-box",
+                                                WebkitLineClamp: 3,
+                                                WebkitBoxOrient: "vertical",
+                                                overflow: "hidden"
+                                            }}>
+                                                {img.description}
+                                            </p>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {/* ── Lightbox Modal ── */}
+                {selectedImage && (
+                    <div 
+                        style={{
+                            position: "fixed",
+                            inset: 0,
+                            background: "rgba(15, 23, 42, 0.9)",
+                            display: "flex",
+                            flexDirection: "column",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            zIndex: 1000,
+                            backdropFilter: "blur(8px)",
+                            padding: "2rem",
+                            animation: "modalFadeIn 0.25s ease"
+                        }}
+                        onClick={() => setSelectedImage(null)}
+                    >
+                        <button 
+                            style={{
+                                position: "absolute",
+                                top: "1.5rem",
+                                right: "1.5rem",
+                                background: "rgba(255, 255, 255, 0.1)",
+                                border: "none",
+                                color: "#fff",
+                                fontSize: "2rem",
+                                width: "48px",
+                                height: "48px",
+                                borderRadius: "50%",
+                                cursor: "pointer",
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "center",
+                                transition: "all 0.2s"
+                            }}
+                            onClick={() => setSelectedImage(null)}
+                            onMouseEnter={e => e.currentTarget.style.background = "rgba(255, 255, 255, 0.2)"}
+                            onMouseLeave={e => e.currentTarget.style.background = "rgba(255, 255, 255, 0.1)"}
+                        >
+                            &times;
+                        </button>
+                        
+                        <div 
+                            style={{
+                                maxWidth: "90%",
+                                maxHeight: "75vh",
+                                overflow: "hidden",
+                                borderRadius: "12px",
+                                boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.5)",
+                                marginBottom: "1.5rem"
+                            }}
+                            onClick={e => e.stopPropagation()}
+                        >
+                            <img 
+                                src={selectedImage.image} 
+                                alt={selectedImage.description} 
+                                style={{
+                                    maxWidth: "100%",
+                                    maxHeight: "75vh",
+                                    display: "block",
+                                    objectFit: "contain"
+                                }}
+                            />
+                        </div>
+                        
+                        <div 
+                            style={{
+                                color: "#fff",
+                                maxWidth: "700px",
+                                textAlign: "center",
+                                padding: "1rem 2rem",
+                                background: "rgba(255, 255, 255, 0.05)",
+                                borderRadius: "12px",
+                                border: "1px solid rgba(255, 255, 255, 0.1)"
+                            }}
+                            onClick={e => e.stopPropagation()}
+                        >
+                            <p style={{ margin: 0, fontSize: "1.1rem", lineHeight: "1.6" }}>
+                                {selectedImage.description}
+                            </p>
+                        </div>
+                    </div>
+                )}
+
+
                 {/*=== Form download ===*/}
 
                 <div className="form-section">
@@ -361,9 +550,10 @@ const Home = () => {
                                     <div className="form-name">{form.name}</div>
                                     <button
                                         onClick={() => window.open(`/forms/${form.file}`, "_blank")}
+                                        style={{ display: 'inline-flex', alignItems: 'center', gap: '0.375rem' }}
                                     >
                                         <span>Download Form</span>
-                                        <span style={{ fontSize: '1.1rem' }}>📥</span>
+                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
                                     </button>
                                 </div>
                             ))}
@@ -441,12 +631,7 @@ const Home = () => {
                             display: "flex", alignItems: "center",
                             justifyContent: "space-around"
                         }}>
-                            {/* <div style={{
-                                width: 28, height: 28,
-                                background: "linear-gradient(135deg, #6366f1, #2dd4bf)",
-                                borderRadius: "8px",
-                                display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.85rem",
-                            }}>🎓</div> */}
+
 
                             <span style={{ fontWeight: 700, color: "var(--txt-2)", fontSize: "0.75rem" }}>Designed & Developed by Department of Computer Science,  Periyar University</span>
                             <span style={{ margin: 0, color: "var(--txt-3)", fontSize: "0.8rem" }}>  © {new Date().getFullYear()} National Service Scheme, Periyar University, Salem, Tamil Nadu</span>

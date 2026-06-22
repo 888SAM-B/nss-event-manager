@@ -53,7 +53,10 @@ const ExploreEvents = () => {
 
     const fetchEvents = async () => {
       try {
-        const res = await axios.get(`${import.meta.env.VITE_API_URL}/getEvents/${collegeCode}/${unitCode}`);
+        const token = localStorage.getItem("unitToken") || localStorage.getItem("nsstoken") || localStorage.getItem("adminToken");
+        const res = await axios.get(`${import.meta.env.VITE_API_URL}/getEvents/${collegeCode}/${unitCode}`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
         if (res.data.success) {
           setUnitEvents(res.data.unitEvents || []);
           setCollegeEvents(res.data.collegeEvents || []);

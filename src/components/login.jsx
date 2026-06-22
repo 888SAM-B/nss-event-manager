@@ -57,13 +57,15 @@ const Login = () => {
                     <div style={{ textAlign: 'center', marginBottom: '1.75rem' }}>
                         <div style={{
                             width: 56, height: 56,
-                            background: '#dbeafe',
-                            border: '1px solid #bfdbfe',
-                            borderRadius: '16px',
+                            background: 'rgba(37, 99, 235, 0.1)',
+                            border: '1px solid rgba(37, 99, 235, 0.2)',
+                            borderRadius: '10px',
                             display: 'flex', alignItems: 'center', justifyContent: 'center',
                             margin: '0 auto 1rem',
-                            fontSize: '1.5rem',
-                        }}>🏛️</div>
+                            color: '#2563eb',
+                        }}>
+                            <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18"/><path d="M9 21V9"/></svg>
+                        </div>
                         <span className="badge badge-primary" style={{ marginBottom: '0.75rem', letterSpacing: '0.08em' }}>
                             ORGANIZATION
                         </span>
