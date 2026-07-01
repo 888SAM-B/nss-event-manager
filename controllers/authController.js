@@ -7,11 +7,12 @@ const { comparePassword } = require('../utils/auth');
 
 // College/User Login
 const loginCollege = async (req, res) => {
-    const { username, password } = req.body;
+    const { collegeCode, email, password } = req.body;
     try {
-        const user = await User.findOne({ userName: username });
+        // Find college by code
+        const user = await User.findOne({ code: collegeCode });
         if (!user) {
-            return res.status(401).json({ success: false, message: "Invalid username or password" });
+            return res.status(401).json({ success: false, message: "Invalid Credentials" });
         }
 
         // Must be fully registered
@@ -19,18 +20,34 @@ const loginCollege = async (req, res) => {
             return res.status(403).json({ success: false, message: "College registration is not completed. Please complete registration first." });
         }
 
+        // Validate email against userName, collegeDetails.email, or principalDetails.email
+        const normalizedEmail = email.toLowerCase().trim();
+        const userNameMatch = user.userName && user.userName.toLowerCase().trim() === normalizedEmail;
+        const collegeEmailMatch = user.collegeDetails && user.collegeDetails.email && user.collegeDetails.email.toLowerCase().trim() === normalizedEmail;
+        const principalEmailMatch = user.principalDetails && user.principalDetails.email && user.principalDetails.email.toLowerCase().trim() === normalizedEmail;
+
+        if (!userNameMatch && !collegeEmailMatch && !principalEmailMatch) {
+            return res.status(401).json({ success: false, message: "Invalid Credentials" });
+        }
+
         const isMatch = await comparePassword(password, user.password, user);
         if (!isMatch) {
-            return res.status(401).json({ success: false, message: "Invalid username or password" });
+            return res.status(401).json({ success: false, message: "Invalid Credentials" });
         }
 
         const token = jwt.sign(
-            { userName: username, userId: user._id, role: 'college' },
+            { userName: user.userName, userId: user._id, role: 'college' },
             process.env.JWT_SECRET,
             { expiresIn: "1d" }
         );
 
-        res.json({ success: true, token });
+        res.json({
+            success: true,
+            token,
+            collegeName: user.insName,
+            collegeCode: user.code,
+            userName: user.userName
+        });
     } catch (err) {
         console.error(err);
         res.status(500).json({ success: false, message: "Server error" });

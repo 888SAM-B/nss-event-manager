@@ -2,14 +2,19 @@ const bcrypt = require('bcryptjs');
 const User = require('../models/User');
 const Unit = require('../models/Unit');
 const Member = require('../models/Member');
+const ProgramOfficer = require('../models/ProgramOfficer');
 const { verifyOwnership } = require('../middlewares/auth');
 
 // Create a new NSS Unit (V2: uses College Code + Passkey verification & auto unit number generation)
 const addUnit = async (req, res) => {
-    const { collegeCode, collegePasskey, name, password, createdDate } = req.body;
+    const { collegeCode, collegePasskey, name, password, createdDate, officerData } = req.body;
 
     if (!collegeCode || !collegePasskey || !name || !password) {
         return res.status(400).json({ success: false, message: "Missing required fields" });
+    }
+
+    if (!officerData || !officerData.name || !officerData.designation || !officerData.department || !officerData.email || !officerData.mobile) {
+        return res.status(400).json({ success: false, message: "Missing required Program Officer details (Name, Designation, Department, Email, Mobile are mandatory)" });
     }
 
     try {
@@ -48,14 +53,32 @@ const addUnit = async (req, res) => {
 
         await newUnit.save();
 
+        // Create the Program Officer
+        const officerCount = await ProgramOfficer.countDocuments({ collegeId: college._id });
+        const officerID = `NSSPO${college.code}${String(officerCount + 1).padStart(2, '0')}`;
+
+        const newOfficer = new ProgramOfficer({
+            ...officerData,
+            unit: unitNumber, // Set unit to the new unit number
+            college: college.insName, // Set college name
+            collegeId: college._id,
+            officerID
+        });
+
+        await newOfficer.save();
+
+        // Link Program Officer as the unit head
+        newUnit.head = newOfficer._id;
+        await newUnit.save();
+
         college.units.push(newUnit._id);
         await college.save();
 
-        const populatedUnit = await Unit.findById(newUnit._id).populate('members');
+        const populatedUnit = await Unit.findById(newUnit._id).populate('members').populate('head');
 
         res.json({
             success: true,
-            message: "Unit created successfully",
+            message: "Unit and Program Officer created successfully",
             unit: populatedUnit
         });
     } catch (error) {
@@ -68,8 +91,8 @@ const addUnit = async (req, res) => {
 const deleteUnit = async (req, res) => {
     const { username, unitNumber } = req.body;
 
-    if (req.user.userName !== username && req.user.role !== 'admin') {
-        return res.status(403).json({ success: false, message: "Unauthorized" });
+    if (req.user.role !== 'admin') {
+        return res.status(403).json({ success: false, message: "Unauthorized: Only administrators can delete units." });
     }
 
     try {
@@ -86,6 +109,9 @@ const deleteUnit = async (req, res) => {
         // Clean up members of this unit
         await Member.deleteMany({ unitId: unit._id });
 
+        // Unassign program officer from this unit
+        await ProgramOfficer.updateMany({ unit: unitNumber, collegeId: user._id }, { unit: "" });
+
         // Delete unit
         await Unit.findByIdAndDelete(unit._id);
 
@@ -101,6 +127,7 @@ const deleteUnit = async (req, res) => {
         res.status(500).json({ success: false, message: "Internal Server Error" });
     }
 };
+
 
 // Get Units for a college (useful for dropdowns)
 const getUnits = async (req, res) => {

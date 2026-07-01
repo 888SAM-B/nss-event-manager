@@ -349,6 +349,70 @@ const deleteAdoptedVillage = async (req, res) => {
     }
 };
 
+const bulkAddOrganizations = async (req, res) => {
+    if (req.user.role !== 'admin') {
+        return res.status(403).json({ success: false, message: "Forbidden: Admin access required" });
+    }
+
+    const { colleges } = req.body;
+    if (!colleges || !Array.isArray(colleges) || colleges.length === 0) {
+        return res.status(400).json({ success: false, message: "Missing or invalid colleges data" });
+    }
+
+    try {
+        let successCount = 0;
+        let duplicateCount = 0;
+        const savedColleges = [];
+        const duplicates = [];
+
+        for (const col of colleges) {
+            const { insName, code, collegeType } = col;
+            if (!insName || !code || !collegeType) {
+                continue; // Skip invalid rows
+            }
+
+            const existing = await User.findOne({ code });
+            if (existing) {
+                duplicateCount++;
+                duplicates.push(code);
+                continue;
+            }
+
+            // Normalise collegeType to match the schema ENUM: 'Funded', 'Self-Financed', or 'Self-Financing'
+            let normalizedType = 'Self-Financing';
+            if (collegeType.toLowerCase().includes('funded')) {
+                normalizedType = 'Funded';
+            } else if (collegeType.toLowerCase().includes('financed')) {
+                normalizedType = 'Self-Financing';
+            }
+
+            const newCollege = new User({
+                insName,
+                code,
+                collegeType: normalizedType,
+                isRegistered: false,
+                userName: `temp_${code}@nss.org`,
+                password: `temp_${code}`
+            });
+
+            await newCollege.save();
+            savedColleges.push(newCollege);
+            successCount++;
+        }
+
+        res.json({
+            success: true,
+            message: `Bulk registration completed. Succeeded: ${successCount}, Duplicates skipped: ${duplicateCount}`,
+            successCount,
+            duplicateCount,
+            duplicates
+        });
+    } catch (error) {
+        console.error("Error bulk adding organizations:", error);
+        res.status(500).json({ success: false, message: "Internal Server Error" });
+    }
+};
+
 module.exports = {
     addOrganization,
     validateCollegeCode,
@@ -356,5 +420,7 @@ module.exports = {
     regeneratePasskey,
     getCollegeDashboard,
     addAdoptedVillage,
-    deleteAdoptedVillage
+    deleteAdoptedVillage,
+    bulkAddOrganizations
 };
+
