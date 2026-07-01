@@ -28,7 +28,10 @@ const ProgramOfficerModal = ({ isOpen, onClose, insName, insCode, units, initial
         image: null,
         seminars: [""],
         nssExperience: [""],
-        specialTalent: [""]
+        specialTalent: [""],
+        achievements: "",
+        etlTraining: false,
+        etlCertificate: ""
     });
 
     useEffect(() => {
@@ -38,7 +41,10 @@ const ProgramOfficerModal = ({ isOpen, onClose, insName, insCode, units, initial
                 college: initialData.college || insName || "",
                 seminars: initialData.seminars?.length ? initialData.seminars : [""],
                 nssExperience: initialData.nssExperience?.length ? initialData.nssExperience : [""],
-                specialTalent: initialData.specialTalent?.length ? initialData.specialTalent : [""]
+                specialTalent: initialData.specialTalent?.length ? initialData.specialTalent : ["",],
+                achievements: initialData.achievements || "",
+                etlTraining: initialData.etlTraining || false,
+                etlCertificate: initialData.etlCertificate || ""
             });
         } else {
             setFormData({
@@ -63,7 +69,10 @@ const ProgramOfficerModal = ({ isOpen, onClose, insName, insCode, units, initial
                 image: null,
                 seminars: [""],
                 nssExperience: [""],
-                specialTalent: [""]
+                specialTalent: [""],
+                achievements: "",
+                etlTraining: false,
+                etlCertificate: ""
             });
         }
     }, [initialData, insName, isOpen]);
@@ -101,6 +110,21 @@ const ProgramOfficerModal = ({ isOpen, onClose, insName, insCode, units, initial
             };
             reader.readAsDataURL(file);
         }
+    };
+
+    const handleEtlCertificateChange = (e) => {
+        const file = e.target.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onloadend = () => {
+                setFormData({ ...formData, etlCertificate: reader.result });
+            };
+            reader.readAsDataURL(file);
+        }
+    };
+
+    const handleEtlTrainingChange = (val) => {
+        setFormData({ ...formData, etlTraining: val, etlCertificate: val ? formData.etlCertificate : "" });
     };
 
     const generatePDF = async () => {
@@ -319,6 +343,36 @@ const ProgramOfficerModal = ({ isOpen, onClose, insName, insCode, units, initial
                                 </label>
                             </div>
                         </div>
+
+                        <div className="form-group" style={{ marginTop: '1rem' }}>
+                            <label>ETL Training Completed?</label>
+                            <div className="d-flex gap-4">
+                                <label className="form-check-label d-flex align-items-center gap-2">
+                                    <input type="radio" name="etlTraining" value="Yes" checked={formData.etlTraining === true} onChange={() => handleEtlTrainingChange(true)} disabled={readOnly} /> Yes
+                                </label>
+                                <label className="form-check-label d-flex align-items-center gap-2">
+                                    <input type="radio" name="etlTraining" value="No" checked={formData.etlTraining === false} onChange={() => handleEtlTrainingChange(false)} disabled={readOnly} /> No
+                                </label>
+                            </div>
+                            
+                            {formData.etlTraining && (
+                                <div style={{ marginTop: '0.75rem' }}>
+                                    {!readOnly && (
+                                        <div className="form-group">
+                                            <label style={{ fontSize: '0.8rem', color: 'var(--txt-2)' }}>ETL Training Certificate (PDF/Image)</label>
+                                            <input type="file" className="form-input" accept="image/*,application/pdf" onChange={handleEtlCertificateChange} />
+                                        </div>
+                                    )}
+                                    {formData.etlCertificate && (
+                                        <div style={{ marginTop: '0.5rem' }}>
+                                            <a href={formData.etlCertificate} target="_blank" rel="noopener noreferrer" className="btn btn-sm btn-secondary" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem', textDecoration: 'none' }}>
+                                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg> View Certificate
+                                            </a>
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+                        </div>
                     </div>
 
                     {/* General */}
@@ -353,6 +407,10 @@ const ProgramOfficerModal = ({ isOpen, onClose, insName, insCode, units, initial
                                     )}
                                 </div>
                             ))}
+                        </div>
+                        <div className="form-group">
+                            <label>Achievements</label>
+                            <textarea className="form-input" name="achievements" value={formData.achievements} onChange={handleInputChange} placeholder="Enter any achievements/awards" disabled={readOnly} rows="3"></textarea>
                         </div>
                     </div>
 

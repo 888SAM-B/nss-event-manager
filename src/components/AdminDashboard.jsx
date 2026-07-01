@@ -9,8 +9,24 @@ import ThemeToggle from './ThemeToggle';
 import AdminAllEvents from './AdminAllEvents';
 import AdminAllOfficers from './AdminAllOfficers';
 import AdminAllStudents from './AdminAllStudents';
+import AdminAllNodalOfficers from './AdminAllNodalOfficers';
 
 ChartJS.register(ArcElement, Tooltip, Legend, CategoryScale, LinearScale, BarElement, Title);
+
+const getDecodedToken = () => {
+    const token = localStorage.getItem("adminToken");
+    if (!token) return null;
+    try {
+        const base64Url = token.split('.')[1];
+        const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+        const jsonPayload = decodeURIComponent(window.atob(base64).split('').map(function(c) {
+            return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+        }).join(''));
+        return JSON.parse(jsonPayload);
+    } catch (e) {
+        return null;
+    }
+};
 
 // Mini Calendar Component
 const EventsCalendar = ({ events }) => {
@@ -302,6 +318,11 @@ const getCategoryColor = (category) => {
 
 const AdminDashboard = () => {
     const navigate = useNavigate();
+    const decoded = getDecodedToken();
+    const userRole = decoded?.role || 'admin';
+    const userDistrict = decoded?.district || '';
+    const userName = decoded?.name || 'System Administrator';
+
     const [stats, setStats] = useState(null);
     const [loading, setLoading] = useState(true);
     const [collegeToDelete, setCollegeToDelete] = useState(null);
@@ -450,6 +471,7 @@ const AdminDashboard = () => {
                 }
             } catch (err) {
                 console.error(err);
+                const role = getDecodedToken()?.role || 'admin';
                 // Clear all dashboard-related tokens
                 localStorage.removeItem("adminToken");
                 localStorage.removeItem("nsstoken");
@@ -459,7 +481,11 @@ const AdminDashboard = () => {
                 localStorage.removeItem("nsscollegeCode");
 
                 toast.error("Session expired or error fetching details. Please login again.");
-                navigate("/admin-login");
+                if (role === 'nodal') {
+                    navigate("/nodal-login");
+                } else {
+                    navigate("/admin-login");
+                }
             } finally {
                 setLoading(false);
             }
@@ -588,6 +614,25 @@ const AdminDashboard = () => {
             setIsDeleting(false);
         }
     };
+
+    const handleRegeneratePasskey = async (college) => {
+        if (!window.confirm(`Are you sure you want to regenerate the secure passkey for ${college.insName}? The old passkey will be immediately invalidated, and the new one will be emailed.`)) {
+            return;
+        }
+        try {
+            const token = localStorage.getItem("adminToken");
+            const res = await axios.post(`${import.meta.env.VITE_API_URL}/admin/regenerate-passkey`, { code: college.code }, {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+            if (res.data.success) {
+                toast.success(`Passkey regenerated successfully: ${res.data.passkey}`);
+            }
+        } catch (err) {
+            console.error(err);
+            toast.error(err.response?.data?.message || "Failed to regenerate passkey");
+        }
+    };
+
     const upcomingCount = stats.allEvents?.filter(e => {
         const d = new Date(e.singleDay ? e.date : e.dateFrom);
         return d >= new Date();
@@ -604,7 +649,7 @@ const AdminDashboard = () => {
                     <div className="sidebar-brand-logo">
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2" /><path d="M12 2L2 7l10 5 10-5-10-5z" /></svg>
                     </div>
-                    <span className="sidebar-brand-name">NSS Admin</span>
+                    <span className="sidebar-brand-name">{userRole === 'admin' ? 'NSS Admin' : `${userDistrict} Nodal`}</span>
                 </div>
                 <div className="d-flex align-items-center gap-2">
                     <ThemeToggle />
@@ -626,7 +671,7 @@ const AdminDashboard = () => {
                     </div>
                     <div style={{ overflow: 'hidden' }}>
                         <span className="sidebar-brand-name" style={{ display: 'block' }}>NSS PORTAL</span>
-                        <span style={{ fontSize: '0.65rem', color: 'var(--txt-3)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Administrator</span>
+                        <span style={{ fontSize: '0.65rem', color: 'var(--txt-3)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{userRole === 'admin' ? 'Administrator' : `${userDistrict} Nodal`}</span>
                     </div>
                 </div>
 
@@ -655,6 +700,12 @@ const AdminDashboard = () => {
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2" /><circle cx="8.5" cy="8.5" r="1.5" /><polyline points="21 15 16 10 5 21" /></svg>
                         Event Gallery
                     </button>
+                    {userRole === 'admin' && (
+                        <button className={`sidebar-item ${activeTab === 'nodal' ? 'active' : ''}`} onClick={() => { setActiveTab('nodal'); setIsSidebarOpen(false); }}>
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M23 21v-2a4 4 0 0 0-3-3.87" /><path d="M16 3.13a4 4 0 0 1 0 7.75" /></svg>
+                            Nodal Officers
+                        </button>
+                    )}
                 </div>
 
                 <div className="sidebar-footer">
@@ -677,9 +728,11 @@ const AdminDashboard = () => {
                         <div className="flex-between mb-6" style={{ flexWrap: 'wrap', gap: '1rem' }}>
                             <div>
                                 <h1 style={{ fontSize: '1.75rem', fontWeight: 800, margin: 0, color: 'var(--txt-1)' }}>Dashboard Overview</h1>
-                                <p style={{ margin: 0, color: 'var(--txt-3)', fontSize: '0.9rem' }}>Welcome back, System Administrator</p>
+                                <p style={{ margin: 0, color: 'var(--txt-3)', fontSize: '0.9rem' }}>Welcome back, {userRole === 'admin' ? 'System Administrator' : `${userName} (${userDistrict} District Nodal)`}</p>
                             </div>
-                            <button className="btn btn-primary" onClick={handleAddOrg}>+ Register College</button>
+                            {userRole === 'admin' && (
+                                <button className="btn btn-primary" onClick={handleAddOrg}>+ Register College</button>
+                            )}
                         </div>
 
                         {/* Stats Row */}
@@ -689,46 +742,62 @@ const AdminDashboard = () => {
                                     label: 'Colleges',
                                     value: stats.totalColleges,
                                     icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 10v6M2 10l10-5 10 5-10 5z" /><path d="M6 12v5c0 2 2 3 6 3s6-1 6-3v-5" /></svg>,
+                                    color: '#6366F1',
+                                    bgLight: 'rgba(99, 102, 241, 0.1)'
                                 },
                                 {
                                     label: 'Units',
                                     value: stats.totalUnits,
                                     icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2" /><path d="M12 2L2 7l10 5 10-5-10-5z" /></svg>,
+                                    color: '#2563EB',
+                                    bgLight: 'rgba(37, 99, 235, 0.1)'
                                 },
                                 {
                                     label: 'Events',
                                     value: stats.totalEvents,
                                     icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2" /><line x1="16" y1="2" x2="16" y2="6" /><line x1="8" y1="2" x2="8" y2="6" /><line x1="3" y1="10" x2="21" y2="10" /></svg>,
+                                    color: '#10B981',
+                                    bgLight: 'rgba(16, 185, 129, 0.1)'
                                 },
                                 {
                                     label: 'Upcoming',
                                     value: upcomingCount,
                                     icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" /></svg>,
+                                    color: '#F59E0B',
+                                    bgLight: 'rgba(245, 158, 11, 0.1)'
                                 },
                             ].map(s => (
                                 <div key={s.label} style={{
                                     background: 'var(--card)',
                                     border: '1px solid var(--border)',
+                                    borderLeft: `4px solid ${s.color}`,
                                     borderRadius: '0.5rem',
                                     padding: '1.125rem 1.25rem',
                                     display: 'flex',
                                     alignItems: 'center',
                                     gap: '0.875rem',
                                     boxShadow: 'var(--sh-sm)',
-                                    transition: 'box-shadow 0.2s ease',
+                                    transition: 'all 0.2s ease',
+                                    cursor: 'default'
                                 }}
-                                    onMouseEnter={e => e.currentTarget.style.boxShadow = 'var(--sh-md)'}
-                                    onMouseLeave={e => e.currentTarget.style.boxShadow = 'var(--sh-sm)'}
+                                    onMouseEnter={e => {
+                                        e.currentTarget.style.boxShadow = 'var(--sh-md)';
+                                        e.currentTarget.style.transform = 'translateY(-2px)';
+                                    }}
+                                    onMouseLeave={e => {
+                                        e.currentTarget.style.boxShadow = 'var(--sh-sm)';
+                                        e.currentTarget.style.transform = 'translateY(0)';
+                                    }}
                                 >
                                     <div style={{
-                                        width: 40, height: 40, borderRadius: '0.375rem', flexShrink: 0,
-                                        background: '#F1F5F9',
+                                        width: 42, height: 42, borderRadius: '0.375rem', flexShrink: 0,
+                                        background: s.bgLight,
                                         display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                        color: '#334155'
+                                        color: s.color
                                     }}>{s.icon}</div>
                                     <div>
-                                        <div style={{ fontSize: '1.625rem', fontWeight: 800, letterSpacing: '-0.04em', color: '#0F172A', lineHeight: 1 }}>{s.value ?? '—'}</div>
-                                        <div style={{ fontSize: '0.68rem', fontWeight: 600, color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.08em', marginTop: '0.2rem' }}>{s.label}</div>
+                                        <div style={{ fontSize: '1.625rem', fontWeight: 800, letterSpacing: '-0.04em', color: 'var(--txt-1)', lineHeight: 1 }}>{s.value ?? '—'}</div>
+                                        <div style={{ fontSize: '0.68rem', fontWeight: 600, color: 'var(--txt-3)', textTransform: 'uppercase', letterSpacing: '0.08em', marginTop: '0.2rem' }}>{s.label}</div>
                                     </div>
                                 </div>
                             ))}
@@ -824,8 +893,8 @@ const AdminDashboard = () => {
                                 <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.8125rem' }}>
                                     <thead>
                                         <tr style={{ background: 'var(--bg-2)', borderBottom: '1px solid var(--border)' }}>
-                                            {['Code', 'Institution Name', 'Units', 'Events', ''].map(h => (
-                                                <th key={h} style={{ padding: '0.625rem 0.875rem', textAlign: 'left', fontSize: '0.675rem', fontWeight: 700, color: 'var(--txt-3)', textTransform: 'uppercase', letterSpacing: '0.07em', whiteSpace: 'nowrap' }}>{h}</th>
+                                            {['Code', 'Institution Name', 'Status', 'Units', 'Events', userRole === 'admin' ? 'Actions' : ''].map(h => (
+                                                h && <th key={h} style={{ padding: '0.625rem 0.875rem', textAlign: h === 'Actions' ? 'right' : 'left', fontSize: '0.675rem', fontWeight: 700, color: 'var(--txt-3)', textTransform: 'uppercase', letterSpacing: '0.07em', whiteSpace: 'nowrap' }}>{h}</th>
                                             ))}
                                         </tr>
                                     </thead>
@@ -841,16 +910,37 @@ const AdminDashboard = () => {
                                                 </td>
                                                 <td style={{ padding: '0.625rem 0.875rem', fontWeight: 600, color: 'var(--txt-1)' }} onClick={() => handleCollegeRedirect(college)}>{college.insName}</td>
                                                 <td style={{ padding: '0.625rem 0.875rem' }} onClick={() => handleCollegeRedirect(college)}>
+                                                    {college.isRegistered ? (
+                                                        <span style={{ fontSize: '0.65rem', fontWeight: 700, padding: '0.15rem 0.5rem', borderRadius: '9999px', background: 'var(--badge-success-bg)', color: 'var(--badge-success-clr)' }}>Registered</span>
+                                                    ) : (
+                                                        <span style={{ fontSize: '0.65rem', fontWeight: 700, padding: '0.15rem 0.5rem', borderRadius: '9999px', background: 'var(--badge-secondary-bg)', color: 'var(--badge-secondary-clr)' }}>Shell Only</span>
+                                                    )}
+                                                </td>
+                                                <td style={{ padding: '0.625rem 0.875rem' }} onClick={() => handleCollegeRedirect(college)}>
                                                     <span style={{ fontWeight: 700, color: 'var(--brand-600)', fontSize: '0.875rem' }}>{college.units.length}</span>
                                                 </td>
                                                 <td style={{ padding: '0.625rem 0.875rem' }} onClick={() => handleCollegeRedirect(college)}>
                                                     <span style={{ fontWeight: 700, color: 'var(--success-600)', fontSize: '0.875rem' }}>{college.events.length}</span>
                                                 </td>
-                                                <td style={{ padding: '0.625rem 0.875rem', textAlign: 'right' }}>
-                                                    <button style={{ fontSize: '0.72rem', fontWeight: 600, padding: '0.3rem 0.625rem', borderRadius: '4px', border: '1px solid var(--danger-400)', background: 'var(--danger-50)', color: 'var(--danger-600)', cursor: 'pointer' }}
-                                                        onClick={e => { e.stopPropagation(); setCollegeToDelete(college); }}
-                                                    >Remove</button>
-                                                </td>
+                                                {userRole === 'admin' ? (
+                                                    <td style={{ padding: '0.625rem 0.875rem', textAlign: 'right', display: 'flex', justifyContent: 'flex-end', gap: '0.5rem', alignItems: 'center' }}>
+                                                        {college.isRegistered && (
+                                                            <button 
+                                                                style={{ fontSize: '0.72rem', fontWeight: 600, padding: '0.3rem 0.625rem', borderRadius: '4px', border: '1px solid var(--border)', background: 'var(--card)', color: 'var(--txt-1)', cursor: 'pointer' }}
+                                                                onClick={e => { e.stopPropagation(); handleRegeneratePasskey(college); }}
+                                                            >
+                                                                Regenerate Passkey
+                                                            </button>
+                                                        )}
+                                                        <button style={{ fontSize: '0.72rem', fontWeight: 600, padding: '0.3rem 0.625rem', borderRadius: '4px', border: '1px solid var(--danger-400)', background: 'var(--danger-50)', color: 'var(--danger-600)', cursor: 'pointer' }}
+                                                            onClick={e => { e.stopPropagation(); setCollegeToDelete(college); }}
+                                                        >Remove</button>
+                                                    </td>
+                                                ) : (
+                                                    <td style={{ padding: '0.625rem 0.875rem', textAlign: 'right' }}>
+                                                        <span style={{ color: 'var(--brand-600)', fontWeight: 600, fontSize: '0.75rem' }} onClick={() => handleCollegeRedirect(college)}>View →</span>
+                                                    </td>
+                                                )}
                                             </tr>
                                         ))}
                                     </tbody>
@@ -900,29 +990,31 @@ const AdminDashboard = () => {
                             <span style={{ fontSize: '0.72rem', fontWeight: 600, background: 'var(--bg-2)', color: 'var(--txt-2)', border: '1px solid var(--border)', padding: '0.25rem 0.625rem', borderRadius: '3px' }}>{galleryImages.length} images</span>
                         </div>
 
-                        <div style={{ display: 'grid', gridTemplateColumns: '320px 1fr', gap: '1.25rem', alignItems: 'start' }}>
+                        <div style={{ display: 'grid', gridTemplateColumns: userRole === 'admin' ? '320px 1fr' : '1fr', gap: '1.25rem', alignItems: 'start' }}>
                             {/* Upload Panel */}
-                            <div style={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: '0.5rem', padding: '1.25rem' }}>
-                                <div style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--txt-3)', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: '1rem', paddingBottom: '0.625rem', borderBottom: '1px solid var(--border)' }}>Upload New Image</div>
-                                <form onSubmit={handleUploadImage}>
-                                    <div style={{ marginBottom: '0.875rem' }}>
-                                        <label style={{ display: 'block', fontSize: '0.7rem', fontWeight: 600, color: 'var(--txt-3)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '0.35rem' }}>Image File</label>
-                                        <input id="gallery-file-input" type="file" className="form-input" style={{ fontSize: '0.8125rem' }} accept="image/*" onChange={handleImageChange} required />
-                                    </div>
-                                    {newImage && (
+                            {userRole === 'admin' && (
+                                <div style={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: '0.5rem', padding: '1.25rem' }}>
+                                    <div style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--txt-3)', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: '1rem', paddingBottom: '0.625rem', borderBottom: '1px solid var(--border)' }}>Upload New Image</div>
+                                    <form onSubmit={handleUploadImage}>
                                         <div style={{ marginBottom: '0.875rem' }}>
-                                            <img src={newImage} alt="Preview" style={{ width: '100%', height: 140, objectFit: 'cover', borderRadius: '4px', border: '1px solid var(--border)' }} />
+                                            <label style={{ display: 'block', fontSize: '0.7rem', fontWeight: 600, color: 'var(--txt-3)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '0.35rem' }}>Image File</label>
+                                            <input id="gallery-file-input" type="file" className="form-input" style={{ fontSize: '0.8125rem' }} accept="image/*" onChange={handleImageChange} required />
                                         </div>
-                                    )}
-                                    <div style={{ marginBottom: '0.875rem' }}>
-                                        <label style={{ display: 'block', fontSize: '0.7rem', fontWeight: 600, color: 'var(--txt-3)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '0.35rem' }}>Description</label>
-                                        <textarea className="form-input" style={{ fontSize: '0.8125rem', minHeight: 70 }} rows="2" placeholder="Brief caption for this photo..." value={newDescription} onChange={e => setNewDescription(e.target.value)} required />
-                                    </div>
-                                    <button type="submit" style={{ width: '100%', padding: '0.55rem', fontSize: '0.8125rem', fontWeight: 600, background: 'var(--brand-600)', color: '#fff', border: 'none', borderRadius: '4px', cursor: uploading ? 'not-allowed' : 'pointer', opacity: uploading ? 0.7 : 1 }} disabled={uploading}>
-                                        {uploading ? 'Uploading...' : 'Upload to Gallery'}
-                                    </button>
-                                </form>
-                            </div>
+                                        {newImage && (
+                                            <div style={{ marginBottom: '0.875rem' }}>
+                                                <img src={newImage} alt="Preview" style={{ width: '100%', height: 140, objectFit: 'cover', borderRadius: '4px', border: '1px solid var(--border)' }} />
+                                            </div>
+                                        )}
+                                        <div style={{ marginBottom: '0.875rem' }}>
+                                            <label style={{ display: 'block', fontSize: '0.7rem', fontWeight: 600, color: 'var(--txt-3)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '0.35rem' }}>Description</label>
+                                            <textarea className="form-input" style={{ fontSize: '0.8125rem', minHeight: 70 }} rows="2" placeholder="Brief caption for this photo..." value={newDescription} onChange={e => setNewDescription(e.target.value)} required />
+                                        </div>
+                                        <button type="submit" style={{ width: '100%', padding: '0.55rem', fontSize: '0.8125rem', fontWeight: 600, background: 'var(--brand-600)', color: '#fff', border: 'none', borderRadius: '4px', cursor: uploading ? 'not-allowed' : 'pointer', opacity: uploading ? 0.7 : 1 }} disabled={uploading}>
+                                            {uploading ? 'Uploading...' : 'Upload to Gallery'}
+                                        </button>
+                                    </form>
+                                </div>
+                            )}
 
                             {/* Image List */}
                             <div style={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: '0.5rem', overflow: 'hidden' }}>
@@ -946,10 +1038,12 @@ const AdminDashboard = () => {
                                                 ) : (
                                                     <div>
                                                         <p style={{ margin: '0 0 0.5rem', fontSize: '0.8rem', color: 'var(--txt-1)', lineHeight: 1.5, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>{img.description}</p>
-                                                        <div style={{ display: 'flex', gap: '0.375rem' }}>
-                                                            <button style={{ fontSize: '0.7rem', fontWeight: 600, padding: '0.25rem 0.5rem', borderRadius: '3px', border: '1px solid var(--border)', background: 'var(--card)', color: 'var(--txt-2)', cursor: 'pointer' }} onClick={() => { setEditingImageId(img._id); setEditDescription(img.description); }}>Edit</button>
-                                                            <button style={{ fontSize: '0.7rem', fontWeight: 600, padding: '0.25rem 0.5rem', borderRadius: '3px', border: '1px solid var(--danger-400)', background: 'var(--danger-50)', color: 'var(--danger-600)', cursor: 'pointer' }} onClick={() => handleDeleteImage(img._id)}>Delete</button>
-                                                        </div>
+                                                        {userRole === 'admin' && (
+                                                            <div style={{ display: 'flex', gap: '0.375rem' }}>
+                                                                <button style={{ fontSize: '0.7rem', fontWeight: 600, padding: '0.25rem 0.5rem', borderRadius: '3px', border: '1px solid var(--border)', background: 'var(--card)', color: 'var(--txt-2)', cursor: 'pointer' }} onClick={() => { setEditingImageId(img._id); setEditDescription(img.description); }}>Edit</button>
+                                                                <button style={{ fontSize: '0.7rem', fontWeight: 600, padding: '0.25rem 0.5rem', borderRadius: '3px', border: '1px solid var(--danger-400)', background: 'var(--danger-50)', color: 'var(--danger-600)', cursor: 'pointer' }} onClick={() => handleDeleteImage(img._id)}>Delete</button>
+                                                            </div>
+                                                        )}
                                                     </div>
                                                 )}
                                             </div>
@@ -958,6 +1052,12 @@ const AdminDashboard = () => {
                                 )}
                             </div>
                         </div>
+                    </div>
+                )}
+
+                {activeTab === "nodal" && userRole === 'admin' && (
+                    <div>
+                        <AdminAllNodalOfficers />
                     </div>
                 )}
             </main>

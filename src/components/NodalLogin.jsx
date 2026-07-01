@@ -1,47 +1,38 @@
-import React, { useEffect, useState } from 'react';
-import { useUser } from '../context/UserContext';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import toast from 'react-hot-toast';
+import axios from 'axios';
 import ThemeToggle from './ThemeToggle';
 import { EyeIcon, EyeOffIcon } from './EyeIcons';
 
-const Login = () => {
-    const { setUsername } = useUser();
+const NodalLogin = () => {
     const navigate = useNavigate();
-    const [loading, setLoading] = useState(false);
+    const [email, setEmail] = useState('');
+    const [password, setPassword] = useState('');
+    const [error, setError] = useState('');
+    const [isLoading, setIsLoading] = useState(false);
     const [showPass, setShowPass] = useState(false);
 
     useEffect(() => {
-        if (localStorage.getItem('nsstoken')) navigate('/college-dashboard');
+        if (localStorage.getItem('adminToken')) {
+            navigate('/admin-dashboard');
+        }
     }, [navigate]);
 
     const handleLogin = async (e) => {
         e.preventDefault();
-        const collegeCode = e.target.collegeCode.value;
-        const email = e.target.email.value;
-        const password = e.target.password.value;
-        setLoading(true);
+        setIsLoading(true);
+        setError('');
         try {
-            const res = await fetch(`${import.meta.env.VITE_API_URL}/login`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ collegeCode, email, password }),
-            });
-            const data = await res.json();
-            if (data.success) {
-                toast.success('Login successful');
-                localStorage.setItem('nsstoken', data.token);
-                setUsername(data.userName);
-                localStorage.setItem('nss_username', data.userName);
-                navigate('/college-dashboard');
-            } else {
-                toast.error(data.message || 'Invalid credentials');
+            const res = await axios.post(`${import.meta.env.VITE_API_URL}/nodal/login`, { email, password });
+            if (res.data.success) {
+                localStorage.setItem('adminToken', res.data.token);
+                navigate('/admin-dashboard');
             }
-        } catch (error) {
-            console.log(error);
-            toast.error('Network error. Please try again.');
+        } catch (err) {
+            console.error(err);
+            setError(err.response?.data?.message || 'Invalid Nodal Officer credentials. Please try again.');
         } finally {
-            setLoading(false);
+            setIsLoading(false);
         }
     };
 
@@ -53,50 +44,57 @@ const Login = () => {
             </div>
 
             <div className="login-card">
-                <div className="card" style={{ padding: '2.25rem', boxShadow: '0 8px 32px rgba(0,0,0,0.08)' }}>
+                <div className="card" style={{ padding: '2.25rem', border: '1px solid var(--border)', boxShadow: '0 8px 32px rgba(0,0,0,0.08)' }}>
 
+                    {/* Logo + Header */}
                     <div style={{ textAlign: 'center', marginBottom: '1.75rem' }}>
                         <div style={{
                             width: 56, height: 56,
-                            background: 'rgba(37, 99, 235, 0.1)',
-                            border: '1px solid rgba(37, 99, 235, 0.2)',
-                            borderRadius: '10px',
+                            background: 'rgba(34, 197, 94, 0.1)',
+                            border: '1px solid rgba(34, 197, 94, 0.2)',
+                            borderRadius: '16px',
                             display: 'flex', alignItems: 'center', justifyContent: 'center',
                             margin: '0 auto 1rem',
-                            color: '#2563eb',
-                        }}>
-                            <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18"/><path d="M9 21V9"/></svg>
-                        </div>
-                        <span className="badge badge-primary" style={{ marginBottom: '0.75rem', letterSpacing: '0.08em' }}>
-                            ORGANIZATION
+                            fontSize: '1.5rem',
+                            color: '#22c55e'
+                        }}>💼</div>
+                        <span className="badge" style={{ marginBottom: '0.75rem', letterSpacing: '0.08em', background: 'var(--badge-success-bg)', color: 'var(--badge-success-clr)' }}>
+                            DISTRICT NODAL OFFICER
                         </span>
                         <h2 style={{ fontSize: '1.5rem', fontWeight: 800, marginBottom: '0.25rem', marginTop: '0.5rem' }}>
-                            Organization Sign In
+                            Nodal Sign In
                         </h2>
                         <p style={{ color: 'var(--txt-3)', fontSize: '0.875rem', margin: 0 }}>
-                            Access your college NSS dashboard
+                            Access your district-scoped NSS portal
                         </p>
                     </div>
 
+                    {/* Error */}
+                    {error && (
+                        <div style={{
+                            padding: '0.75rem 1rem',
+                            background: '#fff1f2',
+                            border: '1px solid #fecaca',
+                            borderRadius: '0.75rem',
+                            color: '#b91c1c',
+                            fontSize: '0.875rem',
+                            marginBottom: '1.25rem',
+                            display: 'flex', alignItems: 'flex-start', gap: '0.5rem',
+                        }}>
+                            <span style={{ flexShrink: 0 }}>⚠️</span>
+                            <span>{error}</span>
+                        </div>
+                    )}
+
                     <form onSubmit={handleLogin}>
                         <div className="form-group">
-                            <label className="form-label">College Code</label>
-                            <input
-                                type="text"
-                                className="form-input"
-                                placeholder="Enter your college code (e.g. 507)"
-                                name="collegeCode"
-                                required
-                            />
-                        </div>
-
-                        <div className="form-group">
-                            <label className="form-label">College Mail ID</label>
+                            <label className="form-label">Email Address</label>
                             <input
                                 type="email"
                                 className="form-input"
-                                placeholder="Enter registered college or principal email"
-                                name="email"
+                                placeholder="Enter your registered email"
+                                value={email}
+                                onChange={(e) => setEmail(e.target.value)}
                                 required
                                 autoComplete="email"
                             />
@@ -108,8 +106,9 @@ const Login = () => {
                                 <input
                                     type={showPass ? 'text' : 'password'}
                                     className="form-input"
-                                    placeholder="Enter your password"
-                                    name="password"
+                                    placeholder="Enter password"
+                                    value={password}
+                                    onChange={(e) => setPassword(e.target.value)}
                                     required
                                     style={{ paddingRight: '2.75rem' }}
                                     autoComplete="current-password"
@@ -123,7 +122,8 @@ const Login = () => {
                                         background: 'none', border: 'none',
                                         color: 'var(--txt-3)', cursor: 'pointer',
                                         display: 'flex', alignItems: 'center',
-                                        padding: '0.25rem', transition: 'color 0.15s',
+                                        padding: '0.25rem',
+                                        transition: 'color 0.15s',
                                     }}
                                     onMouseEnter={e => e.currentTarget.style.color = 'var(--txt-1)'}
                                     onMouseLeave={e => e.currentTarget.style.color = 'var(--txt-3)'}
@@ -135,8 +135,8 @@ const Login = () => {
                         </div>
 
                         <button type="submit" className="btn btn-primary w-100 btn-lg"
-                            disabled={loading} style={{ marginBottom: '0.75rem' }}>
-                            {loading
+                            disabled={isLoading} style={{ marginBottom: '0.75rem' }}>
+                            {isLoading
                                 ? <span className="flex-center" style={{ gap: '0.5rem' }}>
                                     <span className="loading" />Signing in...
                                   </span>
@@ -155,4 +155,4 @@ const Login = () => {
     );
 };
 
-export default Login;
+export default NodalLogin;

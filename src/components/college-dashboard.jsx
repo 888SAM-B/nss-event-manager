@@ -22,6 +22,87 @@ const CollegeDashboard = () => {
     const [newUnitPassword, setNewUnitPassword] = useState("");
     const [newUnitContact, setNewUnitContact] = useState("");
     const [newUnitMail, setNewUnitMail] = useState("");
+    const [collegePasskey, setCollegePasskey] = useState("");
+
+    // Program Officer states for Unit Creation
+    const [poName, setPoName] = useState("");
+    const [poDesignation, setPoDesignation] = useState("");
+    const [poDepartment, setPoDepartment] = useState("");
+    const [poDob, setPoDob] = useState("");
+    const [poCommunity, setPoCommunity] = useState("General");
+    const [poEmail, setPoEmail] = useState("");
+    const [poMobile, setPoMobile] = useState("");
+    const [poDateOfAppointment, setPoDateOfAppointment] = useState("");
+    const [poTeachingExperience, setPoTeachingExperience] = useState("");
+    const [poQualification, setPoQualification] = useState("");
+    const [poEtiCompleted, setPoEtiCompleted] = useState("No");
+    const [poAddress, setPoAddress] = useState("");
+    const [poBlock, setPoBlock] = useState("");
+    const [poTaluk, setPoTaluk] = useState("");
+    const [poDistrict, setPoDistrict] = useState("");
+    const [poPincode, setPoPincode] = useState("");
+
+    const [poImage, setPoImage] = useState(null);
+    const [poSeminars, setPoSeminars] = useState([""]);
+    const [poNssExperience, setPoNssExperience] = useState([""]);
+    const [poSpecialTalent, setPoSpecialTalent] = useState([""]);
+    const [poAchievements, setPoAchievements] = useState("");
+    const [poEtlTraining, setPoEtlTraining] = useState(false);
+    const [poEtlCertificate, setPoEtlCertificate] = useState("");
+
+    const handlePoImageChange = (e) => {
+        const file = e.target.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onloadend = () => {
+                setPoImage(reader.result);
+            };
+            reader.readAsDataURL(file);
+        }
+    };
+
+    const handlePoEtlCertificateChange = (e) => {
+        const file = e.target.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onloadend = () => {
+                setPoEtlCertificate(reader.result);
+            };
+            reader.readAsDataURL(file);
+        }
+    };
+
+    const handlePoDynamicChange = (index, field, value) => {
+        if (field === 'seminars') {
+            const updated = [...poSeminars];
+            updated[index] = value;
+            setPoSeminars(updated);
+        } else if (field === 'nssExperience') {
+            const updated = [...poNssExperience];
+            updated[index] = value;
+            setPoNssExperience(updated);
+        } else if (field === 'specialTalent') {
+            const updated = [...poSpecialTalent];
+            updated[index] = value;
+            setPoSpecialTalent(updated);
+        }
+    };
+
+    const addPoDynamicField = (field) => {
+        if (field === 'seminars') setPoSeminars([...poSeminars, ""]);
+        else if (field === 'nssExperience') setPoNssExperience([...poNssExperience, ""]);
+        else if (field === 'specialTalent') setPoSpecialTalent([...poSpecialTalent, ""]);
+    };
+
+    const removePoDynamicField = (index, field) => {
+        if (field === 'seminars' && poSeminars.length > 1) {
+            setPoSeminars(poSeminars.filter((_, i) => i !== index));
+        } else if (field === 'nssExperience' && poNssExperience.length > 1) {
+            setPoNssExperience(poNssExperience.filter((_, i) => i !== index));
+        } else if (field === 'specialTalent' && poSpecialTalent.length > 1) {
+            setPoSpecialTalent(poSpecialTalent.filter((_, i) => i !== index));
+        }
+    };
 
     const [loading, setLoading] = useState(true);
     const [showMembersList, setShowMembersList] = useState(false);
@@ -48,7 +129,7 @@ const CollegeDashboard = () => {
 
     // Adopting Villages State
     const [showVillageModal, setShowVillageModal] = useState(false);
-    const [newVillage, setNewVillage] = useState({ name: "", address: "", block: "", taluk: "", district: "", pincode: "" });
+    const [newVillage, setNewVillage] = useState({ name: "", address: "", block: "", taluk: "", district: "", pincode: "", distance: "" });
     const [isAddingVillage, setIsAddingVillage] = useState(false);
 
     // Check if admin is viewing this dashboard
@@ -88,23 +169,54 @@ const CollegeDashboard = () => {
             toast.error("Maximum limit of 6 units reached.");
             return;
         }
+        if (!newUnitPassword.trim()) {
+            toast.error("Please enter a unit password.");
+            return;
+        }
+        if (!collegePasskey.trim()) {
+            toast.error("Please enter the College Passkey for authorization.");
+            return;
+        }
+        if (!poName.trim() || !poDesignation.trim() || !poDepartment.trim() || !poEmail.trim() || !poMobile.trim()) {
+            toast.error("Please fill in all mandatory Program Officer details (Name, Designation, Department, Email, Mobile).");
+            return;
+        }
         const assignedName = `Unit ${units.length + 1}`;
-
-        const prefix = (insName || "INS").replace(/\s+/g, '').substring(0, 3).toUpperCase();
-        const serial = units.length + 1;
-        const unitNumber = `PUNSS${prefix}${insCode}${String(serial).padStart(2, '0')}`;
-        console.log(unitNumber);
         const createdDate = new Date().toISOString().split('T')[0];
 
         const payload = {
-            username,
+            collegeCode: insCode,
+            collegePasskey,
             name: assignedName,
             password: newUnitPassword,
             members: newMembers,
-            unitNumber,
-            createdDate
+            createdDate,
+            officerData: {
+                name: poName,
+                designation: poDesignation,
+                department: poDepartment,
+                dob: poDob,
+                community: poCommunity,
+                email: poEmail,
+                mobile: poMobile,
+                dateOfAppointment: poDateOfAppointment,
+                teachingExperience: poTeachingExperience,
+                qualification: poQualification,
+                etiCompleted: poEtlTraining ? "Yes" : "No",
+                address: poAddress,
+                block: poBlock,
+                taluk: poTaluk,
+                district: poDistrict,
+                pincode: poPincode,
+                image: poImage,
+                seminars: poSeminars,
+                nssExperience: poNssExperience,
+                specialTalent: poSpecialTalent,
+                achievements: poAchievements,
+                etlTraining: poEtlTraining,
+                etlCertificate: poEtlCertificate
+            }
         };
-        console.log(payload);
         setIsCreating(true);
         try {
             const res = await axios.post(
@@ -124,14 +236,44 @@ const CollegeDashboard = () => {
                 setShowUnitModal(false);
                 setNewUnitName("");
                 setNewUnitPassword("");
+                setCollegePasskey("");
                 setNewMembers([]);
+                
+                // Clear PO fields
+                setPoName("");
+                setPoDesignation("");
+                setPoDepartment("");
+                setPoDob("");
+                setPoCommunity("General");
+                setPoEmail("");
+                setPoMobile("");
+                setPoDateOfAppointment("");
+                setPoTeachingExperience("");
+                setPoQualification("");
+                setPoEtiCompleted("No");
+                setPoAddress("");
+                setPoBlock("");
+                setPoTaluk("");
+                setPoDistrict("");
+                setPoPincode("");
+                setPoImage(null);
+                setPoSeminars([""]);
+                setPoNssExperience([""]);
+                setPoSpecialTalent([""]);
+                setPoAchievements("");
+                setPoEtlTraining(false);
+                setPoEtlCertificate("");
+
+                // Refresh Program Officers list
+                fetchProgramOfficers(insCode);
+
                 toast.success("Unit created successfully!");
             } else {
                 toast.error("Failed to create unit: " + (res.data.message || "Unknown error"));
             }
         } catch (error) {
             console.error(error);
-            toast.error("An error occurred while creating the unit.");
+            toast.error(error.response?.data?.message || "An error occurred while creating the unit.");
         } finally {
             setIsCreating(false);
         }
@@ -364,24 +506,38 @@ const CollegeDashboard = () => {
             toast.error("Please fill all village details");
             return;
         }
+        if (newVillage.distance === "" || isNaN(newVillage.distance)) {
+            toast.error("Please enter a valid numeric distance.");
+            return;
+        }
+        if (Number(newVillage.distance) > 7) {
+            toast.error("Distance exceeds the maximum limit of 7 KM");
+            return;
+        }
         setIsAddingVillage(true);
         try {
             const res = await axios.post(`${import.meta.env.VITE_API_URL}/add-village`, {
-                username,
-                village: newVillage
+                collegeCode: insCode,
+                name: newVillage.name,
+                address: newVillage.address,
+                block: newVillage.block,
+                taluk: newVillage.taluk,
+                district: newVillage.district,
+                pincode: newVillage.pincode,
+                distance: Number(newVillage.distance)
             }, {
                 headers: { Authorization: `Bearer ${localStorage.getItem("nsstoken")}` }
             });
 
             if (res.data.success) {
                 toast.success("Village added successfully!");
-                setCollegeData({ ...collegeData, adoptingVillages: res.data.user.adoptingVillages });
+                setCollegeData({ ...collegeData, adoptingVillages: res.data.adoptingVillages });
                 setShowVillageModal(false);
-                setNewVillage({ name: "", address: "", block: "", taluk: "", district: "", pincode: "" });
+                setNewVillage({ name: "", address: "", block: "", taluk: "", district: "", pincode: "", distance: "" });
             }
         } catch (error) {
             console.error("Error adding village:", error);
-            toast.error("Failed to add village");
+            toast.error(error.response?.data?.message || "Failed to add village");
         } finally {
             setIsAddingVillage(false);
         }
@@ -391,17 +547,17 @@ const CollegeDashboard = () => {
         if (!confirm("Are you sure you want to remove this village?")) return;
         try {
             const res = await axios.delete(`${import.meta.env.VITE_API_URL}/delete-village`, {
-                data: { username, villageIndex: index },
+                data: { collegeCode: insCode, villageIndex: index },
                 headers: { Authorization: `Bearer ${localStorage.getItem("nsstoken")}` }
             });
 
             if (res.data.success) {
                 toast.success("Village removed successfully");
-                setCollegeData({ ...collegeData, adoptingVillages: res.data.user.adoptingVillages });
+                setCollegeData({ ...collegeData, adoptingVillages: res.data.adoptingVillages });
             }
         } catch (error) {
             console.error("Error deleting village:", error);
-            toast.error("Failed to remove village");
+            toast.error(error.response?.data?.message || "Failed to remove village");
         }
     };
 
@@ -651,13 +807,15 @@ const CollegeDashboard = () => {
                                             <p className="mb-1 text-sm"><strong className="text-white">Members:</strong> {unit.members ? unit.members.length : 0}</p>
                                         </div>
 
-                                        <button
-                                            className="btn btn-danger btn-sm w-100"
-                                            onClick={(e) => handleDeleteUnit(unit.unitNumber, e)}
-                                            style={{ width: '100%' }}
-                                        >
-                                            Delete Unit
-                                        </button>
+                                        {isAdminViewing && (
+                                            <button
+                                                className="btn btn-danger btn-sm w-100"
+                                                onClick={(e) => handleDeleteUnit(unit.unitNumber, e)}
+                                                style={{ width: '100%', marginTop: '0.5rem' }}
+                                            >
+                                                Delete Unit
+                                            </button>
+                                        )}
                                     </div>
                                 ))
                             )}
@@ -987,6 +1145,10 @@ const CollegeDashboard = () => {
                                                 <p className="mb-0 text-xs" style={{ opacity: 0.7 }}><strong className="text-white">Dist:</strong> {village.district}</p>
                                             </div>
                                             <div className="d-flex align-items-center gap-2">
+                                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ opacity: 0.7 }}><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+                                                <p className="mb-0 text-sm" style={{ opacity: 0.9 }}><strong className="text-white">Distance:</strong> {village.distance} KM</p>
+                                            </div>
+                                            <div className="d-flex align-items-center gap-2">
                                                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ opacity: 0.7 }}><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
                                                 <p className="mb-0 text-sm" style={{ opacity: 0.9 }}>{village.pincode}</p>
                                             </div>
@@ -1012,78 +1174,195 @@ const CollegeDashboard = () => {
                             <button className="btn btn-sm btn-secondary" onClick={() => setShowUnitModal(false)}>&times;</button>
                         </div>
 
-                        <div className="grid-cols-2 mb-4">
+                        <div className="grid-cols-3 mb-4" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '1rem' }}>
                             <div className="form-group">
                                 <label className="form-label">Unit Name</label>
-                                <div className="form-input" style={{ background: 'var(--bg-tertiary)', cursor: 'not-allowed', opacity: 0.8, display: 'flex', alignItems: 'center' }}>
+                                <div className="form-input" style={{ background: 'var(--bg-tertiary)', cursor: 'not-allowed', opacity: 0.8, display: 'flex', alignItems: 'center', height: '38px' }}>
                                     {`Unit ${units.length + 1}`}
                                 </div>
                             </div>
                             <div className="form-group">
                                 <label className="form-label">Unit Password</label>
-                                <input className="form-input" type="password" placeholder="Set a password for unit login" value={newUnitPassword} onChange={(e) => setNewUnitPassword(e.target.value)} />
+                                <input className="form-input" type="password" placeholder="Set password" value={newUnitPassword} onChange={(e) => setNewUnitPassword(e.target.value)} />
+                            </div>
+                            <div className="form-group">
+                                <label className="form-label">College Passkey</label>
+                                <input className="form-input" type="password" placeholder="Enter passkey" value={collegePasskey} onChange={(e) => setCollegePasskey(e.target.value)} />
                             </div>
                         </div>
 
-                        <div className="mb-6">
-                            <div className="flex-between mb-3">
-                                <h3 className="mb-0 text-lg">Initial Members (Optional)</h3>
-                                <button className="btn btn-sm btn-secondary" onClick={handleAddMember}>+ Add Member</button>
-                            </div>
-
-                            {newMembers.map((member, index) => (
-                                <div key={index} className="card p-4 mb-3" style={{ background: 'var(--bg-tertiary)' }}>
-                                    <div className="flex-between mb-2">
-                                        <h4 className="text-sm mb-0">Member {index + 1}</h4>
-                                        <button className="text-danger" style={{ background: 'none', border: 'none' }} onClick={() => handleRemoveMember(index)}>Remove</button>
-                                    </div>
-                                    <div className="grid-cols-2">
-                                        <input className="form-input mb-2" placeholder="Full Name" value={member.name} onChange={(e) => handleMemberChange(index, "name", e.target.value)} />
-                                        <input className="form-input mb-2" placeholder="Reg No" value={member.regNo} onChange={(e) => handleMemberChange(index, "regNo", e.target.value)} />
-                                        <input className="form-input mb-2" placeholder="Dept (e.g. CSE)" value={member.dept} onChange={(e) => handleMemberChange(index, "dept", e.target.value)} />
-                                        <input className="form-input mb-2" placeholder="Course" value={member.course} onChange={(e) => handleMemberChange(index, "course", e.target.value)} />
-                                        <input className="form-input mb-2" placeholder="Community" value={member.community} onChange={(e) => handleMemberChange(index, "community", e.target.value)} />
-                                        <select
-                                            className="form-input mb-2"
-                                            value={member.bloodGroup}
-                                            onChange={(e) => handleMemberChange(index, "bloodGroup", e.target.value)}
-                                        >
-                                            <option value="">Blood Group</option>
-                                            <option value="A+">A+</option>
-                                            <option value="A-">A-</option>
-                                            <option value="B+">B+</option>
-                                            <option value="B-">B-</option>
-                                            <option value="O+">O+</option>
-                                            <option value="O-">O-</option>
-                                            <option value="AB+">AB+</option>
-                                            <option value="AB-">AB-</option>
-                                        </select>
-                                        <input
-                                            className="form-input mb-2"
-                                            type="date"
-                                            placeholder="DOB"
-                                            value={member.dob}
-                                            onChange={(e) => handleMemberChange(index, "dob", e.target.value)}
-                                        />
-                                        <input
-                                            className="form-input mb-2"
-                                            type="number"
-                                            placeholder="Batch From"
-                                            value={member.batchFrom}
-                                            onChange={(e) => handleMemberChange(index, "batchFrom", e.target.value)}
-                                        />
-                                        <input
-                                            className="form-input mb-2"
-                                            type="number"
-                                            placeholder="Batch To"
-                                            value={member.batchTo}
-                                            onChange={(e) => handleMemberChange(index, "batchTo", e.target.value)}
-                                        />
-                                        <input className="form-input mb-2" placeholder="Contact" value={member.contact} onChange={(e) => handleMemberChange(index, "contact", e.target.value)} />
-                                    </div>
+                        {/* Program Officer details */}
+                        <div className="mb-6" style={{ borderTop: '1px solid var(--border)', paddingTop: '1.5rem' }}>
+                            <h3 className="mb-3 text-lg" style={{ color: 'var(--txt-1)', fontWeight: 700 }}>Program Officer Details (Unit Head)</h3>
+                            
+                            <div className="grid-cols-2 mb-3" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                                <div className="form-group">
+                                    <label className="form-label">Full Name <span style={{ color: 'red' }}>*</span></label>
+                                    <input className="form-input" type="text" placeholder="PO Name" value={poName} onChange={(e) => setPoName(e.target.value)} required />
                                 </div>
-                            ))}
+                                <div className="form-group">
+                                    <label className="form-label">Designation <span style={{ color: 'red' }}>*</span></label>
+                                    <input className="form-input" type="text" placeholder="Designation" value={poDesignation} onChange={(e) => setPoDesignation(e.target.value)} required />
+                                </div>
+                            </div>
+
+                            <div className="grid-cols-2 mb-3" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                                <div className="form-group">
+                                    <label className="form-label">Department <span style={{ color: 'red' }}>*</span></label>
+                                    <input className="form-input" type="text" placeholder="Department" value={poDepartment} onChange={(e) => setPoDepartment(e.target.value)} required />
+                                </div>
+                                <div className="form-group">
+                                    <label className="form-label">Date of Birth</label>
+                                    <input className="form-input" type="date" value={poDob} onChange={(e) => setPoDob(e.target.value)} />
+                                </div>
+                            </div>
+
+                            <div className="grid-cols-3 mb-3" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '1rem' }}>
+                                <div className="form-group">
+                                    <label className="form-label">Community</label>
+                                    <select className="form-input" value={poCommunity} onChange={(e) => setPoCommunity(e.target.value)}>
+                                        <option value="General">General</option>
+                                        <option value="SC">SC</option>
+                                        <option value="ST">ST</option>
+                                        <option value="OBC">OBC</option>
+                                    </select>
+                                </div>
+                                <div className="form-group">
+                                    <label className="form-label">Email ID <span style={{ color: 'red' }}>*</span></label>
+                                    <input className="form-input" type="email" placeholder="Email" value={poEmail} onChange={(e) => setPoEmail(e.target.value)} required />
+                                </div>
+                                <div className="form-group">
+                                    <label className="form-label">Mobile Number <span style={{ color: 'red' }}>*</span></label>
+                                    <input className="form-input" type="text" placeholder="Mobile" value={poMobile} onChange={(e) => setPoMobile(e.target.value)} required />
+                                </div>
+                            </div>
+
+                            <div className="grid-cols-3 mb-3" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '1rem' }}>
+                                <div className="form-group">
+                                    <label className="form-label">Date of Appointment</label>
+                                    <input className="form-input" type="date" value={poDateOfAppointment} onChange={(e) => setPoDateOfAppointment(e.target.value)} />
+                                </div>
+                                <div className="form-group">
+                                    <label className="form-label">Teaching Experience (Years)</label>
+                                    <input className="form-input" type="text" placeholder="e.g. 5" value={poTeachingExperience} onChange={(e) => setPoTeachingExperience(e.target.value)} />
+                                </div>
+                                <div className="form-group">
+                                    <label className="form-label">Qualification</label>
+                                    <input className="form-input" type="text" placeholder="e.g. Ph.D" value={poQualification} onChange={(e) => setPoQualification(e.target.value)} />
+                                </div>
+                            </div>
+
+                            <div className="form-group mb-3">
+                                <label className="form-label">Address</label>
+                                <input className="form-input" type="text" placeholder="Personal Address" value={poAddress} onChange={(e) => setPoAddress(e.target.value)} />
+                            </div>
+
+                            <div className="grid-cols-4 mb-3" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: '1rem' }}>
+                                <div className="form-group">
+                                    <label className="form-label">Block</label>
+                                    <input className="form-input" type="text" placeholder="Block" value={poBlock} onChange={(e) => setPoBlock(e.target.value)} />
+                                </div>
+                                <div className="form-group">
+                                    <label className="form-label">Taluk</label>
+                                    <input className="form-input" type="text" placeholder="Taluk" value={poTaluk} onChange={(e) => setPoTaluk(e.target.value)} />
+                                </div>
+                                <div className="form-group">
+                                    <label className="form-label">District</label>
+                                    <input className="form-input" type="text" placeholder="District" value={poDistrict} onChange={(e) => setPoDistrict(e.target.value)} />
+                                </div>
+                                <div className="form-group">
+                                    <label className="form-label">Pincode</label>
+                                    <input className="form-input" type="text" placeholder="Pincode" value={poPincode} onChange={(e) => setPoPincode(e.target.value)} maxLength={6} />
+                                </div>
+                            </div>
+
+                            {/* Profile Image upload */}
+                            <div className="grid-cols-2 mb-3" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginTop: '1rem' }}>
+                                <div className="form-group">
+                                    <label className="form-label">Profile Image</label>
+                                    <input className="form-input" type="file" accept="image/*" onChange={handlePoImageChange} />
+                                </div>
+                                {poImage && (
+                                    <div className="form-group" style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                                        <img src={poImage} alt="PO Preview" style={{ width: '45px', height: '45px', borderRadius: '50%', objectFit: 'cover', border: '1px solid var(--border)' }} />
+                                        <button type="button" className="btn btn-sm btn-danger" style={{ padding: '0.2rem 0.5rem', fontSize: '0.75rem' }} onClick={() => setPoImage(null)}>Remove Preview</button>
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* Seminars attended list */}
+                            <div className="form-group mb-3">
+                                <label className="form-label" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                    <span>Orientation / Refresher Seminars Attended</span>
+                                    <button type="button" className="btn btn-sm btn-secondary" style={{ padding: '0.2rem 0.5rem', fontSize: '0.7rem' }} onClick={() => addPoDynamicField("seminars")}>+ Add Seminar</button>
+                                </label>
+                                {poSeminars.map((sem, idx) => (
+                                    <div key={idx} style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.5rem' }}>
+                                        <input className="form-input" type="text" placeholder={`Seminar ${idx + 1}`} value={sem} onChange={(e) => handlePoDynamicChange(idx, "seminars", e.target.value)} style={{ flex: 1 }} />
+                                        {poSeminars.length > 1 && (
+                                            <button type="button" className="btn btn-danger btn-sm" onClick={() => removePoDynamicField(idx, "seminars")}>&times;</button>
+                                        )}
+                                    </div>
+                                ))}
+                            </div>
+
+                            {/* NSS Experience list */}
+                            <div className="form-group mb-3">
+                                <label className="form-label" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                    <span>NSS Experience (If any)</span>
+                                    <button type="button" className="btn btn-sm btn-secondary" style={{ padding: '0.2rem 0.5rem', fontSize: '0.7rem' }} onClick={() => addPoDynamicField("nssExperience")}>+ Add Experience</button>
+                                </label>
+                                {poNssExperience.map((exp, idx) => (
+                                    <div key={idx} style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.5rem' }}>
+                                        <input className="form-input" type="text" placeholder={`Experience details ${idx + 1}`} value={exp} onChange={(e) => handlePoDynamicChange(idx, "nssExperience", e.target.value)} style={{ flex: 1 }} />
+                                        {poNssExperience.length > 1 && (
+                                            <button type="button" className="btn btn-danger btn-sm" onClick={() => removePoDynamicField(idx, "nssExperience")}>&times;</button>
+                                        )}
+                                    </div>
+                                ))}
+                            </div>
+
+                            {/* Special Talent list */}
+                            <div className="form-group mb-3">
+                                <label className="form-label" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                    <span>Special Talents</span>
+                                    <button type="button" className="btn btn-sm btn-secondary" style={{ padding: '0.2rem 0.5rem', fontSize: '0.7rem' }} onClick={() => addPoDynamicField("specialTalent")}>+ Add Talent</button>
+                                </label>
+                                {poSpecialTalent.map((tal, idx) => (
+                                    <div key={idx} style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.5rem' }}>
+                                        <input className="form-input" type="text" placeholder={`Special Talent ${idx + 1}`} value={tal} onChange={(e) => handlePoDynamicChange(idx, "specialTalent", e.target.value)} style={{ flex: 1 }} />
+                                        {poSpecialTalent.length > 1 && (
+                                            <button type="button" className="btn btn-danger btn-sm" onClick={() => removePoDynamicField(idx, "specialTalent")}>&times;</button>
+                                        )}
+                                    </div>
+                                ))}
+                            </div>
+
+                            {/* Achievements */}
+                            <div className="form-group mb-3">
+                                <label className="form-label">Achievements</label>
+                                <textarea className="form-input" rows="2" placeholder="List any achievements..." value={poAchievements} onChange={(e) => setPoAchievements(e.target.value)} style={{ resize: 'vertical', width: '100%', padding: '0.65rem 0.85rem', borderRadius: '8px', border: '1px solid var(--border)', outline: 'none', background: 'var(--bg-card)', color: 'var(--txt-1)' }} />
+                            </div>
+
+                            {/* ETI Training & Certificate */}
+                            <div className="grid-cols-2 mb-3" style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '1rem', alignItems: 'center' }}>
+                                <div className="form-group">
+                                    <label className="form-label">ETI Training completed?</label>
+                                    <select className="form-input" value={poEtlTraining ? "Yes" : "No"} onChange={(e) => setPoEtlTraining(e.target.value === "Yes")}>
+                                        <option value="No">No</option>
+                                        <option value="Yes">Yes</option>
+                                    </select>
+                                </div>
+                                {poEtlTraining && (
+                                    <div className="form-group">
+                                        <label className="form-label">ETI Certificate Upload</label>
+                                        <input className="form-input" type="file" accept="image/*,application/pdf" onChange={handlePoEtlCertificateChange} />
+                                    </div>
+                                )}
+                            </div>
                         </div>
+
+
 
                         <div className="flex-between pt-4" style={{ borderTop: '1px solid var(--border-color)' }}>
                             <button className="btn btn-secondary" onClick={() => setShowUnitModal(false)} disabled={isCreating}>Cancel</button>
@@ -1184,6 +1463,20 @@ const CollegeDashboard = () => {
                                 placeholder="e.g. Near Taluk Office"
                                 value={newVillage.address}
                                 onChange={(e) => setNewVillage({ ...newVillage, address: e.target.value })}
+                            />
+                        </div>
+
+                        <div className="form-group mb-3">
+                            <label className="form-label">Distance from College (KM)</label>
+                            <input
+                                className="form-input"
+                                type="number"
+                                placeholder="e.g. 4.5 (Max 7 KM)"
+                                value={newVillage.distance}
+                                onChange={(e) => setNewVillage({ ...newVillage, distance: e.target.value })}
+                                min="0"
+                                max="7"
+                                step="0.1"
                             />
                         </div>
 

@@ -12,11 +12,13 @@ import UnitDashboard from './components/unitDashboard.jsx'
 import AddEvent from './components/add-event.jsx'
 import ExploreEvents from './components/explore-event.jsx'
 import AddOrg from './components/addOrg.jsx'
+import CollegeRegister from './components/collegeRegister.jsx'
 import AdminLogin from './components/AdminLogin.jsx'
 import AdminDashboard from './components/AdminDashboard.jsx'
 import AdminAllEvents from './components/AdminAllEvents.jsx'
 import AdminAllOfficers from './components/AdminAllOfficers.jsx'
 import AdminAllStudents from './components/AdminAllStudents.jsx'
+import NodalLogin from './components/NodalLogin.jsx'
 
 function App() {
   return (
@@ -32,7 +34,9 @@ function App() {
             <Route path='/explore-events' element={<ExploreEvents />} ></Route>
             <Route path='/events' element={<AddEvent />} ></Route>
             <Route path='/add-org' element={<AddOrg />} ></Route>
+            <Route path='/college-register' element={<CollegeRegister />} ></Route>
             <Route path='/admin-login' element={<AdminLogin />} ></Route>
+            <Route path='/nodal-login' element={<NodalLogin />} ></Route>
             <Route path='/admin-dashboard' element={<AdminDashboard />} ></Route>
             <Route path='/admin/all-events' element={<AdminAllEvents />} ></Route>
             <Route path='/admin/all-officers' element={<AdminAllOfficers />} ></Route>
