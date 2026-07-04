@@ -346,6 +346,128 @@ const AdminDashboard = () => {
     const [editDescription, setEditDescription] = useState("");
     const [updating, setUpdating] = useState(false);
 
+    // Admin Heads States
+    const [adminHeads, setAdminHeads] = useState([]);
+    const [loadingHeads, setLoadingHeads] = useState(false);
+    const [headPosition, setHeadPosition] = useState("");
+    const [headName, setHeadName] = useState("");
+    const [headPhoto, setHeadPhoto] = useState("");
+    const [headDesignation, setHeadDesignation] = useState("");
+    const [headQualification, setHeadQualification] = useState("");
+    const [editingHeadId, setEditingHeadId] = useState(null);
+    const [savingHead, setSavingHead] = useState(false);
+
+    const fetchAdminHeads = async () => {
+        setLoadingHeads(true);
+        try {
+            const res = await axios.get(`${import.meta.env.VITE_API_URL}/admin-heads`);
+            if (res.data.success) {
+                setAdminHeads(res.data.heads);
+            }
+        } catch (err) {
+            console.error(err);
+            toast.error("Failed to load administration heads");
+        } finally {
+            setLoadingHeads(false);
+        }
+    };
+
+    const handleHeadPhotoChange = (e) => {
+        const file = e.target.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onloadend = () => {
+                setHeadPhoto(reader.result);
+            };
+            reader.readAsDataURL(file);
+        }
+    };
+
+    const resetHeadForm = () => {
+        setHeadPosition("");
+        setHeadName("");
+        setHeadPhoto("");
+        setHeadDesignation("");
+        setHeadQualification("");
+        setEditingHeadId(null);
+        const fileInput = document.getElementById("head-photo-input");
+        if (fileInput) fileInput.value = "";
+    };
+
+    const handleSaveAdminHead = async (e) => {
+        e.preventDefault();
+        if (!headPosition.trim() || !headName.trim() || !headPhoto || !headDesignation.trim() || !headQualification.trim()) {
+            toast.error("All fields are required");
+            return;
+        }
+        setSavingHead(true);
+        try {
+            const token = localStorage.getItem("adminToken");
+            if (editingHeadId) {
+                const res = await axios.put(`${import.meta.env.VITE_API_URL}/admin/admin-head/${editingHeadId}`, {
+                    position: headPosition,
+                    photo: headPhoto,
+                    name: headName,
+                    designation: headDesignation,
+                    qualification: headQualification
+                }, {
+                    headers: { Authorization: `Bearer ${token}` }
+                });
+                if (res.data.success) {
+                    toast.success("Admin head updated successfully!");
+                    resetHeadForm();
+                    fetchAdminHeads();
+                }
+            } else {
+                const res = await axios.post(`${import.meta.env.VITE_API_URL}/admin/admin-head`, {
+                    position: headPosition,
+                    photo: headPhoto,
+                    name: headName,
+                    designation: headDesignation,
+                    qualification: headQualification
+                }, {
+                    headers: { Authorization: `Bearer ${token}` }
+                });
+                if (res.data.success) {
+                    toast.success("Admin head added successfully!");
+                    resetHeadForm();
+                    fetchAdminHeads();
+                }
+            }
+        } catch (err) {
+            console.error(err);
+            toast.error(err.response?.data?.message || "Failed to save admin head");
+        } finally {
+            setSavingHead(false);
+        }
+    };
+
+    const handleEditAdminHead = (head) => {
+        setEditingHeadId(head._id);
+        setHeadPosition(head.position);
+        setHeadName(head.name);
+        setHeadPhoto(head.photo);
+        setHeadDesignation(head.designation);
+        setHeadQualification(head.qualification);
+    };
+
+    const handleDeleteAdminHead = async (id) => {
+        if (!window.confirm("Are you sure you want to delete this administration head?")) return;
+        try {
+            const token = localStorage.getItem("adminToken");
+            const res = await axios.delete(`${import.meta.env.VITE_API_URL}/admin/admin-head/${id}`, {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+            if (res.data.success) {
+                toast.success("Admin head deleted successfully!");
+                fetchAdminHeads();
+            }
+        } catch (err) {
+            console.error(err);
+            toast.error("Failed to delete admin head");
+        }
+    };
+
     const fetchGalleryImages = async () => {
         setLoadingGallery(true);
         try {
@@ -365,6 +487,9 @@ const AdminDashboard = () => {
     useEffect(() => {
         if (showGalleryModal || activeTab === "gallery") {
             fetchGalleryImages();
+        }
+        if (activeTab === "admin-heads") {
+            fetchAdminHeads();
         }
     }, [showGalleryModal, activeTab]);
 
@@ -704,6 +829,12 @@ const AdminDashboard = () => {
                         <button className={`sidebar-item ${activeTab === 'nodal' ? 'active' : ''}`} onClick={() => { setActiveTab('nodal'); setIsSidebarOpen(false); }}>
                             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M23 21v-2a4 4 0 0 0-3-3.87" /><path d="M16 3.13a4 4 0 0 1 0 7.75" /></svg>
                             Nodal Officers
+                        </button>
+                    )}
+                    {userRole === 'admin' && (
+                        <button className={`sidebar-item ${activeTab === 'admin-heads' ? 'active' : ''}`} onClick={() => { setActiveTab('admin-heads'); setIsSidebarOpen(false); }}>
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2" /><line x1="16" y1="2" x2="16" y2="6" /><line x1="8" y1="2" x2="8" y2="6" /><line x1="3" y1="10" x2="21" y2="10" /></svg>
+                            Admin Heads
                         </button>
                     )}
                 </div>
@@ -1058,6 +1189,103 @@ const AdminDashboard = () => {
                 {activeTab === "nodal" && userRole === 'admin' && (
                     <div>
                         <AdminAllNodalOfficers />
+                    </div>
+                )}
+
+                {activeTab === "admin-heads" && userRole === 'admin' && (
+                    <div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', flexWrap: 'wrap', gap: '0.75rem' }}>
+                            <div>
+                                <h2 style={{ margin: 0, fontSize: '1.5rem', fontWeight: 800, color: 'var(--txt-1)' }}>Manage Administration Heads</h2>
+                                <p style={{ margin: '0.2rem 0 0', color: 'var(--txt-3)', fontSize: '0.9rem' }}>Configure Vice Chancellors, Coordinators, and other leadership members shown on the home page.</p>
+                            </div>
+                            <span style={{ fontSize: '0.72rem', fontWeight: 600, background: 'var(--bg-2)', color: 'var(--txt-2)', border: '1px solid var(--border)', padding: '0.25rem 0.625rem', borderRadius: '3px' }}>{adminHeads.length} Heads</span>
+                        </div>
+
+                        <div style={{ display: 'grid', gridTemplateColumns: '340px 1fr', gap: '1.5rem', alignItems: 'start' }}>
+                            {/* Management Form Panel */}
+                            <div style={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: '0.5rem', padding: '1.25rem' }}>
+                                <div style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--txt-3)', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: '1rem', paddingBottom: '0.625rem', borderBottom: '1px solid var(--border)' }}>
+                                    {editingHeadId ? 'Edit Administration Head' : 'Add New Admin Head'}
+                                </div>
+                                <form onSubmit={handleSaveAdminHead}>
+                                    <div className="form-group" style={{ marginBottom: '0.875rem' }}>
+                                        <label className="form-label" style={{ fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Position / Title</label>
+                                        <input type="text" className="form-input" style={{ fontSize: '0.85rem' }} placeholder="e.g. Vice Chancellor, NSS Coordinator" value={headPosition} onChange={e => setHeadPosition(e.target.value)} required />
+                                    </div>
+                                    <div className="form-group" style={{ marginBottom: '0.875rem' }}>
+                                        <label className="form-label" style={{ fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Name</label>
+                                        <input type="text" className="form-input" style={{ fontSize: '0.85rem' }} placeholder="Full Name" value={headName} onChange={e => setHeadName(e.target.value)} required />
+                                    </div>
+                                    <div className="form-group" style={{ marginBottom: '0.875rem' }}>
+                                        <label className="form-label" style={{ fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Designation</label>
+                                        <input type="text" className="form-input" style={{ fontSize: '0.85rem' }} placeholder="e.g. Professor & Head of CS" value={headDesignation} onChange={e => setHeadDesignation(e.target.value)} required />
+                                    </div>
+                                    <div className="form-group" style={{ marginBottom: '0.875rem' }}>
+                                        <label className="form-label" style={{ fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Qualification</label>
+                                        <input type="text" className="form-input" style={{ fontSize: '0.85rem' }} placeholder="e.g. Ph.D., M.Sc." value={headQualification} onChange={e => setHeadQualification(e.target.value)} required />
+                                    </div>
+                                    <div className="form-group" style={{ marginBottom: '0.875rem' }}>
+                                        <label className="form-label" style={{ fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Photo</label>
+                                        <input id="head-photo-input" type="file" className="form-input" style={{ fontSize: '0.85rem' }} accept="image/*" onChange={handleHeadPhotoChange} required={!editingHeadId} />
+                                    </div>
+                                    {headPhoto && (
+                                        <div style={{ marginBottom: '1rem', textAlign: 'center' }}>
+                                            <img src={headPhoto} alt="Head Preview" style={{ width: '100px', height: '100px', objectFit: 'cover', borderRadius: '50%', border: '2px solid var(--border)' }} />
+                                        </div>
+                                    )}
+                                    <div style={{ display: 'flex', gap: '0.5rem', marginTop: '1.25rem' }}>
+                                        <button type="submit" className="btn btn-primary" style={{ flex: 1, padding: '0.55rem', fontSize: '0.8rem', fontWeight: 600 }} disabled={savingHead}>
+                                            {savingHead ? 'Saving...' : editingHeadId ? 'Update' : 'Add Head'}
+                                        </button>
+                                        {editingHeadId && (
+                                            <button type="button" className="btn btn-secondary" style={{ padding: '0.55rem', fontSize: '0.8rem' }} onClick={resetHeadForm}>
+                                                Cancel
+                                            </button>
+                                        )}
+                                    </div>
+                                </form>
+                            </div>
+
+                            {/* Admin Heads List Grid */}
+                            <div style={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: '0.5rem', padding: '1.25rem', flex: 1 }}>
+                                {loadingHeads ? (
+                                    <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--txt-3)' }}>Loading administration heads...</div>
+                                ) : adminHeads.length === 0 ? (
+                                    <div style={{ padding: '3rem', textAlign: 'center', color: 'var(--txt-3)' }}>No administration heads configured. Use the form to add one.</div>
+                                ) : (
+                                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '1.25rem' }}>
+                                        {adminHeads.map((head) => (
+                                            <div key={head._id} style={{ background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: '0.5rem', padding: '1.25rem', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', position: 'relative' }}>
+                                                {/* Edit/Delete Actions overlay */}
+                                                <div style={{ position: 'absolute', top: '0.5rem', right: '0.5rem', display: 'flex', gap: '0.25rem' }}>
+                                                    <button 
+                                                        style={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: '4px', cursor: 'pointer', padding: '0.25rem', display: 'flex', alignItems: 'center', justifyContent: 'center' }} 
+                                                        title="Edit"
+                                                        onClick={() => handleEditAdminHead(head)}
+                                                    >
+                                                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--txt-2)" strokeWidth="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" /><path d="M18.5 2.5a2.121 2.121 0 1 1 3 3L12 15l-4 1 1-4 9.5-9.5z" /></svg>
+                                                    </button>
+                                                    <button 
+                                                        style={{ background: 'rgba(239,68,68,0.05)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: '4px', cursor: 'pointer', padding: '0.25rem', display: 'flex', alignItems: 'center', justifyContent: 'center' }} 
+                                                        title="Delete"
+                                                        onClick={() => handleDeleteAdminHead(head._id)}
+                                                    >
+                                                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="red" strokeWidth="2"><polyline points="3 6 5 6 21 6" /><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" /></svg>
+                                                    </button>
+                                                </div>
+
+                                                <img src={head.photo} alt={head.name} style={{ width: 80, height: 80, objectFit: 'cover', borderRadius: '50%', border: '2px solid var(--border)', marginBottom: '0.75rem', background: '#e2e8f0' }} />
+                                                <span style={{ fontSize: '0.65rem', fontWeight: 700, textTransform: 'uppercase', color: 'var(--brand-600)', background: 'rgba(99,102,241,0.08)', padding: '0.15rem 0.5rem', borderRadius: '999px', marginBottom: '0.5rem' }}>{head.position}</span>
+                                                <h4 style={{ margin: '0 0 0.25rem', fontSize: '0.95rem', fontWeight: 700, color: 'var(--txt-1)' }}>{head.name}</h4>
+                                                <p style={{ margin: 0, fontSize: '0.78rem', color: 'var(--txt-3)', fontWeight: 600 }}>{head.designation}</p>
+                                                <p style={{ margin: '0.15rem 0 0', fontSize: '0.75rem', color: 'var(--txt-3)', fontStyle: 'italic' }}>{head.qualification}</p>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+                        </div>
                     </div>
                 )}
             </main>

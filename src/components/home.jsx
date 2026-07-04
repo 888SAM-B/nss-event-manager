@@ -10,6 +10,7 @@ const Home = () => {
     const navigate = useNavigate();
     const { theme } = useTheme();
     const [galleryImages, setGalleryImages] = useState([]);
+    const [adminHeads, setAdminHeads] = useState([]);
     const [selectedImage, setSelectedImage] = useState(null);
     const [loginDropdownOpen, setLoginDropdownOpen] = useState(false);
 
@@ -30,7 +31,20 @@ const Home = () => {
                 console.error("Error fetching gallery:", error);
             }
         };
+
+        const fetchAdminHeads = async () => {
+            try {
+                const res = await axios.get(`${import.meta.env.VITE_API_URL}/admin-heads`);
+                if (res.data.success) {
+                    setAdminHeads(res.data.heads);
+                }
+            } catch (error) {
+                console.error("Error fetching admin heads:", error);
+            }
+        };
+
         fetchGallery();
+        fetchAdminHeads();
     }, []);
 
     const scrollToSection = (id) => {
@@ -67,7 +81,7 @@ const Home = () => {
 
     return (
         <div style={{ minHeight: "100vh", background: "var(--bg)", display: "flex", flexDirection: "column", fontFamily: "var(--font-family)", color: "var(--txt-1)" }}>
-            
+
             {/* Custom Animations CSS */}
             <style>{`
                 .nav-link {
@@ -150,6 +164,20 @@ const Home = () => {
                     background: var(--badge-warning-bg);
                     color: var(--badge-warning-clr);
                 }
+                .hero-columns {
+                    display: grid;
+                    grid-template-columns: 1fr 1fr;
+                    gap: 3.5rem;
+                    align-items: center;
+                    margin-top: 3.5rem;
+                }
+                @media (max-width: 991px) {
+                    .hero-columns {
+                        grid-template-columns: 1fr;
+                        gap: 2.5rem;
+                        margin-top: 2.5rem;
+                    }
+                }
             `}</style>
 
             {/* ── Sticky Navbar ── */}
@@ -165,7 +193,7 @@ const Home = () => {
                 <div className="container flex-between" style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                     {/* Brand */}
                     <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
-                        <img style={{ width: 44, height: 44 }} src="/periyar-univ-logo.png" alt="University Logo" />
+                        <img style={{ width: 44, height: 44, objectFit: "contain" }} src="/periyar-univ-logo.png" alt="University Logo" />
                         <div>
                             <span style={{
                                 fontWeight: 800, fontSize: "1.2rem",
@@ -175,11 +203,14 @@ const Home = () => {
                             }}>NSS Portal</span>
                             <span style={{ fontSize: "0.65rem", display: "block", color: "rgba(255, 255, 255, 0.6)", marginTop: "-2px", letterSpacing: "0.08em" }}>PERIYAR UNIVERSITY</span>
                         </div>
+                        <img style={{ width: 44, height: 44, objectFit: "contain" }} src="/nss-logo.png" alt="NSS Logo" />
                     </div>
 
                     {/* Navigation Section Scroll Links */}
-                    <div className="nav-links-container" style={{ display: "flex", gap: "1.5rem", alignItems: "center" }}>
+                    <div className="nav-links-container" style={{ display: "flex", gap: "1.25rem", alignItems: "center" }}>
                         <span className="nav-link" onClick={() => scrollToSection("intro")}>Intro</span>
+                        <span className="nav-link" onClick={() => scrollToSection("history")}>History</span>
+                        <span className="nav-link" onClick={() => scrollToSection("administration")}>Administration</span>
                         <span className="nav-link" onClick={() => scrollToSection("objectives")}>Objectives</span>
                         <span className="nav-link" onClick={() => scrollToSection("motto")}>Motto</span>
                         <span className="nav-link" onClick={() => scrollToSection("activities")}>Activities</span>
@@ -194,7 +225,7 @@ const Home = () => {
                     {/* Action Group */}
                     <div style={{ display: "flex", alignItems: "center", gap: "1rem", position: "relative" }}>
                         <ThemeToggle />
-                        
+
                         {/* College Self-Registration */}
                         <button
                             className="btn btn-outline-primary btn-sm"
@@ -242,33 +273,199 @@ const Home = () => {
 
             {/* Close Dropdown on click outside */}
             {loginDropdownOpen && (
-                <div 
-                    style={{ position: "fixed", inset: 0, zIndex: 250 }} 
+                <div
+                    style={{ position: "fixed", inset: 0, zIndex: 250 }}
                     onClick={() => setLoginDropdownOpen(false)}
                 />
             )}
 
-            {/* ── Section 1: NSS Intro ── */}
+            {/* ── Section 1: Hero Section ── */}
             <section id="intro" style={{ padding: "5rem 0", background: "var(--card)" }} data-aos="fade-up">
                 <div className="container">
+                    {/* Centered title "NATIONAL SERVICE SCHEME" */}
                     <div style={{ textAlign: "center", marginBottom: "3rem" }}>
-                        <img src="/nss-logo.png" alt="NSS Logo" style={{ width: 90, height: 90, marginBottom: "1rem" }} />
-                        <h1 style={{ fontWeight: 800, fontSize: "clamp(2rem, 4vw, 2.75rem)", color: "var(--txt-1)", letterSpacing: "-0.02em" }}>National Service Scheme (NSS)</h1>
-                        <p style={{ fontSize: "1.1rem", color: "var(--txt-2)", maxWidth: "800px", margin: "0 auto", lineHeight: 1.7 }}>
-                            The National Service Scheme is a noble public service program conducted by the Ministry of Youth Affairs and Sports, Government of India.
-                        </p>
+                        <h1 style={{
+                            fontWeight: 800,
+                            fontSize: "clamp(2rem, 5vw, 3.25rem)",
+                            color: "var(--txt-1)",
+                            letterSpacing: "-0.01em",
+                            textTransform: "uppercase",
+                            margin: 0
+                        }}>
+                            NATIONAL SERVICE SCHEME
+                        </h1>
                     </div>
 
-                    <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: "2.5rem", alignItems: "center" }}>
-                        <div style={{ fontSize: "1.05rem", color: "var(--txt-2)", lineHeight: "1.8" }}>
-                            <p>
+                    {/* Below: left side image, right side content */}
+                    <div className="hero-columns">
+                        {/* Left column: Image */}
+                        <div style={{
+                            borderRadius: "16px",
+                            overflow: "hidden",
+                            boxShadow: "var(--sh-lg)",
+                            border: "1px solid var(--border)",
+                            position: "relative",
+                            aspectRatio: "16/9"
+                        }}>
+                            <img
+                                src="https://silveroakuni.ac.in/_next/image?url=%2Fassets%2Fimages%2Fbanner-images%2Fm_nss.webp&w=3840&q=80"
+                                alt="NSS Illustration"
+                                style={{ width: "100%", height: "100%", display: "block", objectFit: "cover" }}
+                            />
+                        </div>
+
+                        {/* Right column: Content */}
+                        <div style={{ fontSize: "1.05rem", color: "var(--txt-2)", lineHeight: "1.8", display: "flex", flexDirection: "column", gap: "1.25rem" }}>
+                            <p style={{ fontWeight: 600, fontSize: "1.2rem", color: "var(--primary-color)", lineHeight: "1.6", margin: 0 }}>
+                                The National Service Scheme is a noble public service program conducted by the Ministry of Youth Affairs and Sports, Government of India.
+                            </p>
+                            <p style={{ margin: 0 }}>
                                 Launched in the centenary year of Mahatma Gandhi (1969), the primary objective of NSS is to develop student personality and character through voluntary community service. It acts as a bridge connecting student youth with the rural and suburban communities.
                             </p>
-                            <p>
+                            <p style={{ margin: 0 }}>
                                 Student volunteers engage in various social reforms, environmental drives, blood donation camps, literacy campaigns, health care awareness, and village development initiatives. Participation in NSS instills a sense of civic responsibility, leadership capabilities, and community integration.
                             </p>
                         </div>
                     </div>
+                </div>
+            </section>
+
+            {/* ── Section 1.5: History of NSS ── */}
+            <section id="history" style={{ padding: "5rem 0", background: "var(--bg)" }} data-aos="fade-up">
+                <div className="container">
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "4rem", alignItems: "center" }} className="hero-columns">
+                        {/* Left column: History description & download button */}
+                        <div>
+                            <span style={{ fontSize: "0.75rem", fontWeight: 700, letterSpacing: "0.15em", color: "#2563eb", textTransform: "uppercase" }}>Our Legacy</span>
+                            <h2 style={{ fontSize: "2.25rem", fontWeight: 800, marginTop: "0.5rem", marginBottom: "1.5rem" }}>History of NSS</h2>
+                            <div style={{ fontSize: "1.05rem", color: "var(--txt-2)", lineHeight: "1.8", display: "flex", flexDirection: "column", gap: "1rem" }}>
+                                <p>
+                                    The National Service Scheme was formally launched on 24th September 1969, the centenary year of Mahatma Gandhi, the Father of the Nation. Gandhi Ji strongly believed that education should be integrated with social and community service.
+                                </p>
+                                <p>
+                                    Beginning with 37 universities involving approximately 40,000 students across various states, the scheme has grown exponentially. Today, it encompasses millions of student volunteers in universities, colleges, and senior secondary schools throughout India, fostering a spirit of national integration and civic responsibility.
+                                </p>
+                            </div>
+                            <div style={{ marginTop: "2rem" }}>
+                                <a 
+                                    href="/samplepdf.pdf" 
+                                    download="NSS_History_Book.pdf" 
+                                    className="btn btn-primary"
+                                    style={{ padding: "0.75rem 1.5rem", textDecoration: "none" }}
+                                >
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" style={{ marginRight: 8 }}><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                                    Download NSS History Book
+                                </a>
+                            </div>
+                        </div>
+
+                        {/* Right column: Graphic/Illustration representing History */}
+                        <div style={{ borderRadius: "16px", overflow: "hidden", boxShadow: "var(--sh-lg)", border: "1px solid var(--border)" }}>
+                            <img 
+                                src="https://images.unsplash.com/photo-1544654803-b69140b285a1?auto=format&fit=crop&q=80&w=800" 
+                                alt="Mahatma Gandhi & Community Service History" 
+                                style={{ width: "100%", height: "auto", display: "block" }} 
+                            />
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            {/* ── Section 1.6: Administration Section ── */}
+            <section id="administration" style={{ padding: "5rem 0", background: "var(--card)" }} data-aos="fade-up">
+                <div className="container">
+                    <div style={{ textAlign: "center", marginBottom: "4rem" }}>
+                        <span style={{ fontSize: "0.75rem", fontWeight: 700, letterSpacing: "0.15em", color: "#2563eb", textTransform: "uppercase" }}>Organization Leadership</span>
+                        <h2 style={{ fontSize: "2.25rem", fontWeight: 800, marginTop: "0.5rem" }}>Administration Heads</h2>
+                        <p style={{ color: "var(--txt-2)", maxWidth: "550px", margin: "0.5rem auto 0" }}>The leadership guiding the Periyar University National Service Scheme cell.</p>
+                    </div>
+
+                    {adminHeads.length === 0 ? (
+                        <div style={{ textAlign: "center", color: "var(--txt-3)", padding: "2rem" }}>
+                            No administration heads configured.
+                        </div>
+                    ) : (
+                        <div style={{ 
+                            display: "grid", 
+                            gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", 
+                            gap: "2.5rem",
+                            justifyContent: "center"
+                        }}>
+                            {adminHeads.map((head) => (
+                                <div 
+                                    key={head._id} 
+                                    style={{ 
+                                        background: "var(--bg)", 
+                                        padding: "2rem", 
+                                        borderRadius: "16px", 
+                                        border: "1px solid var(--border)", 
+                                        boxShadow: "var(--sh-sm)",
+                                        textAlign: "center",
+                                        display: "flex",
+                                        flexDirection: "column",
+                                        alignItems: "center",
+                                        transition: "all 0.3s ease"
+                                    }}
+                                    onMouseEnter={e => {
+                                        e.currentTarget.style.transform = "translateY(-6px)";
+                                        e.currentTarget.style.boxShadow = "var(--sh-md)";
+                                        e.currentTarget.style.borderColor = "var(--brand-400)";
+                                    }}
+                                    onMouseLeave={e => {
+                                        e.currentTarget.style.transform = "translateY(0)";
+                                        e.currentTarget.style.boxShadow = "var(--sh-sm)";
+                                        e.currentTarget.style.borderColor = "var(--border)";
+                                    }}
+                                >
+                                    {/* Photo */}
+                                    <div style={{ 
+                                        width: "140px", 
+                                        height: "140px", 
+                                        borderRadius: "50%", 
+                                        overflow: "hidden", 
+                                        border: "4px solid var(--card)",
+                                        boxShadow: "var(--sh)",
+                                        marginBottom: "1.5rem",
+                                        background: "#f1f5f9"
+                                    }}>
+                                        <img 
+                                            src={head.photo.startsWith('http') || head.photo.startsWith('uploads') || head.photo.startsWith('/') ? (head.photo.startsWith('uploads') ? `${import.meta.env.VITE_API_URL || ''}/${head.photo}` : head.photo) : "/sample-profile.png"} 
+                                            alt={head.name} 
+                                            style={{ width: "100%", height: "100%", objectFit: "cover" }} 
+                                        />
+                                    </div>
+
+                                    {/* Position (Badge) */}
+                                    <span style={{ 
+                                        fontSize: "0.7rem", 
+                                        fontWeight: 800, 
+                                        textTransform: "uppercase", 
+                                        color: "var(--primary-color)", 
+                                        background: "rgba(37,99,235,0.08)", 
+                                        padding: "0.25rem 0.75rem", 
+                                        borderRadius: "9999px",
+                                        letterSpacing: "0.05em",
+                                        marginBottom: "0.75rem"
+                                    }}>
+                                        {head.position}
+                                    </span>
+
+                                    {/* Name */}
+                                    <h3 style={{ fontSize: "1.2rem", fontWeight: 700, margin: "0 0 0.5rem", color: "var(--txt-1)" }}>
+                                        {head.name}
+                                    </h3>
+
+                                    {/* Designation & Qualification */}
+                                    <p style={{ fontSize: "0.85rem", color: "var(--txt-3)", margin: "0", fontWeight: 600 }}>
+                                        {head.designation}
+                                    </p>
+                                    <p style={{ fontSize: "0.8rem", color: "var(--txt-3)", margin: "0.25rem 0 0", fontStyle: "italic" }}>
+                                        {head.qualification}
+                                    </p>
+                                </div>
+                            ))}
+                        </div>
+                    )}
                 </div>
             </section>
 
@@ -328,7 +525,7 @@ const Home = () => {
                             </ul>
                         </div>
                         <div style={{ borderRadius: "16px", overflow: "hidden", boxShadow: "var(--sh-lg)", border: "1px solid var(--border)" }}>
-                            <img src="https://silveroakuni.ac.in/_next/image?url=%2Fassets%2Fimages%2Fbanner-images%2Fm_nss.webp&w=3840&q=80" alt="Activities" style={{ width: "100%", height: "auto", display: "block" }} />
+                            <img src="/nss-activity-planting.png" alt="Activities" style={{ width: "100%", height: "auto", display: "block" }} />
                         </div>
                     </div>
                 </div>
@@ -434,7 +631,7 @@ const Home = () => {
                                     onClick={() => window.open(`/forms/${form.file}`, "_blank")}
                                     style={{ padding: "0.4rem 0.75rem", fontSize: "0.75rem" }}
                                 >
-                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ marginRight: 4 }}><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ marginRight: 4 }}><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="7 10 12 15 17 10" /><line x1="12" y1="15" x2="12" y2="3" /></svg>
                                     Download
                                 </button>
                             </div>
@@ -459,8 +656,8 @@ const Home = () => {
                             gap: "2rem"
                         }}>
                             {galleryImages.map((img, idx) => (
-                                <div 
-                                    key={img._id} 
+                                <div
+                                    key={img._id}
                                     style={{
                                         background: "var(--card)",
                                         borderRadius: "12px",
@@ -483,10 +680,10 @@ const Home = () => {
                                     }}
                                 >
                                     <div style={{ width: "100%", height: "200px", overflow: "hidden", background: "#f1f5f9" }}>
-                                        <img 
-                                            src={img.image} 
-                                            alt={img.description} 
-                                            style={{ width: "100%", height: "100%", objectFit: "cover" }} 
+                                        <img
+                                            src={img.image}
+                                            alt={img.description}
+                                            style={{ width: "100%", height: "100%", objectFit: "cover" }}
                                         />
                                     </div>
                                     <div style={{ padding: "1rem", flexGrow: 1 }}>
@@ -503,7 +700,7 @@ const Home = () => {
 
             {/* ── Lightbox Modal ── */}
             {selectedImage && (
-                <div 
+                <div
                     style={{
                         position: "fixed",
                         inset: 0,
@@ -518,7 +715,7 @@ const Home = () => {
                     }}
                     onClick={() => setSelectedImage(null)}
                 >
-                    <button 
+                    <button
                         style={{
                             position: "absolute",
                             top: "1.5rem",
@@ -539,19 +736,19 @@ const Home = () => {
                     >
                         &times;
                     </button>
-                    
-                    <div 
+
+                    <div
                         style={{ maxWidth: "90%", maxHeight: "70vh", overflow: "hidden", borderRadius: "12px", marginBottom: "1.5rem" }}
                         onClick={e => e.stopPropagation()}
                     >
-                        <img 
-                            src={selectedImage.image} 
-                            alt={selectedImage.description} 
+                        <img
+                            src={selectedImage.image}
+                            alt={selectedImage.description}
                             style={{ maxWidth: "100%", maxHeight: "70vh", display: "block", objectFit: "contain" }}
                         />
                     </div>
-                    
-                    <div 
+
+                    <div
                         style={{ color: "#fff", maxWidth: "600px", textAlign: "center", padding: "1rem 2rem", background: "rgba(255, 255, 255, 0.05)", borderRadius: "8px", border: "1px solid rgba(255, 255, 255, 0.1)" }}
                         onClick={e => e.stopPropagation()}
                     >
