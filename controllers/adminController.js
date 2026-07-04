@@ -6,6 +6,7 @@ const Event = require('../models/Event');
 const ProgramOfficer = require('../models/ProgramOfficer');
 const GalleryImage = require('../models/GalleryImage');
 const NodalOfficer = require('../models/NodalOfficer');
+const AdminHead = require('../models/AdminHead');
 
 // Get District Helper for Nodal/Admin filtering
 const getDistrictCollegeIds = async (user) => {
@@ -327,6 +328,72 @@ const deleteGalleryImage = async (req, res) => {
     }
 };
 
+// --- Administration Heads ---
+const getAdminHeads = async (req, res) => {
+    try {
+        const heads = await AdminHead.find({}).sort({ createdAt: 1 });
+        res.json({ success: true, heads });
+    } catch (error) {
+        console.error("Error fetching admin heads:", error);
+        res.status(500).json({ success: false, message: "Internal Server Error" });
+    }
+};
+
+const addAdminHead = async (req, res) => {
+    if (req.user.role !== 'admin') {
+        return res.status(403).json({ success: false, message: "Unauthorized: Admin access required" });
+    }
+    const { position, photo, name, designation, qualification } = req.body;
+    if (!position || !photo || !name || !designation || !qualification) {
+        return res.status(400).json({ success: false, message: "All fields are required" });
+    }
+    try {
+        const newHead = new AdminHead({ position, photo, name, designation, qualification });
+        await newHead.save();
+        res.json({ success: true, message: "Admin head added successfully", head: newHead });
+    } catch (error) {
+        console.error("Error adding admin head:", error);
+        res.status(500).json({ success: false, message: "Internal Server Error" });
+    }
+};
+
+const updateAdminHead = async (req, res) => {
+    if (req.user.role !== 'admin') {
+        return res.status(403).json({ success: false, message: "Unauthorized: Admin access required" });
+    }
+    const { id } = req.params;
+    const { position, photo, name, designation, qualification } = req.body;
+    try {
+        const updatedHead = await AdminHead.findByIdAndUpdate(id, {
+            position, photo, name, designation, qualification
+        }, { new: true });
+        if (!updatedHead) {
+            return res.status(404).json({ success: false, message: "Admin head not found" });
+        }
+        res.json({ success: true, message: "Admin head updated successfully", head: updatedHead });
+    } catch (error) {
+        console.error("Error updating admin head:", error);
+        res.status(500).json({ success: false, message: "Internal Server Error" });
+    }
+};
+
+const deleteAdminHead = async (req, res) => {
+    if (req.user.role !== 'admin') {
+        return res.status(403).json({ success: false, message: "Unauthorized: Admin access required" });
+    }
+    const { id } = req.params;
+    try {
+        const deletedHead = await AdminHead.findByIdAndDelete(id);
+        if (!deletedHead) {
+            return res.status(404).json({ success: false, message: "Admin head not found" });
+        }
+        res.json({ success: true, message: "Admin head deleted successfully" });
+    } catch (error) {
+        console.error("Error deleting admin head:", error);
+        res.status(500).json({ success: false, message: "Internal Server Error" });
+    }
+};
+
 module.exports = {
     getAdminStats,
     getAdminEvents,
@@ -339,5 +406,9 @@ module.exports = {
     getGalleryImages,
     addGalleryImage,
     updateGalleryImage,
-    deleteGalleryImage
+    deleteGalleryImage,
+    getAdminHeads,
+    addAdminHead,
+    updateAdminHead,
+    deleteAdminHead
 };

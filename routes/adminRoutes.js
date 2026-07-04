@@ -14,7 +14,11 @@ const {
     getGalleryImages,
     addGalleryImage,
     updateGalleryImage,
-    deleteGalleryImage
+    deleteGalleryImage,
+    getAdminHeads,
+    addAdminHead,
+    updateAdminHead,
+    deleteAdminHead
 } = require('../controllers/adminController');
 
 // Stats and Records
@@ -34,6 +38,12 @@ router.get('/gallery', getGalleryImages);
 router.post('/admin/gallery', verifyToken, addGalleryImage);
 router.put('/admin/gallery/:id', verifyToken, updateGalleryImage);
 router.delete('/admin/gallery/:id', verifyToken, deleteGalleryImage);
+
+// Administration Heads CRUD
+router.get('/admin-heads', getAdminHeads);
+router.post('/admin/admin-head', verifyToken, addAdminHead);
+router.put('/admin/admin-head/:id', verifyToken, updateAdminHead);
+router.delete('/admin/admin-head/:id', verifyToken, deleteAdminHead);
 
 // General File Upload Endpoint
 router.post('/upload', verifyToken, upload.single('file'), (req, res) => {
