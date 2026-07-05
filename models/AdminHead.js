@@ -6,7 +6,8 @@ const adminHeadSchema = new mongoose.Schema({
     name: { type: String, required: true },
     designation: { type: String, required: true },
     qualification: { type: String, required: true },
-    displayOrder: { type: Number, default: 0 },
+    rowOrder: { type: Number, default: 1 },
+    displayOrder: { type: Number, default: 1 },
     createdAt: { type: Date, default: Date.now }
 });
 

@@ -11,6 +11,11 @@ const eventSchema = new mongoose.Schema({
     timeFrom: String,
     timeTo: String,
     venue: String,
+    resourcePerson: String,
+    level: { type: String, enum: ['National', 'State', 'Regional', 'District', 'University', 'College'], default: 'College' },
+    sponsorship: String,
+    registeredMeriBharath: String, // 'Yes' or 'No'
+    meriBharathUrl: String,
     images: Array,
     brochure: String,
     eventCode: String,
@@ -32,6 +37,7 @@ const eventSchema = new mongoose.Schema({
         outcome: String,
         reportFile: String, // PDF URL / relative path
         reportPhotos: Array, // Array of Image URLs / relative paths
+        guests: [String], // Guest / Resource person names
         submittedAt: { type: Date, default: Date.now },
         organizingUnits: [String], // Names of units involved
         volunteersParticipated: Number,

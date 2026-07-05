@@ -305,11 +305,52 @@ const submitReport = async (req, res) => {
     }
 };
 
+// Update Event
+const updateEvent = async (req, res) => {
+    const { eventId, eventData } = req.body;
+    if (!eventId || !eventData) {
+        return res.status(400).json({ success: false, message: "Event ID and event details are required" });
+    }
+
+    if (!(await verifyOwnership(req, eventData.collegeCode, eventData.unitCode))) {
+        return res.status(403).json({ success: false, message: "Forbidden: Unauthorized access" });
+    }
+
+    try {
+        const event = await Event.findById(eventId);
+        if (!event) return res.status(404).json({ success: false, message: "Event not found" });
+
+        // Update fields
+        const updatableFields = [
+            'name', 'description', 'category', 'singleDay', 'date', 'dateFrom', 'dateTo',
+            'timeFrom', 'timeTo', 'venue', 'resourcePerson', 'level', 'sponsorship',
+            'registeredMeriBharath', 'meriBharathUrl', 'images', 'brochure'
+        ];
+
+        updatableFields.forEach(field => {
+            if (eventData[field] !== undefined) {
+                event[field] = eventData[field];
+            }
+        });
+
+        if (event.registeredMeriBharath === 'No') {
+            event.meriBharathUrl = '';
+        }
+
+        await event.save();
+        res.json({ success: true, message: "Event updated successfully", event });
+    } catch (error) {
+        console.error("Error updating event:", error);
+        res.status(500).json({ success: false, message: "Internal Server Error" });
+    }
+};
+
 module.exports = {
     addEvent,
     respondCollaboration,
     getEvents,
     getUnitNotifications,
     deleteEvent,
-    submitReport
+    submitReport,
+    updateEvent
 };

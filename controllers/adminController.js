@@ -49,7 +49,7 @@ const getAdminStats = async (req, res) => {
                 .populate('collegeId', 'insName code')
                 .populate('unitId', 'name unitNumber');
 
-            colleges = await User.find({ _id: { $in: collegeIds } }, 'insName code events userName')
+            colleges = await User.find({ _id: { $in: collegeIds } }, 'insName code events userName collegeType units')
                 .populate('units', 'unitNumber name');
         } else {
             // Admin Full
@@ -65,7 +65,7 @@ const getAdminStats = async (req, res) => {
                 .populate('collegeId', 'insName code')
                 .populate('unitId', 'name unitNumber');
 
-            colleges = await User.find({}, 'insName code events userName')
+            colleges = await User.find({}, 'insName code events userName collegeType units')
                 .populate('units', 'unitNumber name');
         }
 
@@ -331,7 +331,7 @@ const deleteGalleryImage = async (req, res) => {
 // --- Administration Heads ---
 const getAdminHeads = async (req, res) => {
     try {
-        const heads = await AdminHead.find({}).sort({ displayOrder: 1, createdAt: 1 });
+        const heads = await AdminHead.find({}).sort({ rowOrder: 1, displayOrder: 1, createdAt: 1 });
         res.json({ success: true, heads });
     } catch (error) {
         console.error("Error fetching admin heads:", error);
@@ -343,13 +343,14 @@ const addAdminHead = async (req, res) => {
     if (req.user.role !== 'admin') {
         return res.status(403).json({ success: false, message: "Unauthorized: Admin access required" });
     }
-    const { position, photo, name, designation, qualification, displayOrder } = req.body;
+    const { position, photo, name, designation, qualification, rowOrder, displayOrder } = req.body;
     if (!position || !photo || !name || !designation || !qualification) {
         return res.status(400).json({ success: false, message: "All fields are required" });
     }
     try {
-        const order = displayOrder !== undefined ? Number(displayOrder) : 0;
-        const newHead = new AdminHead({ position, photo, name, designation, qualification, displayOrder: order });
+        const rOrder = rowOrder !== undefined ? Number(rowOrder) : 1;
+        const dOrder = displayOrder !== undefined ? Number(displayOrder) : 1;
+        const newHead = new AdminHead({ position, photo, name, designation, qualification, rowOrder: rOrder, displayOrder: dOrder });
         await newHead.save();
         res.json({ success: true, message: "Admin head added successfully", head: newHead });
     } catch (error) {
@@ -363,11 +364,12 @@ const updateAdminHead = async (req, res) => {
         return res.status(403).json({ success: false, message: "Unauthorized: Admin access required" });
     }
     const { id } = req.params;
-    const { position, photo, name, designation, qualification, displayOrder } = req.body;
+    const { position, photo, name, designation, qualification, rowOrder, displayOrder } = req.body;
     try {
-        const order = displayOrder !== undefined ? Number(displayOrder) : 0;
+        const rOrder = rowOrder !== undefined ? Number(rowOrder) : 1;
+        const dOrder = displayOrder !== undefined ? Number(displayOrder) : 1;
         const updatedHead = await AdminHead.findByIdAndUpdate(id, {
-            position, photo, name, designation, qualification, displayOrder: order
+            position, photo, name, designation, qualification, rowOrder: rOrder, displayOrder: dOrder
         }, { new: true });
         if (!updatedHead) {
             return res.status(404).json({ success: false, message: "Admin head not found" });

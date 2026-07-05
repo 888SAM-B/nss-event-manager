@@ -294,8 +294,9 @@ const addAdoptedVillage = async (req, res) => {
         }
 
         // Security check
-        if (req.user.role !== 'admin' && req.user.userName !== college.userName) {
-            return res.status(403).json({ success: false, message: "Unauthorized: only college admin can add villages" });
+        const { verifyOwnership } = require('../middlewares/auth');
+        if (!(await verifyOwnership(req, collegeCode))) {
+            return res.status(403).json({ success: false, message: "Unauthorized: only college admin or associated unit can add villages" });
         }
 
         college.adoptingVillages.push({
@@ -330,8 +331,9 @@ const deleteAdoptedVillage = async (req, res) => {
         }
 
         // Security check
-        if (req.user.role !== 'admin' && req.user.userName !== college.userName) {
-            return res.status(403).json({ success: false, message: "Unauthorized: only college admin can delete villages" });
+        const { verifyOwnership } = require('../middlewares/auth');
+        if (!(await verifyOwnership(req, collegeCode))) {
+            return res.status(403).json({ success: false, message: "Unauthorized: only college admin or associated unit can delete villages" });
         }
 
         const index = Number(villageIndex);
