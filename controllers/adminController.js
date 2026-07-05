@@ -331,7 +331,7 @@ const deleteGalleryImage = async (req, res) => {
 // --- Administration Heads ---
 const getAdminHeads = async (req, res) => {
     try {
-        const heads = await AdminHead.find({}).sort({ createdAt: 1 });
+        const heads = await AdminHead.find({}).sort({ displayOrder: 1, createdAt: 1 });
         res.json({ success: true, heads });
     } catch (error) {
         console.error("Error fetching admin heads:", error);
@@ -343,12 +343,13 @@ const addAdminHead = async (req, res) => {
     if (req.user.role !== 'admin') {
         return res.status(403).json({ success: false, message: "Unauthorized: Admin access required" });
     }
-    const { position, photo, name, designation, qualification } = req.body;
+    const { position, photo, name, designation, qualification, displayOrder } = req.body;
     if (!position || !photo || !name || !designation || !qualification) {
         return res.status(400).json({ success: false, message: "All fields are required" });
     }
     try {
-        const newHead = new AdminHead({ position, photo, name, designation, qualification });
+        const order = displayOrder !== undefined ? Number(displayOrder) : 0;
+        const newHead = new AdminHead({ position, photo, name, designation, qualification, displayOrder: order });
         await newHead.save();
         res.json({ success: true, message: "Admin head added successfully", head: newHead });
     } catch (error) {
@@ -362,10 +363,11 @@ const updateAdminHead = async (req, res) => {
         return res.status(403).json({ success: false, message: "Unauthorized: Admin access required" });
     }
     const { id } = req.params;
-    const { position, photo, name, designation, qualification } = req.body;
+    const { position, photo, name, designation, qualification, displayOrder } = req.body;
     try {
+        const order = displayOrder !== undefined ? Number(displayOrder) : 0;
         const updatedHead = await AdminHead.findByIdAndUpdate(id, {
-            position, photo, name, designation, qualification
+            position, photo, name, designation, qualification, displayOrder: order
         }, { new: true });
         if (!updatedHead) {
             return res.status(404).json({ success: false, message: "Admin head not found" });
