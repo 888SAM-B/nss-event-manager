@@ -386,8 +386,8 @@ const Home = () => {
                         </div>
                     ) : (
                         <div style={{ 
-                            display: "grid", 
-                            gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", 
+                            display: "flex", 
+                            flexWrap: "wrap",
                             gap: "2.5rem",
                             justifyContent: "center"
                         }}>
@@ -404,7 +404,9 @@ const Home = () => {
                                         display: "flex",
                                         flexDirection: "column",
                                         alignItems: "center",
-                                        transition: "all 0.3s ease"
+                                        transition: "all 0.3s ease",
+                                        width: "280px",
+                                        boxSizing: "border-box"
                                     }}
                                     onMouseEnter={e => {
                                         e.currentTarget.style.transform = "translateY(-6px)";
@@ -429,7 +431,7 @@ const Home = () => {
                                         background: "#f1f5f9"
                                     }}>
                                         <img 
-                                            src={head.photo.startsWith('http') || head.photo.startsWith('uploads') || head.photo.startsWith('/') ? (head.photo.startsWith('uploads') ? `${import.meta.env.VITE_API_URL || ''}/${head.photo}` : head.photo) : "/sample-profile.png"} 
+                                            src={head.photo.startsWith('data:') || head.photo.startsWith('http') || head.photo.startsWith('/') ? head.photo : (head.photo.startsWith('uploads') ? `${import.meta.env.VITE_API_URL || ''}/${head.photo}` : "/sample-profile.png")} 
                                             alt={head.name} 
                                             style={{ width: "100%", height: "100%", objectFit: "cover" }} 
                                         />

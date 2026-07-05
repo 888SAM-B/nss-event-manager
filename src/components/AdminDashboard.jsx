@@ -354,6 +354,7 @@ const AdminDashboard = () => {
     const [headPhoto, setHeadPhoto] = useState("");
     const [headDesignation, setHeadDesignation] = useState("");
     const [headQualification, setHeadQualification] = useState("");
+    const [headDisplayOrder, setHeadDisplayOrder] = useState(0);
     const [editingHeadId, setEditingHeadId] = useState(null);
     const [savingHead, setSavingHead] = useState(false);
 
@@ -389,6 +390,7 @@ const AdminDashboard = () => {
         setHeadPhoto("");
         setHeadDesignation("");
         setHeadQualification("");
+        setHeadDisplayOrder(0);
         setEditingHeadId(null);
         const fileInput = document.getElementById("head-photo-input");
         if (fileInput) fileInput.value = "";
@@ -409,7 +411,8 @@ const AdminDashboard = () => {
                     photo: headPhoto,
                     name: headName,
                     designation: headDesignation,
-                    qualification: headQualification
+                    qualification: headQualification,
+                    displayOrder: Number(headDisplayOrder)
                 }, {
                     headers: { Authorization: `Bearer ${token}` }
                 });
@@ -424,7 +427,8 @@ const AdminDashboard = () => {
                     photo: headPhoto,
                     name: headName,
                     designation: headDesignation,
-                    qualification: headQualification
+                    qualification: headQualification,
+                    displayOrder: Number(headDisplayOrder)
                 }, {
                     headers: { Authorization: `Bearer ${token}` }
                 });
@@ -449,6 +453,7 @@ const AdminDashboard = () => {
         setHeadPhoto(head.photo);
         setHeadDesignation(head.designation);
         setHeadQualification(head.qualification);
+        setHeadDisplayOrder(head.displayOrder || 0);
     };
 
     const handleDeleteAdminHead = async (id) => {
@@ -1226,6 +1231,10 @@ const AdminDashboard = () => {
                                         <input type="text" className="form-input" style={{ fontSize: '0.85rem' }} placeholder="e.g. Ph.D., M.Sc." value={headQualification} onChange={e => setHeadQualification(e.target.value)} required />
                                     </div>
                                     <div className="form-group" style={{ marginBottom: '0.875rem' }}>
+                                        <label className="form-label" style={{ fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Display Order</label>
+                                        <input type="number" className="form-input" style={{ fontSize: '0.85rem' }} placeholder="e.g. 1, 2, 3" value={headDisplayOrder} onChange={e => setHeadDisplayOrder(e.target.value)} required />
+                                    </div>
+                                    <div className="form-group" style={{ marginBottom: '0.875rem' }}>
                                         <label className="form-label" style={{ fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Photo</label>
                                         <input id="head-photo-input" type="file" className="form-input" style={{ fontSize: '0.85rem' }} accept="image/*" onChange={handleHeadPhotoChange} required={!editingHeadId} />
                                     </div>
@@ -1254,9 +1263,9 @@ const AdminDashboard = () => {
                                 ) : adminHeads.length === 0 ? (
                                     <div style={{ padding: '3rem', textAlign: 'center', color: 'var(--txt-3)' }}>No administration heads configured. Use the form to add one.</div>
                                 ) : (
-                                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '1.25rem' }}>
+                                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '1.25rem', justifyContent: 'flex-start' }}>
                                         {adminHeads.map((head) => (
-                                            <div key={head._id} style={{ background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: '0.5rem', padding: '1.25rem', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', position: 'relative' }}>
+                                            <div key={head._id} style={{ background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: '0.5rem', padding: '1.25rem', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', position: 'relative', width: '220px', boxSizing: 'border-box' }}>
                                                 {/* Edit/Delete Actions overlay */}
                                                 <div style={{ position: 'absolute', top: '0.5rem', right: '0.5rem', display: 'flex', gap: '0.25rem' }}>
                                                     <button 
@@ -1280,6 +1289,37 @@ const AdminDashboard = () => {
                                                 <h4 style={{ margin: '0 0 0.25rem', fontSize: '0.95rem', fontWeight: 700, color: 'var(--txt-1)' }}>{head.name}</h4>
                                                 <p style={{ margin: 0, fontSize: '0.78rem', color: 'var(--txt-3)', fontWeight: 600 }}>{head.designation}</p>
                                                 <p style={{ margin: '0.15rem 0 0', fontSize: '0.75rem', color: 'var(--txt-3)', fontStyle: 'italic' }}>{head.qualification}</p>
+
+                                                {/* Inline Display Order controls */}
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', marginTop: '0.75rem', width: '100%', justifyContent: 'center' }}>
+                                                    <span style={{ fontSize: '0.7rem', color: 'var(--txt-3)', fontWeight: 600 }}>Order:</span>
+                                                    <input 
+                                                        type="number" 
+                                                        style={{ width: '55px', fontSize: '0.75rem', padding: '0.2rem 0.4rem', border: '1px solid var(--border)', borderRadius: '4px', background: 'var(--card)', color: 'var(--txt-1)', textAlign: 'center' }} 
+                                                        value={head.displayOrder || 0} 
+                                                        onChange={(e) => {
+                                                            const val = parseInt(e.target.value) || 0;
+                                                            setAdminHeads(prev => prev.map(h => h._id === head._id ? { ...h, displayOrder: val } : h));
+                                                        }}
+                                                        onBlur={async (e) => {
+                                                            const val = parseInt(e.target.value) || 0;
+                                                            try {
+                                                                const token = localStorage.getItem("adminToken");
+                                                                await axios.put(`${import.meta.env.VITE_API_URL}/admin/admin-head/${head._id}`, {
+                                                                    ...head,
+                                                                    displayOrder: val
+                                                                }, {
+                                                                    headers: { Authorization: `Bearer ${token}` }
+                                                                });
+                                                                toast.success("Display order updated!");
+                                                                fetchAdminHeads();
+                                                            } catch (err) {
+                                                                console.error(err);
+                                                                toast.error("Failed to update display order");
+                                                            }
+                                                        }}
+                                                    />
+                                                </div>
                                             </div>
                                         ))}
                                     </div>
