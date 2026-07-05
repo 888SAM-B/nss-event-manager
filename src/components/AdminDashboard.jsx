@@ -354,7 +354,8 @@ const AdminDashboard = () => {
     const [headPhoto, setHeadPhoto] = useState("");
     const [headDesignation, setHeadDesignation] = useState("");
     const [headQualification, setHeadQualification] = useState("");
-    const [headDisplayOrder, setHeadDisplayOrder] = useState(0);
+    const [headDisplayOrder, setHeadDisplayOrder] = useState(1);
+    const [headRowOrder, setHeadRowOrder] = useState(1);
     const [editingHeadId, setEditingHeadId] = useState(null);
     const [savingHead, setSavingHead] = useState(false);
 
@@ -390,7 +391,8 @@ const AdminDashboard = () => {
         setHeadPhoto("");
         setHeadDesignation("");
         setHeadQualification("");
-        setHeadDisplayOrder(0);
+        setHeadDisplayOrder(1);
+        setHeadRowOrder(1);
         setEditingHeadId(null);
         const fileInput = document.getElementById("head-photo-input");
         if (fileInput) fileInput.value = "";
@@ -412,6 +414,7 @@ const AdminDashboard = () => {
                     name: headName,
                     designation: headDesignation,
                     qualification: headQualification,
+                    rowOrder: Number(headRowOrder),
                     displayOrder: Number(headDisplayOrder)
                 }, {
                     headers: { Authorization: `Bearer ${token}` }
@@ -428,6 +431,7 @@ const AdminDashboard = () => {
                     name: headName,
                     designation: headDesignation,
                     qualification: headQualification,
+                    rowOrder: Number(headRowOrder),
                     displayOrder: Number(headDisplayOrder)
                 }, {
                     headers: { Authorization: `Bearer ${token}` }
@@ -453,7 +457,8 @@ const AdminDashboard = () => {
         setHeadPhoto(head.photo);
         setHeadDesignation(head.designation);
         setHeadQualification(head.qualification);
-        setHeadDisplayOrder(head.displayOrder || 0);
+        setHeadRowOrder(head.rowOrder || 1);
+        setHeadDisplayOrder(head.displayOrder || 1);
     };
 
     const handleDeleteAdminHead = async (id) => {
@@ -872,72 +877,130 @@ const AdminDashboard = () => {
                         </div>
 
                         {/* Stats Row */}
-                        <div className="grid-cols-4 mb-5" style={{ gap: '0.875rem' }}>
-                            {[
+                        {(() => {
+                            const today = new Date();
+                            today.setHours(0,0,0,0);
+
+                            const registeredColleges = stats.colleges?.filter(c => c.isRegistered) || [];
+                            const totalColleges = registeredColleges.length;
+                            const fundedColleges = registeredColleges.filter(c => c.collegeType === 'Funded').length;
+                            const selfFinancedColleges = totalColleges - fundedColleges;
+
+                            const totalUnits = registeredColleges.reduce((acc, c) => acc + (c.units?.length || 0), 0);
+                            const fundedUnits = registeredColleges.filter(c => c.collegeType === 'Funded').reduce((acc, c) => acc + (c.units?.length || 0), 0);
+                            const selfFinancedUnits = totalUnits - fundedUnits;
+
+                            const totalEvents = stats.totalEvents || 0;
+                            const upcomingEvents = stats.allEvents?.filter(e => {
+                                const d = new Date(e.singleDay ? e.date : e.dateFrom);
+                                return d >= today;
+                            }).length || 0;
+                            const completedEvents = totalEvents - upcomingEvents;
+
+                            const cardData = [
                                 {
-                                    label: 'Colleges',
-                                    value: stats.totalColleges,
+                                    title: 'Colleges',
+                                    total: totalColleges,
+                                    sub1Label: 'Funded Colleges',
+                                    sub1Val: fundedColleges,
+                                    sub2Label: 'Self-Financing',
+                                    sub2Val: selfFinancedColleges,
                                     icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 10v6M2 10l10-5 10 5-10 5z" /><path d="M6 12v5c0 2 2 3 6 3s6-1 6-3v-5" /></svg>,
                                     color: '#6366F1',
                                     bgLight: 'rgba(99, 102, 241, 0.1)'
                                 },
                                 {
-                                    label: 'Units',
-                                    value: stats.totalUnits,
+                                    title: 'Units',
+                                    total: totalUnits,
+                                    sub1Label: 'Funded Units',
+                                    sub1Val: fundedUnits,
+                                    sub2Label: 'Self-Financing',
+                                    sub2Val: selfFinancedUnits,
                                     icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2" /><path d="M12 2L2 7l10 5 10-5-10-5z" /></svg>,
                                     color: '#2563EB',
                                     bgLight: 'rgba(37, 99, 235, 0.1)'
                                 },
                                 {
-                                    label: 'Events',
-                                    value: stats.totalEvents,
+                                    title: 'Events',
+                                    total: totalEvents,
+                                    sub1Label: 'Completed Events',
+                                    sub1Val: completedEvents,
+                                    sub2Label: 'Upcoming Events',
+                                    sub2Val: upcomingEvents,
                                     icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2" /><line x1="16" y1="2" x2="16" y2="6" /><line x1="8" y1="2" x2="8" y2="6" /><line x1="3" y1="10" x2="21" y2="10" /></svg>,
                                     color: '#10B981',
                                     bgLight: 'rgba(16, 185, 129, 0.1)'
-                                },
-                                {
-                                    label: 'Upcoming',
-                                    value: upcomingCount,
-                                    icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" /></svg>,
-                                    color: '#F59E0B',
-                                    bgLight: 'rgba(245, 158, 11, 0.1)'
-                                },
-                            ].map(s => (
-                                <div key={s.label} style={{
-                                    background: 'var(--card)',
-                                    border: '1px solid var(--border)',
-                                    borderLeft: `4px solid ${s.color}`,
-                                    borderRadius: '0.5rem',
-                                    padding: '1.125rem 1.25rem',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    gap: '0.875rem',
-                                    boxShadow: 'var(--sh-sm)',
-                                    transition: 'all 0.2s ease',
-                                    cursor: 'default'
-                                }}
-                                    onMouseEnter={e => {
-                                        e.currentTarget.style.boxShadow = 'var(--sh-md)';
-                                        e.currentTarget.style.transform = 'translateY(-2px)';
-                                    }}
-                                    onMouseLeave={e => {
-                                        e.currentTarget.style.boxShadow = 'var(--sh-sm)';
-                                        e.currentTarget.style.transform = 'translateY(0)';
-                                    }}
-                                >
-                                    <div style={{
-                                        width: 42, height: 42, borderRadius: '0.375rem', flexShrink: 0,
-                                        background: s.bgLight,
-                                        display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                        color: s.color
-                                    }}>{s.icon}</div>
-                                    <div>
-                                        <div style={{ fontSize: '1.625rem', fontWeight: 800, letterSpacing: '-0.04em', color: 'var(--txt-1)', lineHeight: 1 }}>{s.value ?? '—'}</div>
-                                        <div style={{ fontSize: '0.68rem', fontWeight: 600, color: 'var(--txt-3)', textTransform: 'uppercase', letterSpacing: '0.08em', marginTop: '0.2rem' }}>{s.label}</div>
-                                    </div>
+                                }
+                            ];
+
+                            return (
+                                <div style={{
+                                    display: 'grid',
+                                    gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
+                                    gap: '1.25rem',
+                                    marginBottom: '2rem'
+                                }}>
+                                    {cardData.map(c => (
+                                        <div key={c.title} style={{
+                                            background: 'var(--card)',
+                                            border: '1px solid var(--border)',
+                                            borderTop: `4px solid ${c.color}`,
+                                            borderRadius: '12px',
+                                            padding: '1.5rem',
+                                            boxShadow: 'var(--sh-sm)',
+                                            display: 'flex',
+                                            flexDirection: 'column',
+                                            gap: '1rem',
+                                            transition: 'all 0.2s ease',
+                                            cursor: 'default'
+                                        }}
+                                            onMouseEnter={e => {
+                                                e.currentTarget.style.boxShadow = 'var(--sh-md)';
+                                                e.currentTarget.style.transform = 'translateY(-3px)';
+                                            }}
+                                            onMouseLeave={e => {
+                                                e.currentTarget.style.boxShadow = 'var(--sh-sm)';
+                                                e.currentTarget.style.transform = 'translateY(0)';
+                                            }}
+                                        >
+                                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                                                    <div style={{
+                                                        width: '40px',
+                                                        height: '40px',
+                                                        borderRadius: '8px',
+                                                        background: c.bgLight,
+                                                        display: 'flex',
+                                                        alignItems: 'center',
+                                                        justifyContent: 'center',
+                                                        color: c.color,
+                                                        flexShrink: 0
+                                                    }}>
+                                                        {c.icon}
+                                                    </div>
+                                                    <span style={{ fontSize: '0.95rem', fontWeight: 700, color: 'var(--txt-1)' }}>{c.title}</span>
+                                                </div>
+                                                <div style={{ textAlign: 'right' }}>
+                                                    <span style={{ fontSize: '1.75rem', fontWeight: 800, color: 'var(--txt-1)', lineHeight: 1, display: 'block' }}>{c.total}</span>
+                                                    <span style={{ display: 'block', fontSize: '0.65rem', color: 'var(--txt-3)', textTransform: 'uppercase', fontWeight: 700, marginTop: '0.15rem' }}>Total</span>
+                                                </div>
+                                            </div>
+
+                                            <div style={{ borderTop: '1px dashed var(--border)', paddingTop: '0.875rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.8rem' }}>
+                                                    <span style={{ color: 'var(--txt-2)' }}>{c.sub1Label}</span>
+                                                    <span style={{ fontWeight: 700, color: 'var(--txt-1)', background: 'var(--bg-2)', padding: '0.15rem 0.5rem', borderRadius: '4px', border: '1px solid var(--border)' }}>{c.sub1Val}</span>
+                                                </div>
+                                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.8rem' }}>
+                                                    <span style={{ color: 'var(--txt-2)' }}>{c.sub2Label}</span>
+                                                    <span style={{ fontWeight: 700, color: 'var(--txt-1)', background: 'var(--bg-2)', padding: '0.15rem 0.5rem', borderRadius: '4px', border: '1px solid var(--border)' }}>{c.sub2Val}</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ))}
                                 </div>
-                            ))}
-                        </div>
+                            );
+                        })()}
 
                         {/* Charts */}
                         <div className="grid-cols-2 mb-5 admin-charts-container">
@@ -1020,9 +1083,14 @@ const AdminDashboard = () => {
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', flexWrap: 'wrap', gap: '0.75rem' }}>
                             <div>
                                 <h2 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 700, color: 'var(--txt-1)' }}>Registered Colleges</h2>
-                                <p style={{ margin: '0.2rem 0 0', color: 'var(--txt-3)', fontSize: '0.78rem' }}>Click any row to access the college dashboard</p>
+                                <p style={{ margin: '0.2rem 0 0', color: 'var(--txt-3)', fontSize: '0.78rem' }}>List of all registered colleges and their status</p>
                             </div>
-                            <span style={{ fontSize: '0.72rem', fontWeight: 600, background: 'var(--brand-50)', color: 'var(--brand-700)', border: '1px solid var(--brand-200)', padding: '0.25rem 0.625rem', borderRadius: '3px' }}>{stats.colleges.length} colleges</span>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                                {userRole === 'admin' && (
+                                    <button className="btn btn-primary btn-sm" onClick={handleAddOrg}>+ Register College</button>
+                                )}
+                                <span style={{ fontSize: '0.72rem', fontWeight: 600, background: 'var(--brand-50)', color: 'var(--brand-700)', border: '1px solid var(--brand-200)', padding: '0.25rem 0.625rem', borderRadius: '3px' }}>{stats.colleges.length} colleges</span>
+                            </div>
                         </div>
                         <div style={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: '0.5rem', overflow: 'hidden' }}>
                             <div style={{ overflowX: 'auto' }}>
@@ -1037,25 +1105,25 @@ const AdminDashboard = () => {
                                     <tbody>
                                         {stats.colleges.map((college, i) => (
                                             <tr key={college._id}
-                                                style={{ borderBottom: '1px solid var(--border)', cursor: 'pointer', background: i % 2 === 0 ? 'transparent' : 'var(--bg)' }}
+                                                style={{ borderBottom: '1px solid var(--border)', cursor: 'default', background: i % 2 === 0 ? 'transparent' : 'var(--bg)' }}
                                                 onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-2)'}
                                                 onMouseLeave={e => e.currentTarget.style.background = i % 2 === 0 ? 'transparent' : 'var(--bg)'}
                                             >
-                                                <td style={{ padding: '0.625rem 0.875rem' }} onClick={() => handleCollegeRedirect(college)}>
+                                                <td style={{ padding: '0.625rem 0.875rem' }}>
                                                     <span style={{ fontFamily: 'var(--font-mono)', fontSize: '0.7rem', background: 'var(--brand-50)', color: 'var(--brand-700)', border: '1px solid var(--brand-200)', padding: '0.15rem 0.4rem', borderRadius: '3px' }}>{college.code}</span>
                                                 </td>
-                                                <td style={{ padding: '0.625rem 0.875rem', fontWeight: 600, color: 'var(--txt-1)' }} onClick={() => handleCollegeRedirect(college)}>{college.insName}</td>
-                                                <td style={{ padding: '0.625rem 0.875rem' }} onClick={() => handleCollegeRedirect(college)}>
+                                                <td style={{ padding: '0.625rem 0.875rem', fontWeight: 600, color: 'var(--txt-1)' }}>{college.insName}</td>
+                                                <td style={{ padding: '0.625rem 0.875rem' }}>
                                                     {college.isRegistered ? (
-                                                        <span style={{ fontSize: '0.65rem', fontWeight: 700, padding: '0.15rem 0.5rem', borderRadius: '9999px', background: 'var(--badge-success-bg)', color: 'var(--badge-success-clr)' }}>Registered</span>
+                                                        <span style={{ fontSize: '0.65rem', fontWeight: 700, padding: '0.15rem 0.5rem', borderRadius: '9999px', background: 'var(--badge-success-bg)', color: 'var(--badge-success-clr)' }}>Done</span>
                                                     ) : (
-                                                        <span style={{ fontSize: '0.65rem', fontWeight: 700, padding: '0.15rem 0.5rem', borderRadius: '9999px', background: 'var(--badge-secondary-bg)', color: 'var(--badge-secondary-clr)' }}>Shell Only</span>
+                                                        <span style={{ fontSize: '0.65rem', fontWeight: 700, padding: '0.15rem 0.5rem', borderRadius: '9999px', background: 'var(--badge-secondary-bg)', color: 'var(--badge-secondary-clr)' }}>Pending</span>
                                                     )}
                                                 </td>
-                                                <td style={{ padding: '0.625rem 0.875rem' }} onClick={() => handleCollegeRedirect(college)}>
+                                                <td style={{ padding: '0.625rem 0.875rem' }}>
                                                     <span style={{ fontWeight: 700, color: 'var(--brand-600)', fontSize: '0.875rem' }}>{college.units.length}</span>
                                                 </td>
-                                                <td style={{ padding: '0.625rem 0.875rem' }} onClick={() => handleCollegeRedirect(college)}>
+                                                <td style={{ padding: '0.625rem 0.875rem' }}>
                                                     <span style={{ fontWeight: 700, color: 'var(--success-600)', fontSize: '0.875rem' }}>{college.events.length}</span>
                                                 </td>
                                                 {userRole === 'admin' ? (
@@ -1074,7 +1142,6 @@ const AdminDashboard = () => {
                                                     </td>
                                                 ) : (
                                                     <td style={{ padding: '0.625rem 0.875rem', textAlign: 'right' }}>
-                                                        <span style={{ color: 'var(--brand-600)', fontWeight: 600, fontSize: '0.75rem' }} onClick={() => handleCollegeRedirect(college)}>View →</span>
                                                     </td>
                                                 )}
                                             </tr>
@@ -1231,6 +1298,10 @@ const AdminDashboard = () => {
                                         <input type="text" className="form-input" style={{ fontSize: '0.85rem' }} placeholder="e.g. Ph.D., M.Sc." value={headQualification} onChange={e => setHeadQualification(e.target.value)} required />
                                     </div>
                                     <div className="form-group" style={{ marginBottom: '0.875rem' }}>
+                                        <label className="form-label" style={{ fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Row Order</label>
+                                        <input type="number" className="form-input" style={{ fontSize: '0.85rem' }} placeholder="e.g. 1, 2, 3" value={headRowOrder} onChange={e => setHeadRowOrder(e.target.value)} required />
+                                    </div>
+                                    <div className="form-group" style={{ marginBottom: '0.875rem' }}>
                                         <label className="form-label" style={{ fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Display Order</label>
                                         <input type="number" className="form-input" style={{ fontSize: '0.85rem' }} placeholder="e.g. 1, 2, 3" value={headDisplayOrder} onChange={e => setHeadDisplayOrder(e.target.value)} required />
                                     </div>
@@ -1290,35 +1361,66 @@ const AdminDashboard = () => {
                                                 <p style={{ margin: 0, fontSize: '0.78rem', color: 'var(--txt-3)', fontWeight: 600 }}>{head.designation}</p>
                                                 <p style={{ margin: '0.15rem 0 0', fontSize: '0.75rem', color: 'var(--txt-3)', fontStyle: 'italic' }}>{head.qualification}</p>
 
-                                                {/* Inline Display Order controls */}
-                                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', marginTop: '0.75rem', width: '100%', justifyContent: 'center' }}>
-                                                    <span style={{ fontSize: '0.7rem', color: 'var(--txt-3)', fontWeight: 600 }}>Order:</span>
-                                                    <input 
-                                                        type="number" 
-                                                        style={{ width: '55px', fontSize: '0.75rem', padding: '0.2rem 0.4rem', border: '1px solid var(--border)', borderRadius: '4px', background: 'var(--card)', color: 'var(--txt-1)', textAlign: 'center' }} 
-                                                        value={head.displayOrder || 0} 
-                                                        onChange={(e) => {
-                                                            const val = parseInt(e.target.value) || 0;
-                                                            setAdminHeads(prev => prev.map(h => h._id === head._id ? { ...h, displayOrder: val } : h));
-                                                        }}
-                                                        onBlur={async (e) => {
-                                                            const val = parseInt(e.target.value) || 0;
-                                                            try {
-                                                                const token = localStorage.getItem("adminToken");
-                                                                await axios.put(`${import.meta.env.VITE_API_URL}/admin/admin-head/${head._id}`, {
-                                                                    ...head,
-                                                                    displayOrder: val
-                                                                }, {
-                                                                    headers: { Authorization: `Bearer ${token}` }
-                                                                });
-                                                                toast.success("Display order updated!");
-                                                                fetchAdminHeads();
-                                                            } catch (err) {
-                                                                console.error(err);
-                                                                toast.error("Failed to update display order");
-                                                            }
-                                                        }}
-                                                    />
+                                                {/* Inline Row & Display Order controls */}
+                                                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.375rem', marginTop: '0.75rem', width: '100%', alignItems: 'center' }}>
+                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', justifyContent: 'center' }}>
+                                                        <span style={{ fontSize: '0.7rem', color: 'var(--txt-3)', fontWeight: 600 }}>Row:</span>
+                                                        <input 
+                                                            type="number" 
+                                                            style={{ width: '55px', fontSize: '0.75rem', padding: '0.2rem 0.4rem', border: '1px solid var(--border)', borderRadius: '4px', background: 'var(--card)', color: 'var(--txt-1)', textAlign: 'center' }} 
+                                                            value={head.rowOrder || 1} 
+                                                            onChange={(e) => {
+                                                                const val = parseInt(e.target.value) || 1;
+                                                                setAdminHeads(prev => prev.map(h => h._id === head._id ? { ...h, rowOrder: val } : h));
+                                                            }}
+                                                            onBlur={async (e) => {
+                                                                const val = parseInt(e.target.value) || 1;
+                                                                try {
+                                                                    const token = localStorage.getItem("adminToken");
+                                                                    await axios.put(`${import.meta.env.VITE_API_URL}/admin/admin-head/${head._id}`, {
+                                                                        ...head,
+                                                                        rowOrder: val
+                                                                    }, {
+                                                                        headers: { Authorization: `Bearer ${token}` }
+                                                                    });
+                                                                    toast.success("Row order updated!");
+                                                                    fetchAdminHeads();
+                                                                } catch (err) {
+                                                                    console.error(err);
+                                                                    toast.error("Failed to update row order");
+                                                                }
+                                                            }}
+                                                        />
+                                                    </div>
+                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', justifyContent: 'center' }}>
+                                                        <span style={{ fontSize: '0.7rem', color: 'var(--txt-3)', fontWeight: 600 }}>Order:</span>
+                                                        <input 
+                                                            type="number" 
+                                                            style={{ width: '55px', fontSize: '0.75rem', padding: '0.2rem 0.4rem', border: '1px solid var(--border)', borderRadius: '4px', background: 'var(--card)', color: 'var(--txt-1)', textAlign: 'center' }} 
+                                                            value={head.displayOrder || 1} 
+                                                            onChange={(e) => {
+                                                                const val = parseInt(e.target.value) || 1;
+                                                                setAdminHeads(prev => prev.map(h => h._id === head._id ? { ...h, displayOrder: val } : h));
+                                                            }}
+                                                            onBlur={async (e) => {
+                                                                const val = parseInt(e.target.value) || 1;
+                                                                try {
+                                                                    const token = localStorage.getItem("adminToken");
+                                                                    await axios.put(`${import.meta.env.VITE_API_URL}/admin/admin-head/${head._id}`, {
+                                                                        ...head,
+                                                                        displayOrder: val
+                                                                    }, {
+                                                                        headers: { Authorization: `Bearer ${token}` }
+                                                                    });
+                                                                    toast.success("Display order updated!");
+                                                                    fetchAdminHeads();
+                                                                } catch (err) {
+                                                                    console.error(err);
+                                                                    toast.error("Failed to update display order");
+                                                                }
+                                                            }}
+                                                        />
+                                                    </div>
                                                 </div>
                                             </div>
                                         ))}

@@ -189,9 +189,8 @@ const ExploreEvents = () => {
       participantsCount: event.report?.participantsCount || "",
       collegesCount: event.report?.collegesCount || "",
       outcome: event.report?.outcome || "",
-      reportFile: event.report?.reportFile || "",
       reportPhotos: event.report?.reportPhotos || [],
-      attendees: event.attendees || []
+      guests: event.report?.guests && event.report.guests.length > 0 ? event.report.guests : [""]
     });
     setReportFiles({ pdf: null, photos: [] });
     setShowReportModal(true);
@@ -206,24 +205,18 @@ const ExploreEvents = () => {
   };
 
   const handleReportFileChange = (e, type) => {
-    if (type === 'pdf') {
-      setReportFiles(prev => ({ ...prev, pdf: e.target.files[0] }));
-    } else {
-      const files = Array.from(e.target.files).slice(0, 5); // Max 5 photos
-      setReportFiles(prev => ({ ...prev, photos: files }));
-    }
+    const files = Array.from(e.target.files).slice(0, 5); // Max 5 photos
+    setReportFiles(prev => ({ ...prev, photos: files }));
   };
 
   const uploadToCloudinary = async (file, resourceType = 'image', isPdf = false) => {
     const formData = new FormData();
     formData.append('file', file);
 
-    // Use PDF-specific variables if isPdf is true, otherwise use default ones
     const uploadPreset = isPdf ? CLOUDINARY_PDF_UPLOAD_PRESET : CLOUDINARY_UPLOAD_PRESET;
     const cloudName = isPdf ? CLOUDINARY_PDF_CLOUD_NAME : CLOUDINARY_CLOUD_NAME;
     const resourceType1 = isPdf ? 'raw' : 'image';
     formData.append('upload_preset', uploadPreset);
-    console.log(resourceType1, "resourceType1");
     const response = await axios.post(
       `https://api.cloudinary.com/v1_1/${cloudName}/${resourceType1}/upload`,
       formData
@@ -233,16 +226,14 @@ const ExploreEvents = () => {
 
   const handleReportSubmit = async (e) => {
     e.preventDefault();
+    if (reportFiles.photos.length === 0 && reportForm.reportPhotos.length === 0) {
+      toast.error("Please upload at least one photo (newspaper cutting, invitation, or certificate).");
+      return;
+    }
     setIsSubmittingReport(true);
 
     try {
-      let pdfUrl = reportForm.reportFile;
       let photoUrls = [...reportForm.reportPhotos];
-
-      // Upload PDF if selected
-      if (reportFiles.pdf) {
-        pdfUrl = await uploadToCloudinary(reportFiles.pdf, 'image', true);
-      }
 
       // Upload photos if selected
       if (reportFiles.photos.length > 0) {
@@ -253,8 +244,11 @@ const ExploreEvents = () => {
       }
 
       const finalReportData = {
-        ...reportForm,
-        reportFile: pdfUrl,
+        conductedOnDate: reportForm.conductedOnDate,
+        participantsCount: reportForm.participantsCount,
+        collegesCount: reportForm.collegesCount,
+        outcome: reportForm.outcome,
+        guests: reportForm.guests.filter(g => g.trim() !== ""),
         reportPhotos: photoUrls,
         submittedAt: new Date()
       };
@@ -274,7 +268,7 @@ const ExploreEvents = () => {
         setShowReportModal(false);
       }
     } catch (err) {
-      console.error("Report submisson error:", err);
+      console.error("Report submission error:", err);
       toast.error("Failed to submit report. Ensure cloud configuration is correct.");
     } finally {
       setIsSubmittingReport(false);
@@ -479,6 +473,49 @@ const ExploreEvents = () => {
                 </div>
               </div>
 
+              {/* Guest / Resource Person Dynamic Fields */}
+              <div className="form-group mb-3 p-3" style={{ background: 'var(--bg-secondary)', borderRadius: 'var(--radius-md)' }}>
+                <label className="d-flex justify-content-between align-items-center mb-2 fw-bold">
+                  <span>Name of Guest / Resource Person(s)</span>
+                  <button
+                    type="button"
+                    className="btn btn-sm btn-outline-primary"
+                    onClick={() => setReportForm(prev => ({ ...prev, guests: [...prev.guests, ""] }))}
+                  >
+                    + Add Guest
+                  </button>
+                </label>
+                {reportForm.guests?.map((guest, idx) => (
+                  <div key={idx} className="d-flex gap-2 mb-2">
+                    <input
+                      type="text"
+                      className="form-control"
+                      value={guest}
+                      placeholder={`Guest/Resource Person #${idx + 1}`}
+                      onChange={(e) => {
+                        const updatedGuests = [...reportForm.guests];
+                        updatedGuests[idx] = e.target.value;
+                        setReportForm(prev => ({ ...prev, guests: updatedGuests }));
+                      }}
+                      required
+                    />
+                    {reportForm.guests.length > 1 && (
+                      <button
+                        type="button"
+                        className="btn btn-danger btn-sm"
+                        style={{ padding: '0.375rem 0.75rem' }}
+                        onClick={() => {
+                          const updatedGuests = reportForm.guests.filter((_, i) => i !== idx);
+                          setReportForm(prev => ({ ...prev, guests: updatedGuests }));
+                        }}
+                      >
+                        ✕
+                      </button>
+                    )}
+                  </div>
+                ))}
+              </div>
+
               <div className="form-group mb-3">
                 <label>Outcome of the Event <span className="text-danger">*</span></label>
                 <textarea
@@ -492,87 +529,11 @@ const ExploreEvents = () => {
                 ></textarea>
               </div>
 
-              <div className="form-group mb-3">
-                <label>Attach Report (PDF) <span className="text-danger">*</span></label>
-                <input
-                  type="file"
-                  accept=".pdf"
-                  className="form-control"
-                  onChange={(e) => handleReportFileChange(e, 'pdf')}
-                />
-                {reportForm.reportFile && <small className="text-success d-block mt-1">✓ PDF Report already attached</small>}
-              </div>
-
               <div className="form-group mb-4">
-                <div className="d-flex justify-content-between align-items-center mb-2">
-                  <label className="d-block mb-0">Mark Attendance (Select Volunteers) <span className="text-danger">*</span></label>
-
+                <label>Event Photos <span className="text-danger">*</span></label>
+                <div style={{ background: '#FFFBEB', border: '1px solid #FEF3C7', color: '#B45309', padding: '0.75rem', borderRadius: '4px', fontSize: '0.8rem', marginBottom: '0.75rem' }}>
+                  ⚠️ <strong>Required:</strong> Please upload at least one photo showing <strong>Newspaper cuttings</strong>, <strong>invitation</strong>, or <strong>certificate</strong>. (Max: 5 photos in total)
                 </div>
-                <div style={{ background: 'var(--bg-tertiary)', padding: '10px', borderRadius: '4px', border: '1px solid var(--border-color)' }}>
-
-                  <input
-                    type="text"
-                    className="form-control mb-2"
-                    placeholder="Search volunteers..."
-                    value={attendeeSearch}
-                    onChange={(e) => setAttendeeSearch(e.target.value)}
-                  />
-                  <label className="d-flex align-items-center select-all cursor-pointer" style={{ fontSize: '0.8rem', gap: '8px' }}>
-                    <input
-                      type="checkbox"
-                      className="form-check-input "
-                      checked={unitMembers.filter(m => m.name.toLowerCase().includes(attendeeSearch.toLowerCase()) || m.regNo.toLowerCase().includes(attendeeSearch.toLowerCase()))
-                        .length > 0 && unitMembers.filter(m => m.name.toLowerCase().includes(attendeeSearch.toLowerCase()) || m.regNo.toLowerCase().includes(attendeeSearch.toLowerCase()))
-                          .every(m => reportForm.attendees?.includes(m._id))}
-                      onChange={() => {
-                        const filteredIds = unitMembers
-                          .filter(m => m.name.toLowerCase().includes(attendeeSearch.toLowerCase()) || m.regNo.toLowerCase().includes(attendeeSearch.toLowerCase()))
-                          .map(m => m._id);
-
-                        const allSelected = filteredIds.every(id => reportForm.attendees?.includes(id));
-
-                        let newAttendees;
-                        if (allSelected) {
-                          // Deselect all filtered
-                          newAttendees = (reportForm.attendees || []).filter(id => !filteredIds.includes(id));
-                        } else {
-                          // Select all filtered
-                          newAttendees = Array.from(new Set([...(reportForm.attendees || []), ...filteredIds]));
-                        }
-                        setReportForm({ ...reportForm, attendees: newAttendees });
-                      }}
-                    />
-                    <span>Select All </span>
-                  </label>
-                  <div style={{ maxHeight: '200px', overflowY: 'auto' }}>
-                    {unitMembers
-                      .filter(m => m.name.toLowerCase().includes(attendeeSearch.toLowerCase()) || m.regNo.toLowerCase().includes(attendeeSearch.toLowerCase()))
-                      .map(member => (
-                        <label key={member._id} className="d-flex align-items-center mb-1 p-1 hover-bg" style={{ cursor: 'pointer' }}>
-                          <input
-                            type="checkbox"
-                            className="form-check-input"
-                            checked={reportForm.attendees?.includes(member._id)}
-                            onChange={(e) => {
-                              const newAttendees = e.target.checked
-                                ? [...(reportForm.attendees || []), member._id]
-                                : (reportForm.attendees || []).filter(id => id !== member._id);
-                              setReportForm({ ...reportForm, attendees: newAttendees });
-                            }}
-                          />
-                          <span className="ms-3 text-sm">{member.name} ({member.regNo})</span>
-                        </label>
-                      ))
-                    }
-                  </div>
-                  <div className="mt-2 text-xs text-muted">
-                    {reportForm.attendees?.length || 0} volunteers selected
-                  </div>
-                </div>
-              </div>
-
-              <div className="form-group mb-4">
-                <label>Event Photos (Max: 5)</label>
                 <input
                   type="file"
                   accept="image/*"
@@ -582,7 +543,7 @@ const ExploreEvents = () => {
                 />
                 <small className="text-muted d-block mt-1">Select up to 5 best photos of the event.</small>
                 {(reportForm.reportPhotos && reportForm.reportPhotos.length > 0) && (
-                  <small className="text-success d-block">✓ {reportForm.reportPhotos.length} photos already attached</small>
+                  <small className="text-success d-block mt-1">✓ {reportForm.reportPhotos.length} photos already attached</small>
                 )}
               </div>
 
@@ -609,30 +570,41 @@ const ExploreEvents = () => {
               <button className="btn btn-sm btn-secondary" onClick={() => setSelectedEvent(null)}>&times;</button>
             </div>
 
-            <div className="mb-6 text-sm">
-              <div className="flex-between mb-2">
-                <p className="mb-0"><strong>Date:</strong> {selectedEvent.singleDay ? selectedEvent.date : `${selectedEvent.dateFrom} to ${selectedEvent.dateTo}`}</p>
-                <p className="mb-0"><strong>Time:</strong> {selectedEvent.timeFrom} - {selectedEvent.timeTo}</p>
+            <div className="mb-6 text-sm" style={{ borderBottom: '1px solid var(--border-color)', paddingBottom: '1.5rem' }}>
+              <div className="grid-cols-2 gap-4">
+                <div>
+                  <p className="mb-2"><strong>Date:</strong> {selectedEvent.singleDay ? selectedEvent.date : `${selectedEvent.dateFrom} to ${selectedEvent.dateTo}`}</p>
+                  <p className="mb-2"><strong>Time:</strong> {selectedEvent.timeFrom || "N/A"} - {selectedEvent.timeTo || "N/A"}</p>
+                  <p className="mb-2"><strong>Venue:</strong> {selectedEvent.venue}</p>
+                  {selectedEvent.resourcePerson && (
+                    <p className="mb-0"><strong>Resource Person:</strong> {selectedEvent.resourcePerson}</p>
+                  )}
+                </div>
+                <div>
+                  <p className="mb-2"><strong>Level of Event:</strong> <span className="badge badge-primary">{selectedEvent.level || "College"}</span></p>
+                  <p className="mb-2"><strong>Sponsorship:</strong> {selectedEvent.sponsorship || "N/A"}</p>
+                  <p className="mb-2"><strong>MY Bharat Registration:</strong> {selectedEvent.registeredMeriBharath || "No"}</p>
+                  {selectedEvent.registeredMeriBharath === "Yes" && selectedEvent.meriBharathUrl && (
+                    <p className="mb-0"><strong>MY Bharat URL:</strong> <a href={selectedEvent.meriBharathUrl} target="_blank" rel="noopener noreferrer" className="text-primary">View Event Link</a></p>
+                  )}
+                </div>
               </div>
-              <p><strong>Venue:</strong> {selectedEvent.venue}</p>
             </div>
 
             <div className="mb-6">
               <h3 className="text-lg mb-2">Description</h3>
               <p style={{ whiteSpace: 'pre-wrap', lineHeight: '1.6', marginBottom: '1.5rem' }}>{selectedEvent.description}</p>
 
-              {
-                selectedEvent.brochure && (
-                  <div className="p-3 rounded d-flex align-items-center gap-3" style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border-color)' }}>
-                    <div style={{ color: 'var(--primary-500)', fontSize: '1.5rem' }}>📄</div>
-                    <div style={{ flex: 1 }}>
-                      <p className="mb-0 fw-bold">Event Brochure</p>
-                      <p className="mb-0 text-xs text-muted">Download for more details and schedules</p>
-                    </div>
-                    <a href={selectedEvent.brochure} target="_blank" rel="noopener noreferrer" className="btn btn-primary btn-sm">Download PDF</a>
+              {selectedEvent.brochure && (
+                <div className="p-3 rounded d-flex align-items-center gap-3" style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border-color)' }}>
+                  <div style={{ color: 'var(--primary-500)', fontSize: '1.5rem' }}>📄</div>
+                  <div style={{ flex: 1 }}>
+                    <p className="mb-0 fw-bold">Event Brochure</p>
+                    <p className="mb-0 text-xs text-muted">Download for more details and schedules</p>
                   </div>
-                )
-              }
+                  <a href={selectedEvent.brochure} target="_blank" rel="noopener noreferrer" className="btn btn-primary btn-sm">Download PDF</a>
+                </div>
+              )}
             </div>
 
             {selectedEvent.report && (
@@ -642,10 +614,10 @@ const ExploreEvents = () => {
                   <p><strong>Status:</strong> {selectedEvent.report.participantsCount ? (selectedEvent.report.conductedOnDate ? "Conducted on time" : "Delayed/Rescheduled") : "Yet to be updated"}</p>
                   <p><strong>Participants:</strong> {selectedEvent.report.participantsCount}</p>
                   <p><strong>Colleges:</strong> {selectedEvent.report.collegesCount}</p>
-                  {selectedEvent.report.reportFile && (
-                    <p><strong>Report:</strong> <a href={selectedEvent.report.reportFile} target="_blank" rel="noopener noreferrer" className="text-primary">View PDF</a></p>
-                  )}
                 </div>
+                {selectedEvent.report.guests && selectedEvent.report.guests.length > 0 && (
+                  <p className="mt-2 mb-2"><strong>Guest / Resource Person(s):</strong> {selectedEvent.report.guests.join(', ')}</p>
+                )}
                 <div className="mt-2">
                   <p><strong>Outcome:</strong> {selectedEvent.report.outcome}</p>
                 </div>
@@ -670,7 +642,7 @@ const ExploreEvents = () => {
               </div>
             )}
 
-            {selectedEvent.report?.reportPhotos?.length > 0 ? (
+            {selectedEvent.report?.reportPhotos && selectedEvent.report.reportPhotos.length > 0 ?
               <div className="mb-6">
                 <h3 className="text-lg mb-3">Event Photos (From Report)</h3>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: '1rem' }}>
@@ -681,8 +653,8 @@ const ExploreEvents = () => {
                   ))}
                 </div>
               </div>
-            ) : (
-              selectedEvent.images && selectedEvent.images.length > 0 && (
+             : 
+              selectedEvent.images && selectedEvent.images.length > 0 ?
                 <div className="mb-6">
                   <h3 className="text-lg mb-3">Event Gallery</h3>
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '1rem' }}>
@@ -693,8 +665,8 @@ const ExploreEvents = () => {
                     ))}
                   </div>
                 </div>
-              )
-            )}
+               : null
+            }
 
             <div className="flex-center mt-6 pt-4" style={{ borderTop: '1px solid var(--border-color)' }}>
               <button className="btn btn-secondary close" onClick={() => setSelectedEvent(null)}>Close</button>

@@ -24,7 +24,7 @@ const AddEvent = () => {
     const standardCategories = [
         "Blood Donation", "Tree Plantation", "Cleanliness Drive", "Awareness Program",
         "Conference", "Seminar", "Workshop", "Sports", "Cultural", "Health",
-        "Environmental", "Social"
+        "Environmental", "Social", "Exhibition", "Health care", "Creation of Assets"
     ];
 
     const isCustomCategory = eventToEdit && !standardCategories.includes(eventToEdit.category);
@@ -41,6 +41,11 @@ const AddEvent = () => {
         timeFrom: eventToEdit?.timeFrom || "",
         timeTo: eventToEdit?.timeTo || "",
         venue: eventToEdit?.venue || "",
+        resourcePerson: eventToEdit?.resourcePerson || "",
+        level: eventToEdit?.level || "College",
+        sponsorship: eventToEdit?.sponsorship || "",
+        registeredMeriBharath: eventToEdit?.registeredMeriBharath || "No",
+        meriBharathUrl: eventToEdit?.meriBharathUrl || "",
         images: eventToEdit?.images || [],
         brochure: eventToEdit?.brochure || "",
     });
@@ -233,6 +238,11 @@ const AddEvent = () => {
             timeFrom: eventForm.timeFrom,
             timeTo: eventForm.timeTo,
             venue: eventForm.venue,
+            resourcePerson: eventForm.resourcePerson,
+            level: eventForm.level,
+            sponsorship: eventForm.sponsorship,
+            registeredMeriBharath: eventForm.registeredMeriBharath,
+            meriBharathUrl: eventForm.registeredMeriBharath === "Yes" ? eventForm.meriBharathUrl : "",
             images: eventForm.images,
             brochure: eventForm.brochure,
             unitCode: unitCode,
@@ -331,8 +341,11 @@ const AddEvent = () => {
                                 <option value="Sports">Sports</option>
                                 <option value="Cultural">Cultural</option>
                                 <option value="Health">Health</option>
+                                <option value="Health care">Health care</option>
                                 <option value="Environmental">Environmental</option>
                                 <option value="Social">Social</option>
+                                <option value="Exhibition">Exhibition</option>
+                                <option value="Creation of Assets">Creation of Assets</option>
                                 <option value="Other">Other</option>
                             </select>
                         </div>
@@ -427,7 +440,7 @@ const AddEvent = () => {
                         </div>
 
                         {/* Venue */}
-                        <div className="form-group mb-8">
+                        <div className="form-group mb-4">
                             <label htmlFor="venue">Venue <span className="text-danger">*</span></label>
                             <input
                                 type="text"
@@ -438,6 +451,81 @@ const AddEvent = () => {
                                 onChange={handleChange}
                                 required
                             />
+                        </div>
+
+                        {/* Resource Person */}
+                        <div className="form-group mb-4">
+                            <label htmlFor="resourcePerson">Resource Person (Optional)</label>
+                            <input
+                                type="text"
+                                className="form-control"
+                                id="resourcePerson"
+                                placeholder="Enter name and details of Resource Person"
+                                value={eventForm.resourcePerson}
+                                onChange={handleChange}
+                            />
+                        </div>
+
+                        {/* Event Level & Sponsorship */}
+                        <div className="grid-cols-2 mb-4">
+                            <div>
+                                <label htmlFor="level">Level of Event <span className="text-danger">*</span></label>
+                                <select
+                                    className="form-control"
+                                    id="level"
+                                    value={eventForm.level}
+                                    onChange={handleChange}
+                                    required
+                                >
+                                    <option value="College">College</option>
+                                    <option value="University">University</option>
+                                    <option value="District">District</option>
+                                    <option value="Regional">Regional</option>
+                                    <option value="State">State</option>
+                                    <option value="National">National</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label htmlFor="sponsorship">Sponsorship (Optional)</label>
+                                <input
+                                    type="text"
+                                    className="form-control"
+                                    id="sponsorship"
+                                    placeholder="e.g. Funded / Self Financing / Sponsor name"
+                                    value={eventForm.sponsorship}
+                                    onChange={handleChange}
+                                />
+                            </div>
+                        </div>
+
+                        {/* Meri Bharath Portal Registration */}
+                        <div className="grid-cols-2 mb-8">
+                            <div>
+                                <label htmlFor="registeredMeriBharath">Registered in May Bharat Portal? <span className="text-danger">*</span></label>
+                                <select
+                                    className="form-control"
+                                    id="registeredMeriBharath"
+                                    value={eventForm.registeredMeriBharath}
+                                    onChange={handleChange}
+                                    required
+                                >
+                                    <option value="No">No</option>
+                                    <option value="Yes">Yes</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label htmlFor="meriBharathUrl">May Bharat Event URL {eventForm.registeredMeriBharath === "Yes" && <span className="text-danger">*</span>}</label>
+                                <input
+                                    type="url"
+                                    className="form-control"
+                                    id="meriBharathUrl"
+                                    placeholder={eventForm.registeredMeriBharath === "Yes" ? "e.g. https://mybharat.gov.in/..." : "Not registered (URL disabled)"}
+                                    value={eventForm.meriBharathUrl}
+                                    onChange={handleChange}
+                                    disabled={eventForm.registeredMeriBharath !== "Yes"}
+                                    required={eventForm.registeredMeriBharath === "Yes"}
+                                />
+                            </div>
                         </div>
 
                         <div className="form-section-header">

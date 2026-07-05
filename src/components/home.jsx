@@ -13,6 +13,7 @@ const Home = () => {
     const [adminHeads, setAdminHeads] = useState([]);
     const [selectedImage, setSelectedImage] = useState(null);
     const [loginDropdownOpen, setLoginDropdownOpen] = useState(false);
+    const [sidebarOpen, setSidebarOpen] = useState(false);
 
     useEffect(() => {
         AOS.init({
@@ -54,30 +55,7 @@ const Home = () => {
         }
     };
 
-    // Announcements Mock Data
-    const announcements = [
-        {
-            date: "June 28, 2026",
-            tag: "Important",
-            title: "NSS Portal V2 Launch & Self-Registration Open",
-            desc: "All affiliated colleges can now self-register using the portal. Passkeys will be sent directly to verification emails.",
-            link: "#"
-        },
-        {
-            date: "June 20, 2026",
-            tag: "Circular",
-            title: "Submission of Regular Activity Reports 2025-26",
-            desc: "The deadline for submitting regular activity reports for the academic year 2025-26 has been extended.",
-            link: "#"
-        },
-        {
-            date: "June 15, 2026",
-            tag: "Camp Guidance",
-            title: "Special Camping Programme - Guidelines",
-            desc: "Please download the updated guidelines (Form 1 & 2) for conducting the 7-day Special Camping programme.",
-            link: "#"
-        }
-    ];
+
 
     return (
         <div style={{ minHeight: "100vh", background: "var(--bg)", display: "flex", flexDirection: "column", fontFamily: "var(--font-family)", color: "var(--txt-1)" }}>
@@ -96,6 +74,114 @@ const Home = () => {
                 .nav-link:hover {
                     color: #fff;
                 }
+                 /* Sidebar Drawer styles */
+                 .sidebar-drawer {
+                     position: fixed;
+                     top: 0;
+                     right: -320px;
+                     width: 320px;
+                     height: 100vh;
+                     background: rgba(15, 23, 42, 0.96);
+                     backdrop-filter: blur(16px);
+                     -webkit-backdrop-filter: blur(16px);
+                     box-shadow: -10px 0 35px rgba(0, 0, 0, 0.35);
+                     z-index: 500;
+                     transition: right 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+                     display: flex;
+                     flex-direction: column;
+                     padding: 2.5rem 2rem;
+                     box-sizing: border-box;
+                     border-left: 1px solid rgba(255, 255, 255, 0.1);
+                 }
+                 .sidebar-drawer.open {
+                     right: 0;
+                 }
+                 .sidebar-overlay {
+                     position: fixed;
+                     inset: 0;
+                     background: rgba(0, 0, 0, 0.4);
+                     backdrop-filter: blur(4px);
+                     -webkit-backdrop-filter: blur(4px);
+                     z-index: 450;
+                     opacity: 0;
+                     pointer-events: none;
+                     transition: opacity 0.3s ease;
+                 }
+                 .sidebar-overlay.open {
+                     opacity: 1;
+                     pointer-events: auto;
+                 }
+                 .sidebar-header {
+                     display: flex;
+                     justify-content: space-between;
+                     align-items: center;
+                     margin-bottom: 2.5rem;
+                     border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+                     padding-bottom: 1.25rem;
+                 }
+                 .sidebar-title {
+                     color: #fff;
+                     font-weight: 800;
+                     font-size: 1.25rem;
+                     letter-spacing: -0.02em;
+                 }
+                 .sidebar-close-btn {
+                     background: transparent;
+                     border: none;
+                     color: rgba(255, 255, 255, 0.6);
+                     cursor: pointer;
+                     display: flex;
+                     align-items: center;
+                     justify-content: center;
+                     padding: 0.5rem;
+                     border-radius: 50%;
+                     transition: all 0.2s;
+                 }
+                 .sidebar-close-btn:hover {
+                     color: #fff;
+                     background: rgba(255, 255, 255, 0.1);
+                 }
+                 .sidebar-links {
+                     display: flex;
+                     flex-direction: column;
+                     gap: 1.25rem;
+                 }
+                 .sidebar-link {
+                     color: rgba(255, 255, 255, 0.75);
+                     font-size: 1.05rem;
+                     font-weight: 600;
+                     cursor: pointer;
+                     transition: all 0.25s ease;
+                     display: flex;
+                     align-items: center;
+                     gap: 0.75rem;
+                     padding: 0.75rem 1rem;
+                     border-radius: 10px;
+                     text-decoration: none;
+                 }
+                 .sidebar-link:hover {
+                     color: #fff;
+                     background: rgba(255, 255, 255, 0.06);
+                     padding-left: 1.5rem;
+                 }
+                 .hamburger-btn {
+                     background: rgba(255, 255, 255, 0.05);
+                     border: 1px solid rgba(255, 255, 255, 0.15);
+                     color: #fff;
+                     cursor: pointer;
+                     display: flex;
+                     align-items: center;
+                     justify-content: center;
+                     padding: 0.6rem;
+                     border-radius: 8px;
+                     transition: all 0.2s;
+                     height: 36px;
+                     width: 36px;
+                 }
+                 .hamburger-btn:hover {
+                     background: rgba(255, 255, 255, 0.1);
+                     border-color: rgba(255, 255, 255, 0.3);
+                 }
                 .dropdown-item {
                     display: block;
                     width: 100%;
@@ -178,6 +264,67 @@ const Home = () => {
                         margin-top: 2.5rem;
                     }
                 }
+                 .identity-grid {
+                     display: grid;
+                     grid-template-columns: 1fr 1fr;
+                     gap: 2rem;
+                 }
+                 .identity-card {
+                     display: flex;
+                     flex-direction: row;
+                     align-items: stretch;
+                     background: var(--card);
+                     border-radius: 16px;
+                     border: 1px solid var(--border);
+                     box-shadow: var(--sh-sm);
+                     overflow: hidden;
+                     transition: all 0.3s ease;
+                 }
+                 .identity-card:hover {
+                     transform: translateY(-4px);
+                     box-shadow: var(--sh-md);
+                 }
+                 .identity-card-left {
+                     width: 160px;
+                     min-width: 160px;
+                     display: flex;
+                     align-items: center;
+                     justify-content: center;
+                     position: relative;
+                 }
+                 .identity-card-right {
+                     flex: 1;
+                     padding: 2.5rem 2rem;
+                     display: flex;
+                     flex-direction: column;
+                     gap: 0.75rem;
+                     justify-content: center;
+                 }
+                 @media (max-width: 991px) {
+                     .identity-grid {
+                         grid-template-columns: 1fr;
+                     }
+                 }
+                 @media (max-width: 576px) {
+                     .identity-card {
+                         flex-direction: column;
+                     }
+                     .identity-card-left {
+                         width: 100%;
+                         height: 140px;
+                         padding: 1.5rem;
+                     }
+                 }
+                 .objectives-grid {
+                     display: grid;
+                     grid-template-columns: repeat(2, 1fr);
+                     gap: 2rem;
+                 }
+                 @media (max-width: 991px) {
+                     .objectives-grid {
+                         grid-template-columns: 1fr;
+                     }
+                 }
             `}</style>
 
             {/* ── Sticky Navbar ── */}
@@ -204,22 +351,6 @@ const Home = () => {
                             <span style={{ fontSize: "0.65rem", display: "block", color: "rgba(255, 255, 255, 0.6)", marginTop: "-2px", letterSpacing: "0.08em" }}>PERIYAR UNIVERSITY</span>
                         </div>
                         <img style={{ width: 44, height: 44, objectFit: "contain" }} src="/nss-logo.png" alt="NSS Logo" />
-                    </div>
-
-                    {/* Navigation Section Scroll Links */}
-                    <div className="nav-links-container" style={{ display: "flex", gap: "1.25rem", alignItems: "center" }}>
-                        <span className="nav-link" onClick={() => scrollToSection("intro")}>Intro</span>
-                        <span className="nav-link" onClick={() => scrollToSection("history")}>History</span>
-                        <span className="nav-link" onClick={() => scrollToSection("administration")}>Administration</span>
-                        <span className="nav-link" onClick={() => scrollToSection("objectives")}>Objectives</span>
-                        <span className="nav-link" onClick={() => scrollToSection("motto")}>Motto</span>
-                        <span className="nav-link" onClick={() => scrollToSection("activities")}>Activities</span>
-                        <span className="nav-link" onClick={() => scrollToSection("university")}>University NSS</span>
-                        <span className="nav-link" onClick={() => scrollToSection("announcements")}>Announcements</span>
-                        <span className="nav-link" onClick={() => scrollToSection("resources")}>Resources</span>
-                        {galleryImages.length > 0 && (
-                            <span className="nav-link" onClick={() => scrollToSection("gallery")}>Gallery</span>
-                        )}
                     </div>
 
                     {/* Action Group */}
@@ -262,11 +393,20 @@ const Home = () => {
                             }}>
                                 <div style={{ padding: "0.5rem 1rem", fontSize: "0.7rem", fontWeight: 700, color: "var(--txt-3)", background: "var(--bg-2)", textTransform: "uppercase" }}>Select Portal</div>
                                 <button className="dropdown-item" onClick={() => { setLoginDropdownOpen(false); navigate("/admin-login"); }}>University Admin</button>
-                                <button className="dropdown-item" onClick={() => { setLoginDropdownOpen(false); navigate("/login?role=nodal"); }}>District Nodal Officer</button>
+                                <button className="dropdown-item" onClick={() => { setLoginDropdownOpen(false); navigate("/nodal-login"); }}>District Nodal Officer</button>
                                 <button className="dropdown-item" onClick={() => { setLoginDropdownOpen(false); navigate("/login"); }}>College Portal</button>
                                 <button className="dropdown-item" onClick={() => { setLoginDropdownOpen(false); navigate("/unit-login"); }}>NSS Unit Portal</button>
                             </div>
                         )}
+
+                        {/* Sidebar Menu Toggle Button */}
+                        <button className="hamburger-btn" onClick={() => setSidebarOpen(true)} title="Open Menu">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                                <line x1="3" y1="12" x2="21" y2="12" />
+                                <line x1="3" y1="6" x2="21" y2="6" />
+                                <line x1="3" y1="18" x2="21" y2="18" />
+                            </svg>
+                        </button>
                     </div>
                 </div>
             </nav>
@@ -279,6 +419,56 @@ const Home = () => {
                 />
             )}
 
+            {/* ── Slide-out Sidebar Drawer ── */}
+            <div className={`sidebar-overlay ${sidebarOpen ? "open" : ""}`} onClick={() => setSidebarOpen(false)} />
+            <div className={`sidebar-drawer ${sidebarOpen ? "open" : ""}`}>
+                <div className="sidebar-header">
+                    <span className="sidebar-title">NSS Navigation</span>
+                    <button className="sidebar-close-btn" onClick={() => setSidebarOpen(false)} title="Close Menu">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                            <line x1="18" y1="6" x2="6" y2="18" />
+                            <line x1="6" y1="6" x2="18" y2="18" />
+                        </svg>
+                    </button>
+                </div>
+                <div className="sidebar-links">
+                    <span className="sidebar-link" onClick={() => { setSidebarOpen(false); scrollToSection("intro"); }}>
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" /><polyline points="9 22 9 12 15 12 15 22" /></svg>
+                        Intro
+                    </span>
+                    <span className="sidebar-link" onClick={() => { setSidebarOpen(false); scrollToSection("history"); }}>
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1-2.5-2.5Z" /><path d="M6 2v20" /></svg>
+                        History
+                    </span>
+                    <span className="sidebar-link" onClick={() => { setSidebarOpen(false); scrollToSection("administration"); }}>
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M22 21v-2a4 4 0 0 0-3-3.87" /><path d="M16 3.13a4 4 0 0 1 0 7.75" /></svg>
+                        Administration
+                    </span>
+                    <span className="sidebar-link" onClick={() => { setSidebarOpen(false); scrollToSection("objectives"); }}>
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10" /><path d="m9 12 2 2 4-4" /></svg>
+                        Objectives
+                    </span>
+                    <span className="sidebar-link" onClick={() => { setSidebarOpen(false); scrollToSection("motto"); }}>
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10" /><path d="M8 14h8" /></svg>
+                        Motto
+                    </span>
+                    <span className="sidebar-link" onClick={() => { setSidebarOpen(false); scrollToSection("identity"); }}>
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10" /><path d="M12 2v20" /><path d="M2 12h20" /><path d="m16.24 7.76-8.48 8.48" /><path d="m7.76 7.76 8.48 8.48" /></svg>
+                        Identity
+                    </span>
+                    <span className="sidebar-link" onClick={() => { setSidebarOpen(false); scrollToSection("resources"); }}>
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" /><line x1="16" y1="13" x2="8" y2="13" /><line x1="16" y1="17" x2="8" y2="17" /></svg>
+                        Resources
+                    </span>
+                    {galleryImages.length > 0 && (
+                        <span className="sidebar-link" onClick={() => { setSidebarOpen(false); scrollToSection("gallery"); }}>
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect width="18" height="18" x="3" y="3" rx="2" ry="2" /><circle cx="9" cy="9" r="2" /><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21" /></svg>
+                            Gallery
+                        </span>
+                    )}
+                </div>
+            </div>
+
             {/* ── Section 1: Hero Section ── */}
             <section id="intro" style={{ padding: "5rem 0", background: "var(--card)" }} data-aos="fade-up">
                 <div className="container">
@@ -286,7 +476,7 @@ const Home = () => {
                     <div style={{ textAlign: "center", marginBottom: "3rem" }}>
                         <h1 style={{
                             fontWeight: 800,
-                            fontSize: "clamp(2rem, 5vw, 3.25rem)",
+                            fontSize: "2.2rem",
                             color: "var(--txt-1)",
                             letterSpacing: "-0.01em",
                             textTransform: "uppercase",
@@ -315,7 +505,7 @@ const Home = () => {
                         </div>
 
                         {/* Right column: Content */}
-                        <div style={{ fontSize: "1.05rem", color: "var(--txt-2)", lineHeight: "1.8", display: "flex", flexDirection: "column", gap: "1.25rem" }}>
+                        <div style={{ fontSize: "1.05rem", color: "var(--txt-2)", lineHeight: "1.8", display: "flex", flexDirection: "column", gap: "1.25rem", textAlign: "justify" }}>
                             <p style={{ fontWeight: 600, fontSize: "1.2rem", color: "var(--primary-color)", lineHeight: "1.6", margin: 0 }}>
                                 The National Service Scheme is a noble public service program conducted by the Ministry of Youth Affairs and Sports, Government of India.
                             </p>
@@ -338,22 +528,25 @@ const Home = () => {
                         <div>
                             <span style={{ fontSize: "0.75rem", fontWeight: 700, letterSpacing: "0.15em", color: "#2563eb", textTransform: "uppercase" }}>Our Legacy</span>
                             <h2 style={{ fontSize: "2.25rem", fontWeight: 800, marginTop: "0.5rem", marginBottom: "1.5rem" }}>History of NSS</h2>
-                            <div style={{ fontSize: "1.05rem", color: "var(--txt-2)", lineHeight: "1.8", display: "flex", flexDirection: "column", gap: "1rem" }}>
+                            <div style={{ fontSize: "1.05rem", color: "var(--txt-2)", lineHeight: "1.8", display: "flex", flexDirection: "column", gap: "1rem", textAlign: "justify" }}>
                                 <p>
-                                    The National Service Scheme was formally launched on 24th September 1969, the centenary year of Mahatma Gandhi, the Father of the Nation. Gandhi Ji strongly believed that education should be integrated with social and community service.
+                                    The overall aim of National Service Scheme as envisaged earlier, is to give an extension dimension to the higher education system and orient the student youth to community service while they are studying in educational institution.
                                 </p>
                                 <p>
-                                    Beginning with 37 universities involving approximately 40,000 students across various states, the scheme has grown exponentially. Today, it encompasses millions of student volunteers in universities, colleges, and senior secondary schools throughout India, fostering a spirit of national integration and civic responsibility.
+                                    The reason for the formulation of this objective is the general realization that the college and +2 level students have a tendency to get alienated from the village/slum masses which constitute the majority of the population of the country. The educated youth who are expected to take the reins of administration in future are found to be unaware of the problems of the village/slum community and in certain cases are indifferent towards their needs and problems.
+                                </p>
+                                <p>
+                                    Therefore it is necessary to arouse the social conscience of the students, and to provide them an opportunity to work with the people in the villages and slums. It is felt that their interaction with the common villagers and slum dwellers will expose them to the realities of life and bring about a change in their social perception.
                                 </p>
                             </div>
                             <div style={{ marginTop: "2rem" }}>
-                                <a 
-                                    href="/samplepdf.pdf" 
-                                    download="NSS_History_Book.pdf" 
+                                <a
+                                    href="/samplepdf.pdf"
+                                    download="NSS_History_Book.pdf"
                                     className="btn btn-primary"
                                     style={{ padding: "0.75rem 1.5rem", textDecoration: "none" }}
                                 >
-                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" style={{ marginRight: 8 }}><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" style={{ marginRight: 8 }}><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="7 10 12 15 17 10" /><line x1="12" y1="15" x2="12" y2="3" /></svg>
                                     Download NSS History Book
                                 </a>
                             </div>
@@ -361,10 +554,10 @@ const Home = () => {
 
                         {/* Right column: Graphic/Illustration representing History */}
                         <div style={{ borderRadius: "16px", overflow: "hidden", boxShadow: "var(--sh-lg)", border: "1px solid var(--border)" }}>
-                            <img 
-                                src="https://images.unsplash.com/photo-1544654803-b69140b285a1?auto=format&fit=crop&q=80&w=800" 
-                                alt="Mahatma Gandhi & Community Service History" 
-                                style={{ width: "100%", height: "auto", display: "block" }} 
+                            <img
+                                src="/history.jpg"
+                                alt="Mahatma Gandhi & Community Service History"
+                                style={{ width: "100%", height: "auto", display: "block" }}
                             />
                         </div>
                     </div>
@@ -384,90 +577,107 @@ const Home = () => {
                         <div style={{ textAlign: "center", color: "var(--txt-3)", padding: "2rem" }}>
                             No administration heads configured.
                         </div>
-                    ) : (
-                        <div style={{ 
-                            display: "flex", 
-                            flexWrap: "wrap",
-                            gap: "2.5rem",
-                            justifyContent: "center"
-                        }}>
-                            {adminHeads.map((head) => (
-                                <div 
-                                    key={head._id} 
-                                    style={{ 
-                                        background: "var(--bg)", 
-                                        padding: "2rem", 
-                                        borderRadius: "16px", 
-                                        border: "1px solid var(--border)", 
-                                        boxShadow: "var(--sh-sm)",
-                                        textAlign: "center",
+                    ) : (() => {
+                        const headsByRow = {};
+                        adminHeads.forEach(head => {
+                            const r = head.rowOrder || 1;
+                            if (!headsByRow[r]) {
+                                headsByRow[r] = [];
+                            }
+                            headsByRow[r].push(head);
+                        });
+                        const sortedRows = Object.keys(headsByRow).sort((a, b) => Number(a) - Number(b));
+
+                        return (
+                            <div style={{ display: "flex", flexDirection: "column", gap: "2.5rem", width: "100%" }}>
+                                {sortedRows.map(rowNum => (
+                                    <div key={rowNum} style={{
                                         display: "flex",
-                                        flexDirection: "column",
-                                        alignItems: "center",
-                                        transition: "all 0.3s ease",
-                                        width: "280px",
-                                        boxSizing: "border-box"
-                                    }}
-                                    onMouseEnter={e => {
-                                        e.currentTarget.style.transform = "translateY(-6px)";
-                                        e.currentTarget.style.boxShadow = "var(--sh-md)";
-                                        e.currentTarget.style.borderColor = "var(--brand-400)";
-                                    }}
-                                    onMouseLeave={e => {
-                                        e.currentTarget.style.transform = "translateY(0)";
-                                        e.currentTarget.style.boxShadow = "var(--sh-sm)";
-                                        e.currentTarget.style.borderColor = "var(--border)";
-                                    }}
-                                >
-                                    {/* Photo */}
-                                    <div style={{ 
-                                        width: "140px", 
-                                        height: "140px", 
-                                        borderRadius: "50%", 
-                                        overflow: "hidden", 
-                                        border: "4px solid var(--card)",
-                                        boxShadow: "var(--sh)",
-                                        marginBottom: "1.5rem",
-                                        background: "#f1f5f9"
+                                        flexWrap: "wrap",
+                                        gap: "2.5rem",
+                                        justifyContent: "center",
+                                        width: "100%"
                                     }}>
-                                        <img 
-                                            src={head.photo.startsWith('data:') || head.photo.startsWith('http') || head.photo.startsWith('/') ? head.photo : (head.photo.startsWith('uploads') ? `${import.meta.env.VITE_API_URL || ''}/${head.photo}` : "/sample-profile.png")} 
-                                            alt={head.name} 
-                                            style={{ width: "100%", height: "100%", objectFit: "cover" }} 
-                                        />
+                                        {headsByRow[rowNum].map((head) => (
+                                            <div
+                                                key={head._id}
+                                                style={{
+                                                    background: "var(--bg)",
+                                                    padding: "2rem",
+                                                    borderRadius: "16px",
+                                                    border: "1px solid var(--border)",
+                                                    boxShadow: "var(--sh-sm)",
+                                                    textAlign: "center",
+                                                    display: "flex",
+                                                    flexDirection: "column",
+                                                    alignItems: "center",
+                                                    transition: "all 0.3s ease",
+                                                    width: "280px",
+                                                    boxSizing: "border-box"
+                                                }}
+                                                onMouseEnter={e => {
+                                                    e.currentTarget.style.transform = "translateY(-6px)";
+                                                    e.currentTarget.style.boxShadow = "var(--sh-md)";
+                                                    e.currentTarget.style.borderColor = "var(--brand-400)";
+                                                }}
+                                                onMouseLeave={e => {
+                                                    e.currentTarget.style.transform = "translateY(0)";
+                                                    e.currentTarget.style.boxShadow = "var(--sh-sm)";
+                                                    e.currentTarget.style.borderColor = "var(--border)";
+                                                }}
+                                            >
+                                                {/* Photo */}
+                                                <div style={{
+                                                    width: "100%",
+                                                    height: "200px",
+                                                    borderRadius: "12px",
+                                                    overflow: "hidden",
+                                                    border: "1px solid var(--border)",
+                                                    boxShadow: "var(--sh-sm)",
+                                                    marginBottom: "1.5rem",
+                                                    background: "#f1f5f9"
+                                                }}>
+                                                    <img
+                                                        src={head.photo.startsWith('data:') || head.photo.startsWith('http') || head.photo.startsWith('/') ? head.photo : (head.photo.startsWith('uploads') ? `${import.meta.env.VITE_API_URL || ''}/${head.photo}` : "/sample-profile.png")}
+                                                        alt={head.name}
+                                                        style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                                                    />
+                                                </div>
+
+                                                {/* Position (Badge) */}
+                                                <span style={{
+                                                    fontSize: "0.7rem",
+                                                    fontWeight: 800,
+                                                    textTransform: "uppercase",
+                                                    color: "var(--primary-color)",
+                                                    background: "rgba(37,99,235,0.08)",
+                                                    padding: "0.25rem 0.75rem",
+                                                    borderRadius: "9999px",
+                                                    letterSpacing: "0.05em",
+                                                    marginBottom: "0.75rem"
+                                                }}>
+                                                    {head.position}
+                                                </span>
+
+                                                {/* Name */}
+                                                <h3 style={{ fontSize: "1.2rem", fontWeight: 700, margin: "0 0 0.5rem", color: "var(--txt-1)" }}>
+                                                    {head.name}
+                                                </h3>
+
+                                                {/* Designation & Qualification */}
+                                                <p style={{ fontSize: "0.85rem", color: "var(--txt-3)", margin: "0", fontWeight: 600 }}>
+                                                    {head.designation}
+                                                </p>
+                                                <p style={{ fontSize: "0.8rem", color: "var(--txt-3)", margin: "0.25rem 0 0", fontStyle: "italic" }}>
+                                                    {head.qualification}
+                                                </p>
+                                            </div>
+                                        ))}
                                     </div>
-
-                                    {/* Position (Badge) */}
-                                    <span style={{ 
-                                        fontSize: "0.7rem", 
-                                        fontWeight: 800, 
-                                        textTransform: "uppercase", 
-                                        color: "var(--primary-color)", 
-                                        background: "rgba(37,99,235,0.08)", 
-                                        padding: "0.25rem 0.75rem", 
-                                        borderRadius: "9999px",
-                                        letterSpacing: "0.05em",
-                                        marginBottom: "0.75rem"
-                                    }}>
-                                        {head.position}
-                                    </span>
-
-                                    {/* Name */}
-                                    <h3 style={{ fontSize: "1.2rem", fontWeight: 700, margin: "0 0 0.5rem", color: "var(--txt-1)" }}>
-                                        {head.name}
-                                    </h3>
-
-                                    {/* Designation & Qualification */}
-                                    <p style={{ fontSize: "0.85rem", color: "var(--txt-3)", margin: "0", fontWeight: 600 }}>
-                                        {head.designation}
-                                    </p>
-                                    <p style={{ fontSize: "0.8rem", color: "var(--txt-3)", margin: "0.25rem 0 0", fontStyle: "italic" }}>
-                                        {head.qualification}
-                                    </p>
-                                </div>
-                            ))}
-                        </div>
-                    )}
+                                ))}
+                            </div>
+                        );
+                    })()}
                 </div>
             </section>
 
@@ -477,20 +687,30 @@ const Home = () => {
                     <div style={{ textAlign: "center", marginBottom: "4rem" }}>
                         <span style={{ fontSize: "0.75rem", fontWeight: 700, letterSpacing: "0.15em", color: "#2563eb", textTransform: "uppercase" }}>Core Mandates</span>
                         <h2 style={{ fontSize: "2.25rem", fontWeight: 800, marginTop: "0.5rem" }}>NSS Objectives</h2>
-                        <p style={{ color: "var(--txt-2)", maxWidth: "550px", margin: "0.5rem auto 0" }}>Key milestones and focus points for student volunteers and units.</p>
+                        <p style={{ color: "var(--txt-2)", maxWidth: "550px", margin: "0.5rem auto 0" }}>The broad objectives of National Service Scheme are to develop student volunteers through community involvement.</p>
                     </div>
 
-                    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: "2rem" }}>
+                    <div className="objectives-grid">
                         {[
-                            { title: "Understand Community", desc: "Identify the needs and problems of the community and involve volunteers in problem-solving." },
-                            { title: "Develop Empathy", desc: "Develop a sense of social and civic responsibility to support underprivileged communities." },
-                            { title: "Leadership Qualities", desc: "Acquire leadership qualities and democratic attitudes through organizing local camps." },
-                            { title: "Teamwork & Cohesion", desc: "Build capacity to meet emergencies and natural disasters, cultivating community mobilization." }
+                            { title: "Understand Community", desc: "Understand the community in which they work" },
+                            { title: "Relation to Community", desc: "Understand themselves in relation to their community" },
+                            { title: "Problem Solving", desc: "Identify the needs and problems of the community and involve them in problem solving process" },
+                            { title: "Civic Responsibility", desc: "Develop among themselves a sense of social and civic responsibility" },
+                            { title: "Practical Solutions", desc: "Utilize their knowledge in finding practical solution to individual and community problems" },
+                            { title: "Group Living Competence", desc: "Develop competence required for group living and sharing of responsibilities" },
+                            { title: "Mobilize Participation", desc: "Gain skills in mobilizing community participation" },
+                            { title: "Leadership Qualities", desc: "Acquire leadership qualities and democratic attitude" },
+                            { title: "Emergency Readiness", desc: "Develop capacity to meet emergencies and natural disasters" },
+                            { title: "Social Harmony", desc: "Practice national integration and social harmony" }
                         ].map((obj, i) => (
-                            <div key={i} style={{ background: "var(--card)", padding: "2rem", borderRadius: "12px", border: "1px solid var(--border)", boxShadow: "var(--sh-sm)" }}>
-                                <div style={{ width: 44, height: 44, background: "rgba(37,99,235,0.1)", color: "#2563eb", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: "bold", fontSize: "1.2rem", marginBottom: "1.25rem" }}>{i + 1}</div>
-                                <h3 style={{ fontSize: "1.15rem", fontWeight: 700, marginBottom: "0.5rem" }}>{obj.title}</h3>
-                                <p style={{ color: "var(--txt-2)", fontSize: "0.95rem", lineHeight: "1.6", margin: 0 }}>{obj.desc}</p>
+                            <div key={i} style={{ background: "var(--card)", padding: "2rem", borderRadius: "12px", border: "1px solid var(--border)", boxShadow: "var(--sh-sm)", transition: "all 0.3s ease", display: "flex", flexDirection: "column", height: "100%" }}
+                                onMouseEnter={e => { e.currentTarget.style.borderColor = "#2563eb"; e.currentTarget.style.transform = "translateY(-4px)"; }}
+                                onMouseLeave={e => { e.currentTarget.style.borderColor = "var(--border)"; e.currentTarget.style.transform = "translateY(0)"; }}>
+                                <div style={{ display: "flex", alignItems: "center", gap: "1rem", marginBottom: "1.25rem" }}>
+                                    <div style={{ width: 36, height: 36, minWidth: 36, background: "rgba(37,99,235,0.1)", color: "#2563eb", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: "bold", fontSize: "1rem" }}>{i + 1}</div>
+                                    <h3 style={{ fontSize: "1.15rem", fontWeight: 700, margin: 0 }}>{obj.title}</h3>
+                                </div>
+                                <p style={{ color: "var(--txt-2)", fontSize: "0.95rem", lineHeight: "1.6", margin: 0, textAlign: "justify" }}>{obj.desc}.</p>
                             </div>
                         ))}
                     </div>
@@ -499,98 +719,133 @@ const Home = () => {
 
             {/* ── Section 3: Motto Banner ── */}
             <section id="motto" className="motto-banner" data-aos="zoom-in">
-                <div style={{ position: "relative", zIndex: 1, maxWidth: "800px", margin: "0 auto" }}>
+                <div style={{ position: "relative", zIndex: 1, maxWidth: "900px", margin: "0 auto", padding: "0 1.5rem" }}>
                     <span style={{ fontSize: "0.85rem", fontWeight: 700, letterSpacing: "0.2em", textTransform: "uppercase", color: "#93c5fd" }}>National Motto of NSS</span>
                     <h2 style={{ fontSize: "clamp(2.5rem, 5vw, 4rem)", fontWeight: 900, margin: "1rem 0", letterSpacing: "-0.03em" }}>"NOT ME, BUT YOU"</h2>
-                    <p style={{ fontSize: "1.2rem", color: "#dbeafe", fontWeight: 500, lineHeight: 1.6, maxWidth: "600px", margin: "0 auto" }}>
-                        A salute to selfless service. This motto underlines the essence of democratic living and upholds the need for mutual appreciation and the welfare of society.
+                    <p style={{ fontSize: "1.15rem", color: "#dbeafe", fontWeight: 500, lineHeight: 1.8, maxWidth: "750px", margin: "0 auto" }}>
+                        The motto or watchword of the National Service Scheme is : 'NOT ME BUT YOU'. This reflects the essence of democratic living and upholds the need for selfless service and appreciation of the other person's point of view and also to show consideration for fellow human beings. It underlines that the welfare of an individual is ultimately dependent on the welfare of society on the whole. Therefore, it should be the aim of the NSS to demonstrate this motto in its day-to-day programme.
                     </p>
                 </div>
             </section>
 
-            {/* ── Section 4: Activities ── */}
-            <section id="activities" style={{ padding: "5rem 0", background: "var(--card)" }} data-aos="fade-up">
-                <div className="container">
-                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "4rem", alignItems: "center" }}>
-                        <div>
-                            <span style={{ fontSize: "0.75rem", fontWeight: 700, letterSpacing: "0.15em", color: "#2563eb", textTransform: "uppercase" }}>Engagements</span>
-                            <h2 style={{ fontSize: "2.25rem", fontWeight: 800, marginTop: "0.5rem", marginBottom: "1.5rem" }}>Regular Activities & Special Camps</h2>
-                            <p style={{ fontSize: "1.05rem", color: "var(--txt-2)", lineHeight: "1.7" }}>
-                                NSS volunteers participate in two kinds of activities: Regular community work during weekends and 7-day Special Camping programs in adopted villages.
-                            </p>
-                            <ul style={{ paddingLeft: "1.25rem", color: "var(--txt-2)", fontSize: "1rem", lineHeight: "2" }}>
-                                <li>Health campaigns, sanitation, immunization drives.</li>
-                                <li>Afforestation, tree plantation, environment awareness.</li>
-                                <li>Adult education, child education campaigns.</li>
-                                <li>Disaster mitigation and rehabilitation assistance.</li>
-                                <li>Skill development and vocational trainings in villages.</li>
-                            </ul>
-                        </div>
-                        <div style={{ borderRadius: "16px", overflow: "hidden", boxShadow: "var(--sh-lg)", border: "1px solid var(--border)" }}>
-                            <img src="/nss-activity-planting.png" alt="Activities" style={{ width: "100%", height: "auto", display: "block" }} />
-                        </div>
-                    </div>
-                </div>
-            </section>
-
-            {/* ── Section 5: About University NSS ── */}
-            <section id="university" style={{ padding: "5rem 0", background: "var(--bg)" }} data-aos="fade-up">
+            {/* ── Section 3.5: NSS Core Identity ── */}
+            <section id="identity" style={{ padding: "5rem 0", background: "var(--bg)" }} data-aos="fade-up">
                 <div className="container">
                     <div style={{ textAlign: "center", marginBottom: "4rem" }}>
-                        <span style={{ fontSize: "0.75rem", fontWeight: 700, letterSpacing: "0.15em", color: "#2563eb", textTransform: "uppercase" }}>Institutional Overview</span>
-                        <h2 style={{ fontSize: "2.25rem", fontWeight: 800, marginTop: "0.5rem" }}>Periyar University NSS cell</h2>
-                        <p style={{ color: "var(--txt-2)", maxWidth: "600px", margin: "0.5rem auto 0" }}>Managing community action across four key districts: Salem, Namakkal, Dharmapuri, and Krishnagiri.</p>
+                        <span style={{ fontSize: "0.75rem", fontWeight: 700, letterSpacing: "0.15em", color: "#2563eb", textTransform: "uppercase" }}>Core Elements</span>
+                        <h2 style={{ fontSize: "2.25rem", fontWeight: 800, marginTop: "0.5rem" }}>NSS Insignia & Identity</h2>
+                        <p style={{ color: "var(--txt-2)", maxWidth: "550px", margin: "0.5rem auto 0" }}>The values and symbols that define the identity of every NSS volunteer.</p>
+                        <div style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: "0.5rem", marginTop: "1.25rem" }}>
+                            <div style={{ width: "40px", height: "2px", background: "var(--border)" }}></div>
+                            <div style={{ width: "20px", height: "4px", background: "#2563eb", borderRadius: "2px" }}></div>
+                            <div style={{ width: "40px", height: "2px", background: "var(--border)" }}></div>
+                        </div>
                     </div>
 
-                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1.2fr", gap: "4rem", alignItems: "center" }}>
-                        <div style={{ borderRadius: "16px", overflow: "hidden", boxShadow: "var(--sh-lg)" }}>
-                            <img src="/univ-campus.jpg" alt="University Campus" style={{ width: "100%", height: "auto", display: "block" }} />
+                    <div className="identity-grid">
+                        {/* NSS Symbol Card */}
+                        <div className="identity-card" style={{ borderLeft: "4px solid #2563eb" }}
+                            onMouseEnter={e => { e.currentTarget.style.borderColor = "#2563eb"; }}
+                            onMouseLeave={e => { e.currentTarget.style.borderColor = "var(--border)"; }}>
+                            <div className="identity-card-left" style={{ background: "linear-gradient(135deg, rgba(37,99,235,0.08) 0%, rgba(37,99,235,0.02) 100%)" }}>
+                                <img src="/nss-logo.png" alt="NSS Symbol Logo" style={{ width: "96px", height: "96px", objectFit: "contain" }} />
+                            </div>
+                            <div className="identity-card-right">
+                                <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
+                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#2563eb" strokeWidth="2.5"><circle cx="12" cy="12" r="10" /><path d="M12 2v20" /><path d="M2 12h20" /><path d="m16.24 7.76-8.48 8.48" /><path d="m7.76 7.76 8.48 8.48" /></svg>
+                                    <h3 style={{ fontSize: "1.25rem", fontWeight: 800, margin: 0, color: "var(--txt-1)" }}>NSS Symbol</h3>
+                                </div>
+                                <p style={{ fontSize: "0.925rem", color: "var(--txt-2)", lineHeight: "1.65", margin: 0, textAlign: "justify" }}>
+                                    The symbol of the National Service Scheme is based on the 'Rath' wheel of the Konark Sun Temple situated in Orissa. These giant wheels of the Sun Temple portray the cycle of creation, preservation and release, and signify the movement in life across time and space. The design of the symbol, a simplified form of the Sun-chariot wheel primarily depicts movement. The wheel signifies the progressive cycle of life. It stands for continuity as well as change and implies the continuous striving of NSS for social transformation and upliftment.
+                                </p>
+                            </div>
                         </div>
-                        <div>
-                            <p style={{ fontSize: "1.05rem", lineHeight: "1.8", color: "var(--txt-2)" }}>
-                                Named after the great social reformer E.V. Ramasamy (Thanthai Periyar), Periyar University NSS cell drives community outreach across 118 affiliated colleges. Reaccredited by NAAC with <strong>"A++" Grade</strong> in 2021, the university is a pioneer in integrating academics with societal welfare.
-                            </p>
-                            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "2rem", marginTop: "2rem" }}>
-                                <div style={{ borderLeft: "4px solid #2563eb", paddingLeft: "1rem" }}>
-                                    <div style={{ fontSize: "2rem", fontWeight: 800, color: "#2563eb", lineHeight: 1 }}>110+</div>
-                                    <div style={{ fontSize: "0.85rem", color: "var(--txt-3)", fontWeight: 600, textTransform: "uppercase", marginTop: "0.25rem" }}>Active Units</div>
+
+                        {/* NSS Badge Card */}
+                        <div className="identity-card" style={{ borderLeft: "4px solid #eab308" }}
+                            onMouseEnter={e => { e.currentTarget.style.borderColor = "#eab308"; }}
+                            onMouseLeave={e => { e.currentTarget.style.borderColor = "var(--border)"; }}>
+                            <div className="identity-card-left" style={{ background: "linear-gradient(135deg, rgba(234,179,8,0.08) 0%, rgba(234,179,8,0.02) 100%)" }}>
+                                <img src="/nss-logo.png" alt="NSS Badge Logo" style={{ width: "96px", height: "96px", objectFit: "contain" }} />
+                            </div>
+                            <div className="identity-card-right">
+                                <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
+                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#eab308" strokeWidth="2.5"><circle cx="12" cy="12" r="10" /><path d="M12 2v20" /><path d="M2 12h20" /><path d="m16.24 7.76-8.48 8.48" /><path d="m7.76 7.76 8.48 8.48" /></svg>
+                                    <h3 style={{ fontSize: "1.25rem", fontWeight: 800, margin: 0, color: "var(--txt-1)" }}>NSS Badge</h3>
                                 </div>
-                                <div style={{ borderLeft: "4px solid #2563eb", paddingLeft: "1rem" }}>
-                                    <div style={{ fontSize: "2rem", fontWeight: 800, color: "#2563eb", lineHeight: 1 }}>11,000+</div>
-                                    <div style={{ fontSize: "0.85rem", color: "var(--txt-3)", fontWeight: 600, textTransform: "uppercase", marginTop: "0.25rem" }}>Volunteers</div>
+                                <p style={{ fontSize: "0.925rem", color: "var(--txt-2)", lineHeight: "1.65", margin: 0, textAlign: "justify" }}>
+                                    The NSS symbol is embossed on the NSS badge. The NSS volunteers wear it while undertaking any programme of community service. The Konark wheel in the symbol has eight bars which represent the 24 hours of the day. Hence, the badge reminds the wearer to be in readiness for service of the nation round the clock i.e. for 24 hours. The red colour in the badge indicates that the NSS volunteers are full of blood i.e. lively, active, energetic and full of high spirit. The navy blue colour indicates the cosmos of which the NSS is a tiny part, ready to contribute its share for the welfare of the mankind.
+                                </p>
+                            </div>
+                        </div>
+
+                        {/* NSS Day Card */}
+                        <div className="identity-card" style={{ borderLeft: "4px solid #10b981" }}
+                            onMouseEnter={e => { e.currentTarget.style.borderColor = "#10b981"; }}
+                            onMouseLeave={e => { e.currentTarget.style.borderColor = "var(--border)"; }}>
+                            <div className="identity-card-left" style={{ background: "linear-gradient(135deg, rgba(16,185,129,0.08) 0%, rgba(16,185,129,0.02) 100%)" }}>
+                                <div style={{ width: "80px", height: "80px", borderRadius: "20px", background: "rgba(16,185,129,0.1)", display: "flex", alignItems: "center", justifyContent: "center", color: "#10b981" }}>
+                                    <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
+                                        <rect x="3" y="4" width="18" height="18" rx="4" ry="4" />
+                                        <line x1="16" y1="2" x2="16" y2="6" />
+                                        <line x1="8" y1="2" x2="8" y2="6" />
+                                        <line x1="3" y1="10" x2="21" y2="10" />
+                                        <path d="M8 14h.01M12 14h.01M16 14h.01M8 18h.01M12 18h.01M16 18h.01" strokeWidth="3" strokeLinecap="round" />
+                                    </svg>
                                 </div>
+                            </div>
+                            <div className="identity-card-right">
+                                <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
+                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#10b981" strokeWidth="2.5"><rect x="3" y="4" width="18" height="18" rx="2" ry="2" /><line x1="16" y1="2" x2="16" y2="6" /><line x1="8" y1="2" x2="8" y2="6" /><line x1="3" y1="10" x2="21" y2="10" /></svg>
+                                    <h3 style={{ fontSize: "1.25rem", fontWeight: 800, margin: 0, color: "var(--txt-1)" }}>NSS Day</h3>
+                                </div>
+                                <p style={{ fontSize: "0.925rem", color: "var(--txt-2)", lineHeight: "1.65", margin: 0, textAlign: "justify" }}>
+                                    NSS was formally launched on <b>24th September, 1969</b>, the birth centenary year of the Father of the Nation. Therefore, 24 September is celebrated every year as NSS Day with appropriate programmes and activities.
+                                </p>
+                            </div>
+                        </div>
+
+                        {/* NSS Song Card */}
+                        <div className="identity-card" style={{ borderLeft: "4px solid #8b5cf6" }}
+                            onMouseEnter={e => { e.currentTarget.style.borderColor = "#8b5cf6"; }}
+                            onMouseLeave={e => { e.currentTarget.style.borderColor = "var(--border)"; }}>
+                            <div className="identity-card-left" style={{ background: "linear-gradient(135deg, rgba(139,92,246,0.08) 0%, rgba(139,92,246,0.02) 100%)" }}>
+                                <div style={{ width: "80px", height: "80px", borderRadius: "20px", background: "rgba(139,92,246,0.1)", display: "flex", alignItems: "center", justifyContent: "center", color: "#8b5cf6" }}>
+                                    <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
+                                        <path d="M9 18V5l12-2v13" />
+                                        <circle cx="6" cy="18" r="3" />
+                                        <circle cx="18" cy="16" r="3" />
+                                    </svg>
+                                </div>
+                            </div>
+                            <div className="identity-card-right">
+                                <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
+                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#8b5cf6" strokeWidth="2.5"><path d="M9 18V5l12-2v13" /><circle cx="6" cy="18" r="3" /><circle cx="18" cy="16" r="3" /></svg>
+                                    <h3 style={{ fontSize: "1.25rem", fontWeight: 800, margin: 0, color: "var(--txt-1)" }}>NSS Song</h3>
+                                </div>
+                                <p style={{ fontSize: "0.925rem", color: "var(--txt-2)", lineHeight: "1.65", margin: 0, textAlign: "justify" }}>
+                                    During Silver Jubilee Year the NSS theme song has been composed. All NSS volunteers are requested to learn the theme song and sing the song during NSS programmes and celebrations. The theme song cassette is available and the theme song is given in the end of the Manual.
+                                </p>
                             </div>
                         </div>
                     </div>
-                </div>
-            </section>
 
-            {/* ── Section 6: Announcements Grid ── */}
-            <section id="announcements" style={{ padding: "5rem 0", background: "var(--card)" }} data-aos="fade-up">
-                <div className="container">
-                    <div style={{ textAlign: "center", marginBottom: "4rem" }}>
-                        <span style={{ fontSize: "0.75rem", fontWeight: 700, letterSpacing: "0.15em", color: "#2563eb", textTransform: "uppercase" }}>Real-time Updates</span>
-                        <h2 style={{ fontSize: "2.25rem", fontWeight: 800, marginTop: "0.5rem" }}>Announcements & Notifications</h2>
-                        <p style={{ color: "var(--txt-2)", maxWidth: "500px", margin: "0.5rem auto 0" }}>Stay informed with the latest notifications from the university cell.</p>
-                    </div>
-
-                    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))", gap: "2rem" }}>
-                        {announcements.map((ann, idx) => {
-                            const tagClass = ann.tag === "Important" ? "tag-important" : (ann.tag === "Circular" ? "tag-circular" : "tag-camp");
-                            return (
-                                <div className="announcement-card" key={idx}>
-                                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                                        <span className={`tag ${tagClass}`}>{ann.tag}</span>
-                                        <span style={{ fontSize: "0.75rem", color: "var(--txt-3)", fontWeight: 500 }}>{ann.date}</span>
-                                    </div>
-                                    <h3 style={{ fontSize: "1.2rem", fontWeight: 700, margin: "0.5rem 0 1rem", lineHeight: 1.4 }}>{ann.title}</h3>
-                                    <p style={{ color: "var(--txt-2)", fontSize: "0.9rem", lineHeight: "1.6", margin: 0 }}>{ann.desc}</p>
-                                </div>
-                            );
-                        })}
+                    {/* Bottom Footer Note Banner */}
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "0.75rem", background: "rgba(37,99,235,0.05)", border: "1px solid rgba(37,99,235,0.1)", borderRadius: "12px", padding: "1rem 2rem", marginTop: "4rem", maxWidth: "720px", marginLeft: "auto", marginRight: "auto" }}>
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#2563eb" strokeWidth="2.5">
+                            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+                            <circle cx="9" cy="7" r="4" />
+                            <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+                            <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+                        </svg>
+                        <span style={{ fontSize: "0.95rem", color: "var(--txt-1)", fontWeight: 500, textAlign: "center" }}>
+                            These core elements inspire unity, service, and a strong sense of responsibility among NSS volunteers.
+                        </span>
                     </div>
                 </div>
             </section>
+
+
 
             {/* ── Section 7: Forms & Resources ── */}
             <section id="resources" style={{ padding: "5rem 0", background: "var(--bg)" }} data-aos="fade-up">

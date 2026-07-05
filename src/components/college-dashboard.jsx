@@ -127,10 +127,7 @@ const CollegeDashboard = () => {
     const [currentMemberPage, setCurrentMemberPage] = useState(1);
     const membersPerPage = 50;
 
-    // Adopting Villages State
-    const [showVillageModal, setShowVillageModal] = useState(false);
-    const [newVillage, setNewVillage] = useState({ name: "", address: "", block: "", taluk: "", district: "", pincode: "", distance: "" });
-    const [isAddingVillage, setIsAddingVillage] = useState(false);
+
 
     // Check if admin is viewing this dashboard
     const isAdminViewing = localStorage.getItem("adminToken") !== null;
@@ -238,7 +235,7 @@ const CollegeDashboard = () => {
                 setNewUnitPassword("");
                 setCollegePasskey("");
                 setNewMembers([]);
-                
+
                 // Clear PO fields
                 setPoName("");
                 setPoDesignation("");
@@ -501,65 +498,7 @@ const CollegeDashboard = () => {
         currentMemberPage * membersPerPage
     );
 
-    const handleAddVillage = async () => {
-        if (!newVillage.name || !newVillage.address || !newVillage.block || !newVillage.taluk || !newVillage.district || !newVillage.pincode) {
-            toast.error("Please fill all village details");
-            return;
-        }
-        if (newVillage.distance === "" || isNaN(newVillage.distance)) {
-            toast.error("Please enter a valid numeric distance.");
-            return;
-        }
-        if (Number(newVillage.distance) > 7) {
-            toast.error("Distance exceeds the maximum limit of 7 KM");
-            return;
-        }
-        setIsAddingVillage(true);
-        try {
-            const res = await axios.post(`${import.meta.env.VITE_API_URL}/add-village`, {
-                collegeCode: insCode,
-                name: newVillage.name,
-                address: newVillage.address,
-                block: newVillage.block,
-                taluk: newVillage.taluk,
-                district: newVillage.district,
-                pincode: newVillage.pincode,
-                distance: Number(newVillage.distance)
-            }, {
-                headers: { Authorization: `Bearer ${localStorage.getItem("nsstoken")}` }
-            });
 
-            if (res.data.success) {
-                toast.success("Village added successfully!");
-                setCollegeData({ ...collegeData, adoptingVillages: res.data.adoptingVillages });
-                setShowVillageModal(false);
-                setNewVillage({ name: "", address: "", block: "", taluk: "", district: "", pincode: "", distance: "" });
-            }
-        } catch (error) {
-            console.error("Error adding village:", error);
-            toast.error(error.response?.data?.message || "Failed to add village");
-        } finally {
-            setIsAddingVillage(false);
-        }
-    };
-
-    const handleDeleteVillage = async (index) => {
-        if (!confirm("Are you sure you want to remove this village?")) return;
-        try {
-            const res = await axios.delete(`${import.meta.env.VITE_API_URL}/delete-village`, {
-                data: { collegeCode: insCode, villageIndex: index },
-                headers: { Authorization: `Bearer ${localStorage.getItem("nsstoken")}` }
-            });
-
-            if (res.data.success) {
-                toast.success("Village removed successfully");
-                setCollegeData({ ...collegeData, adoptingVillages: res.data.adoptingVillages });
-            }
-        } catch (error) {
-            console.error("Error deleting village:", error);
-            toast.error(error.response?.data?.message || "Failed to remove village");
-        }
-    };
 
     const handleLogout = () => {
         if (isAdminViewing) {
@@ -597,7 +536,7 @@ const CollegeDashboard = () => {
             <header className="mobile-nav-header">
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                     <div className="sidebar-brand-logo">
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c0 2 2 3 6 3s6-1 6-3v-5"/></svg>
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 10v6M2 10l10-5 10 5-10 5z" /><path d="M6 12v5c0 2 2 3 6 3s6-1 6-3v-5" /></svg>
                     </div>
                     <span className="sidebar-brand-name" style={{ fontSize: '0.9rem' }}>{insName || 'College Portal'}</span>
                 </div>
@@ -605,9 +544,9 @@ const CollegeDashboard = () => {
                     <ThemeToggle />
                     <button className="mobile-toggle-btn" onClick={() => setIsSidebarOpen(!isSidebarOpen)}>
                         {isSidebarOpen ? (
-                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
                         ) : (
-                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="3" y1="12" x2="21" y2="12" /><line x1="3" y1="6" x2="21" y2="6" /><line x1="3" y1="18" x2="21" y2="18" /></svg>
                         )}
                     </button>
                 </div>
@@ -617,7 +556,7 @@ const CollegeDashboard = () => {
             <aside className={`sidebar ${isSidebarOpen ? 'open' : ''}`}>
                 <div className="sidebar-brand">
                     <div className="sidebar-brand-logo">
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c0 2 2 3 6 3s6-1 6-3v-5"/></svg>
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 10v6M2 10l10-5 10 5-10 5z" /><path d="M6 12v5c0 2 2 3 6 3s6-1 6-3v-5" /></svg>
                     </div>
                     <div style={{ overflow: 'hidden' }}>
                         <span className="sidebar-brand-name" style={{ display: 'block' }}>NSS PORTAL</span>
@@ -627,23 +566,23 @@ const CollegeDashboard = () => {
 
                 <div className="sidebar-menu">
                     <button className={`sidebar-item ${activeTab === 'overview' ? 'active' : ''}`} onClick={() => { setActiveTab('overview'); setIsSidebarOpen(false); }}>
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/></svg>
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="7" height="9" /><rect x="14" y="3" width="7" height="5" /><rect x="14" y="12" width="7" height="9" /><rect x="3" y="16" width="7" height="5" /></svg>
                         Overview
                     </button>
                     <button className={`sidebar-item ${activeTab === 'units' ? 'active' : ''}`} onClick={() => { setActiveTab('units'); setIsSidebarOpen(false); }}>
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M12 2L2 7l10 5 10-5-10-5z"/></svg>
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2" /><path d="M12 2L2 7l10 5 10-5-10-5z" /></svg>
                         NSS Units
                     </button>
                     <button className={`sidebar-item ${activeTab === 'officers' ? 'active' : ''}`} onClick={() => { setActiveTab('officers'); setIsSidebarOpen(false); }}>
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M22 21v-2a4 4 0 0 0-3-3.87" /><path d="M16 3.13a4 4 0 0 1 0 7.75" /></svg>
                         Program Officers
                     </button>
                     <button className={`sidebar-item ${activeTab === 'students' ? 'active' : ''}`} onClick={() => { setActiveTab('students'); setIsSidebarOpen(false); }}>
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M23 21v-2a4 4 0 0 0-3-3.87" /><path d="M16 3.13a4 4 0 0 1 0 7.75" /></svg>
                         Student Records
                     </button>
                     <button className={`sidebar-item ${activeTab === 'villages' ? 'active' : ''}`} onClick={() => { setActiveTab('villages'); setIsSidebarOpen(false); }}>
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" /><circle cx="12" cy="10" r="3" /></svg>
                         Adopted Villages
                     </button>
                 </div>
@@ -654,7 +593,7 @@ const CollegeDashboard = () => {
                         <ThemeToggle />
                     </div>
                     <button className="sidebar-item" onClick={handleLogout} style={{ color: 'var(--danger-500)', opacity: 0.9 }}>
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" /><polyline points="16 17 21 12 16 7" /><line x1="21" y1="12" x2="9" y2="12" /></svg>
                         Sign Out
                     </button>
                 </div>
@@ -668,7 +607,7 @@ const CollegeDashboard = () => {
                         <div className="flex-between mb-6" style={{ flexWrap: 'wrap', gap: '1rem' }}>
                             <div>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ color: 'var(--brand-600)' }}><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18"/><path d="M9 21V9"/></svg>
+                                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ color: 'var(--brand-600)' }}><rect x="3" y="3" width="18" height="18" rx="2" /><path d="M3 9h18" /><path d="M9 21V9" /></svg>
                                     <h1 style={{ fontSize: '1.75rem', fontWeight: 800, margin: 0, color: 'var(--txt-1)' }}>{insName || 'College Dashboard'}</h1>
                                 </div>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', marginTop: '4px' }}>
@@ -692,7 +631,7 @@ const CollegeDashboard = () => {
                         <div className="grid-cols-4 mb-6" style={{ gap: '1rem' }}>
                             <div className="card p-4 d-flex align-items-center" style={{ gap: '1rem', background: 'var(--card-bg)' }}>
                                 <div style={{ width: '44px', height: '44px', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(99,102,241,0.1)', color: 'var(--primary-color)' }}>
-                                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M12 2L2 7l10 5 10-5-10-5z"/></svg>
+                                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2" /><path d="M12 2L2 7l10 5 10-5-10-5z" /></svg>
                                 </div>
                                 <div>
                                     <div style={{ fontSize: '0.8rem', color: 'var(--txt-3)', fontWeight: 500 }}>Active Units</div>
@@ -702,7 +641,7 @@ const CollegeDashboard = () => {
 
                             <div className="card p-4 d-flex align-items-center" style={{ gap: '1rem', background: 'var(--card-bg)' }}>
                                 <div style={{ width: '44px', height: '44px', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(16,185,129,0.1)', color: 'var(--success-color)' }}>
-                                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M22 21v-2a4 4 0 0 0-3-3.87" /><path d="M16 3.13a4 4 0 0 1 0 7.75" /></svg>
                                 </div>
                                 <div>
                                     <div style={{ fontSize: '0.8rem', color: 'var(--txt-3)', fontWeight: 500 }}>Program Officers</div>
@@ -712,7 +651,7 @@ const CollegeDashboard = () => {
 
                             <div className="card p-4 d-flex align-items-center" style={{ gap: '1rem', background: 'var(--card-bg)' }}>
                                 <div style={{ width: '44px', height: '44px', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(245,158,11,0.1)', color: 'var(--warning-color)' }}>
-                                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c0 2 2 3 6 3s6-1 6-3v-5"/></svg>
+                                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 10v6M2 10l10-5 10 5-10 5z" /><path d="M6 12v5c0 2 2 3 6 3s6-1 6-3v-5" /></svg>
                                 </div>
                                 <div>
                                     <div style={{ fontSize: '0.8rem', color: 'var(--txt-3)', fontWeight: 500 }}>Total Volunteers</div>
@@ -724,7 +663,7 @@ const CollegeDashboard = () => {
 
                             <div className="card p-4 d-flex align-items-center" style={{ gap: '1rem', background: 'var(--card-bg)' }}>
                                 <div style={{ width: '44px', height: '44px', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(236,72,153,0.1)', color: 'var(--danger-color)' }}>
-                                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+                                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" /><circle cx="12" cy="10" r="3" /></svg>
                                 </div>
                                 <div>
                                     <div style={{ fontSize: '0.8rem', color: 'var(--txt-3)', fontWeight: 500 }}>Adopted Villages</div>
@@ -789,13 +728,7 @@ const CollegeDashboard = () => {
                                     <div
                                         key={unit.id || idx}
                                         className="unit-card"
-                                        onClick={() => {
-                                            localStorage.setItem("nssunitCode", unit.unitNumber);
-                                            localStorage.setItem("unitToken", localStorage.getItem("nsstoken"));
-                                            localStorage.setItem("nsscollegeCode", insCode);
-                                            navigate('/unit-dashboard')
-                                        }}
-                                        style={{ width: '100%', margin: 0, cursor: 'pointer' }}
+                                        style={{ width: '100%', margin: 0, cursor: 'default' }}
                                     >
                                         <div className="flex-between mb-3">
                                             <h4 className="mb-0">{unit.name || unit.unitName}</h4>
@@ -807,7 +740,7 @@ const CollegeDashboard = () => {
                                             <p className="mb-1 text-sm"><strong className="text-white">Members:</strong> {unit.members ? unit.members.length : 0}</p>
                                         </div>
 
-                                        {isAdminViewing && (
+                                        {/* {isAdminViewing && (
                                             <button
                                                 className="btn btn-danger btn-sm w-100"
                                                 onClick={(e) => handleDeleteUnit(unit.unitNumber, e)}
@@ -815,7 +748,7 @@ const CollegeDashboard = () => {
                                             >
                                                 Delete Unit
                                             </button>
-                                        )}
+                                        )} */}
                                     </div>
                                 ))
                             )}
@@ -1018,12 +951,12 @@ const CollegeDashboard = () => {
                                                         >
                                                             {m.isEnrolled ? (
                                                                 <>
-                                                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ marginRight: '4px' }}><polyline points="20 6 9 17 4 12"/></svg>
+                                                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ marginRight: '4px' }}><polyline points="20 6 9 17 4 12" /></svg>
                                                                     View Enrolment
                                                                 </>
                                                             ) : (
                                                                 <>
-                                                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ marginRight: '4px' }}><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 1 1 3 3L12 15l-4 1 1-4z"/></svg>
+                                                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ marginRight: '4px' }}><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" /><path d="M18.5 2.5a2.121 2.121 0 1 1 3 3L12 15l-4 1 1-4z" /></svg>
                                                                     Enrolment
                                                                 </>
                                                             )}
@@ -1098,12 +1031,6 @@ const CollegeDashboard = () => {
                                 <h1 style={{ fontSize: '1.75rem', fontWeight: 800, margin: 0, color: 'var(--txt-1)' }}>Adopted Villages</h1>
                                 <p style={{ margin: 0, color: 'var(--txt-3)', fontSize: '0.9rem' }}>NSS adopted villages for community outreach</p>
                             </div>
-                            <button
-                                className="btn btn-primary"
-                                onClick={() => setShowVillageModal(true)}
-                            >
-                                + Add Village
-                            </button>
                         </div>
 
                         {collegeData?.adoptingVillages && collegeData.adoptingVillages.length > 0 ? (
@@ -1123,42 +1050,13 @@ const CollegeDashboard = () => {
                                             height: '100%',
                                             background: 'var(--primary-color)'
                                         }}></div>
-                                        <div className="flex-between mb-3">
-                                            <h4 className="mb-0 text-primary-400" style={{ fontSize: '1.1rem' }}>{village.name}</h4>
-                                            <button
-                                                className="text-danger"
-                                                style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
-                                                onClick={() => handleDeleteVillage(idx)}
-                                                title="Remove Village"
-                                            >
-                                                &times;
-                                            </button>
-                                        </div>
-                                        <div className="d-flex flex-column gap-2">
-                                            <div className="d-flex align-items-start gap-2">
-                                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ marginTop: '3px', opacity: 0.7 }}><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
-                                                <p className="mb-0 text-sm" style={{ opacity: 0.9 }}>{village.address}</p>
-                                            </div>
-                                            <div className="d-flex flex-wrap gap-x-4 gap-y-1">
-                                                <p className="mb-0 text-xs" style={{ opacity: 0.7 }}><strong className="text-white">Block:</strong> {village.block}</p>
-                                                <p className="mb-0 text-xs" style={{ opacity: 0.7 }}><strong className="text-white">Taluk:</strong> {village.taluk}</p>
-                                                <p className="mb-0 text-xs" style={{ opacity: 0.7 }}><strong className="text-white">Dist:</strong> {village.district}</p>
-                                            </div>
-                                            <div className="d-flex align-items-center gap-2">
-                                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ opacity: 0.7 }}><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
-                                                <p className="mb-0 text-sm" style={{ opacity: 0.9 }}><strong className="text-white">Distance:</strong> {village.distance} KM</p>
-                                            </div>
-                                            <div className="d-flex align-items-center gap-2">
-                                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ opacity: 0.7 }}><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
-                                                <p className="mb-0 text-sm" style={{ opacity: 0.9 }}>{village.pincode}</p>
-                                            </div>
-                                        </div>
+                                        <h4 className="mb-0 text-primary-400" style={{ fontSize: '1.2rem', fontWeight: 700 }}>{village.name}</h4>
                                     </div>
                                 ))}
                             </div>
                         ) : (
                             <div className="text-center p-6" style={{ background: 'var(--bg-tertiary)', borderRadius: '8px' }}>
-                                <p className="text-muted mb-0">No villages adopted yet. Click the button above to add one.</p>
+                                <p className="text-muted mb-0">No villages adopted yet.</p>
                             </div>
                         )}
                     </div>
@@ -1194,7 +1092,7 @@ const CollegeDashboard = () => {
                         {/* Program Officer details */}
                         <div className="mb-6" style={{ borderTop: '1px solid var(--border)', paddingTop: '1.5rem' }}>
                             <h3 className="mb-3 text-lg" style={{ color: 'var(--txt-1)', fontWeight: 700 }}>Program Officer Details (Unit Head)</h3>
-                            
+
                             <div className="grid-cols-2 mb-3" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
                                 <div className="form-group">
                                     <label className="form-label">Full Name <span style={{ color: 'red' }}>*</span></label>
@@ -1419,7 +1317,7 @@ const CollegeDashboard = () => {
                         </div>
 
                         <div className="alert alert-warning mb-4" style={{ fontSize: '0.85rem', display: 'flex', alignItems: 'center' }}>
-                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ marginRight: '8px', flexShrink: 0 }}><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ marginRight: '8px', flexShrink: 0 }}><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" /><line x1="12" y1="9" x2="12" y2="13" /><line x1="12" y1="17" x2="12.01" y2="17" /></svg>
                             <span>Caution: Assigning a new head will automatically unassign the current head of that unit.</span>
                         </div>
 
@@ -1437,81 +1335,7 @@ const CollegeDashboard = () => {
                 </div>
             )}
 
-            {/* Add Village Modal */}
-            {showVillageModal && (
-                <div className="modal-overlay" onClick={() => setShowVillageModal(false)}>
-                    <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '450px' }}>
-                        <div className="flex-between mb-4">
-                            <h2 className="mb-0">Adopt a New Village</h2>
-                            <button className="btn btn-sm btn-secondary" onClick={() => setShowVillageModal(false)}>&times;</button>
-                        </div>
 
-                        <div className="form-group mb-3">
-                            <label className="form-label">Village Name</label>
-                            <input
-                                className="form-input"
-                                placeholder="e.g. Melpattu Village"
-                                value={newVillage.name}
-                                onChange={(e) => setNewVillage({ ...newVillage, name: e.target.value })}
-                            />
-                        </div>
-
-                        <div className="form-group mb-3">
-                            <label className="form-label">Location / Address</label>
-                            <input
-                                className="form-input"
-                                placeholder="e.g. Near Taluk Office"
-                                value={newVillage.address}
-                                onChange={(e) => setNewVillage({ ...newVillage, address: e.target.value })}
-                            />
-                        </div>
-
-                        <div className="form-group mb-3">
-                            <label className="form-label">Distance from College (KM)</label>
-                            <input
-                                className="form-input"
-                                type="number"
-                                placeholder="e.g. 4.5 (Max 7 KM)"
-                                value={newVillage.distance}
-                                onChange={(e) => setNewVillage({ ...newVillage, distance: e.target.value })}
-                                min="0"
-                                max="7"
-                                step="0.1"
-                            />
-                        </div>
-
-                        <div className="grid-cols-2 gap-3 mb-3">
-                            <div className="form-group">
-                                <label className="form-label">Block</label>
-                                <input className="form-input" placeholder="Block" value={newVillage.block} onChange={(e) => setNewVillage({ ...newVillage, block: e.target.value })} />
-                            </div>
-                            <div className="form-group">
-                                <label className="form-label">Taluk</label>
-                                <input className="form-input" placeholder="Taluk" value={newVillage.taluk} onChange={(e) => setNewVillage({ ...newVillage, taluk: e.target.value })} />
-                            </div>
-                            <div className="form-group">
-                                <label className="form-label">District</label>
-                                <input className="form-input" placeholder="District" value={newVillage.district} onChange={(e) => setNewVillage({ ...newVillage, district: e.target.value })} />
-                            </div>
-                            <div className="form-group">
-                                <label className="form-label">Pincode</label>
-                                <input className="form-input" placeholder="Pincode" value={newVillage.pincode} onChange={(e) => setNewVillage({ ...newVillage, pincode: e.target.value })} maxLength={6} />
-                            </div>
-                        </div>
-
-                        <div className="flex-between pt-4" style={{ borderTop: '1px solid var(--border-color)' }}>
-                            <button className="btn btn-secondary" onClick={() => setShowVillageModal(false)}>Cancel</button>
-                            <button
-                                className="btn btn-primary"
-                                onClick={handleAddVillage}
-                                disabled={isAddingVillage}
-                            >
-                                {isAddingVillage ? 'Adding...' : 'Add Village'}
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
         </div>
     );
 };

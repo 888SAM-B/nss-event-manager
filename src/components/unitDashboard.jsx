@@ -34,6 +34,11 @@ const UnitDashboard = () => {
     const [isAssignModalOpen, setIsAssignModalOpen] = useState(false);
     const [isAssigning, setIsAssigning] = useState(false);
 
+    // Adopting Villages State
+    const [showVillageModal, setShowVillageModal] = useState(false);
+    const [newVillage, setNewVillage] = useState({ name: "", address: "", block: "", taluk: "", district: "", pincode: "", distance: "" });
+    const [isAddingVillage, setIsAddingVillage] = useState(false);
+
 
 
     // Check if accessed from college dashboard (admin or college user)
@@ -472,6 +477,68 @@ const UnitDashboard = () => {
         }
     };
 
+    const handleAddVillage = async () => {
+        if (!newVillage.name || !newVillage.address || !newVillage.block || !newVillage.taluk || !newVillage.district || !newVillage.pincode) {
+            toast.error("Please fill all village details");
+            return;
+        }
+        if (newVillage.distance === "" || isNaN(newVillage.distance)) {
+            toast.error("Please enter a valid numeric distance.");
+            return;
+        }
+        if (Number(newVillage.distance) > 7) {
+            toast.error("Distance exceeds the maximum limit of 7 KM");
+            return;
+        }
+        setIsAddingVillage(true);
+        const token = localStorage.getItem("unitToken");
+        try {
+            const res = await axios.post(`${import.meta.env.VITE_API_URL}/add-village`, {
+                collegeCode: college.code,
+                name: newVillage.name,
+                address: newVillage.address,
+                block: newVillage.block,
+                taluk: newVillage.taluk,
+                district: newVillage.district,
+                pincode: newVillage.pincode,
+                distance: Number(newVillage.distance)
+            }, {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+
+            if (res.data.success) {
+                toast.success("Village added successfully!");
+                setCollege({ ...college, adoptingVillages: res.data.adoptingVillages });
+                setShowVillageModal(false);
+                setNewVillage({ name: "", address: "", block: "", taluk: "", district: "", pincode: "", distance: "" });
+            }
+        } catch (error) {
+            console.error("Error adding village:", error);
+            toast.error(error.response?.data?.message || "Failed to add village");
+        } finally {
+            setIsAddingVillage(false);
+        }
+    };
+
+    const handleDeleteVillage = async (index) => {
+        if (!confirm("Are you sure you want to remove this village?")) return;
+        const token = localStorage.getItem("unitToken");
+        try {
+            const res = await axios.delete(`${import.meta.env.VITE_API_URL}/delete-village`, {
+                data: { collegeCode: college.code, villageIndex: index },
+                headers: { Authorization: `Bearer ${token}` }
+            });
+
+            if (res.data.success) {
+                toast.success("Village removed successfully");
+                setCollege({ ...college, adoptingVillages: res.data.adoptingVillages });
+            }
+        } catch (error) {
+            console.error("Error deleting village:", error);
+            toast.error(error.response?.data?.message || "Failed to remove village");
+        }
+    };
+
     if (loading) return (
         <div className="flex-center" style={{ height: '100vh', flexDirection: 'column', gap: '1.25rem' }}>
             <div style={{
@@ -554,6 +621,10 @@ const UnitDashboard = () => {
                     <button className={`sidebar-item ${activeTab === 'volunteers' ? 'active' : ''}`} onClick={() => { setActiveTab('volunteers'); setIsSidebarOpen(false); }}>
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
                         Volunteers
+                    </button>
+                    <button className={`sidebar-item ${activeTab === 'villages' ? 'active' : ''}`} onClick={() => { setActiveTab('villages'); setIsSidebarOpen(false); }}>
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+                        Adopted Villages
                     </button>
                     <button className={`sidebar-item ${activeTab === 'collaborations' ? 'active' : ''}`} onClick={() => { setActiveTab('collaborations'); setIsSidebarOpen(false); }}>
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
@@ -966,6 +1037,79 @@ const UnitDashboard = () => {
                         </div>
                     </div>
                 )}
+
+                {activeTab === "villages" && (
+                    <div>
+                        <div className="flex-between mb-6" style={{ flexWrap: 'wrap', gap: '1rem' }}>
+                            <div>
+                                <h1 style={{ fontSize: '1.75rem', fontWeight: 800, margin: 0, color: 'var(--txt-1)' }}>Adopted Villages</h1>
+                                <p style={{ margin: 0, color: 'var(--txt-3)', fontSize: '0.9rem' }}>NSS adopted villages for community outreach</p>
+                            </div>
+                            <button
+                                className="btn btn-primary"
+                                onClick={() => setShowVillageModal(true)}
+                            >
+                                + Add Village
+                            </button>
+                        </div>
+
+                        {college?.adoptingVillages && college.adoptingVillages.length > 0 ? (
+                            <div className="grid-cols-3 gap-4">
+                                {college.adoptingVillages.map((village, idx) => (
+                                    <div key={idx} className="p-4 rounded village-card" style={{
+                                        background: 'var(--bg-tertiary)',
+                                        border: '1px solid var(--border-color)',
+                                        position: 'relative',
+                                        overflow: 'hidden'
+                                    }}>
+                                        <div style={{
+                                            position: 'absolute',
+                                            top: 0,
+                                            left: 0,
+                                            width: '4px',
+                                            height: '100%',
+                                            background: 'var(--primary-color)'
+                                        }}></div>
+                                        <div className="flex-between mb-3">
+                                            <h4 className="mb-0 text-primary-400" style={{ fontSize: '1.1rem' }}>{village.name}</h4>
+                                            <button
+                                                className="text-danger"
+                                                style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
+                                                onClick={() => handleDeleteVillage(idx)}
+                                                title="Remove Village"
+                                            >
+                                                &times;
+                                            </button>
+                                        </div>
+                                        <div className="d-flex flex-column gap-2">
+                                            <div className="d-flex align-items-start gap-2">
+                                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ marginTop: '3px', opacity: 0.7 }}><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" /><circle cx="12" cy="10" r="3" /></svg>
+                                                <p className="mb-0 text-sm" style={{ opacity: 0.9 }}>{village.address}</p>
+                                            </div>
+                                            <div className="d-flex flex-wrap gap-x-4 gap-y-1">
+                                                <p className="mb-0 text-xs" style={{ opacity: 0.7 }}><strong className="text-white">Block:</strong> {village.block}</p>
+                                                <p className="mb-0 text-xs" style={{ opacity: 0.7 }}><strong className="text-white">Taluk:</strong> {village.taluk}</p>
+                                                <p className="mb-0 text-xs" style={{ opacity: 0.7 }}><strong className="text-white">Dist:</strong> {village.district}</p>
+                                            </div>
+                                            <div className="d-flex align-items-center gap-2">
+                                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ opacity: 0.7 }}><polyline points="22 12 18 12 15 21 9 3 6 12 2 12" /></svg>
+                                                <p className="mb-0 text-sm" style={{ opacity: 0.9 }}><strong className="text-white">Distance:</strong> {village.distance} KM</p>
+                                            </div>
+                                            <div className="d-flex align-items-center gap-2">
+                                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ opacity: 0.7 }}><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" /><polyline points="22,6 12,13 2,6" /></svg>
+                                                <p className="mb-0 text-sm" style={{ opacity: 0.9 }}>{village.pincode}</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        ) : (
+                            <div className="text-center p-6" style={{ background: 'var(--bg-tertiary)', borderRadius: '8px' }}>
+                                <p className="text-muted mb-0">No villages adopted yet. Click the button above to add one.</p>
+                            </div>
+                        )}
+                    </div>
+                )}
             </main>
 
             {/* Modals & Overlays */}
@@ -1058,6 +1202,82 @@ const UnitDashboard = () => {
                                     Download Template (.xlsx)
                                 </button>
                             </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Add Village Modal */}
+            {showVillageModal && (
+                <div className="modal-overlay" onClick={() => setShowVillageModal(false)}>
+                    <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '450px' }}>
+                        <div className="flex-between mb-4">
+                            <h2 className="mb-0">Adopt a New Village</h2>
+                            <button className="btn btn-sm btn-secondary" onClick={() => setShowVillageModal(false)}>&times;</button>
+                        </div>
+
+                        <div className="form-group mb-3">
+                            <label className="form-label">Village Name</label>
+                            <input
+                                className="form-input"
+                                placeholder="e.g. Melpattu Village"
+                                value={newVillage.name}
+                                onChange={(e) => setNewVillage({ ...newVillage, name: e.target.value })}
+                            />
+                        </div>
+
+                        <div className="form-group mb-3">
+                            <label className="form-label">Location / Address</label>
+                            <input
+                                className="form-input"
+                                placeholder="e.g. Near Taluk Office"
+                                value={newVillage.address}
+                                onChange={(e) => setNewVillage({ ...newVillage, address: e.target.value })}
+                            />
+                        </div>
+
+                        <div className="form-group mb-3">
+                            <label className="form-label">Distance from College (KM)</label>
+                            <input
+                                className="form-input"
+                                type="number"
+                                placeholder="e.g. 4.5 (Max 7 KM)"
+                                value={newVillage.distance}
+                                onChange={(e) => setNewVillage({ ...newVillage, distance: e.target.value })}
+                                min="0"
+                                max="7"
+                                step="0.1"
+                            />
+                        </div>
+
+                        <div className="grid-cols-2 gap-3 mb-3">
+                            <div className="form-group">
+                                <label className="form-label">Block</label>
+                                <input className="form-input" placeholder="Block" value={newVillage.block} onChange={(e) => setNewVillage({ ...newVillage, block: e.target.value })} />
+                            </div>
+                            <div className="form-group">
+                                <label className="form-label">Taluk</label>
+                                <input className="form-input" placeholder="Taluk" value={newVillage.taluk} onChange={(e) => setNewVillage({ ...newVillage, taluk: e.target.value })} />
+                            </div>
+                            <div className="form-group">
+                                <label className="form-label">District</label>
+                                <input className="form-input" placeholder="District" value={newVillage.district} onChange={(e) => setNewVillage({ ...newVillage, district: e.target.value })} />
+                            </div>
+                            <div className="form-group">
+                                <label className="form-label">Pincode</label>
+                                <input className="form-input" placeholder="Pincode" value={newVillage.pincode} onChange={(e) => setNewVillage({ ...newVillage, pincode: e.target.value })} maxLength={6} />
+                            </div>
+                        </div>
+
+                        <div className="flex-between pt-4" style={{ borderTop: '1px solid var(--border-color)' }}>
+                            <button className="btn btn-secondary" onClick={() => setShowVillageModal(false)}>Cancel</button>
+                            <button
+                                className="btn btn-primary"
+                                onClick={handleAddVillage}
+                                disabled={isAddingVillage}
+                            >
+                                {isAddingVillage ? 'Adding...' : 'Add Village'}
+                            </button>
                         </div>
                     </div>
                 </div>
