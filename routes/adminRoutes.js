@@ -18,13 +18,15 @@ const {
     getAdminHeads,
     addAdminHead,
     updateAdminHead,
-    deleteAdminHead
+    deleteAdminHead,
+    getAdminUnits
 } = require('../controllers/adminController');
 
 // Stats and Records
 router.get('/admin/stats', verifyToken, getAdminStats);
 router.get('/admin/events', verifyToken, getAdminEvents);
 router.get('/admin/all-students', verifyToken, getAdminStudents);
+router.get('/admin/all-units', verifyToken, getAdminUnits);
 router.post('/admin/delete-organization', verifyToken, deleteOrganization);
 
 // Nodal Officer CRUD (Admin only)

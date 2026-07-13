@@ -11,6 +11,7 @@ const programOfficerSchema = new mongoose.Schema({
     // Personal Details
     image: String, // Path or Base64
     dob: String,
+    gender: String,
     community: String, // SC/ST/OBC/General
     email: String,
     mobile: String,

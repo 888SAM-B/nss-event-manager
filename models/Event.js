@@ -41,7 +41,9 @@ const eventSchema = new mongoose.Schema({
         submittedAt: { type: Date, default: Date.now },
         organizingUnits: [String], // Names of units involved
         volunteersParticipated: Number,
-        beneficiaries: String
+        beneficiaries: String,
+        treesPlanted: Number,        // For 'Tree Plantation' category events
+        bloodUnitsCollected: Number  // For 'Blood Donation' category events
     }
 });
 

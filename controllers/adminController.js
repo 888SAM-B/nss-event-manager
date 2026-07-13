@@ -49,7 +49,7 @@ const getAdminStats = async (req, res) => {
                 .populate('collegeId', 'insName code')
                 .populate('unitId', 'name unitNumber');
 
-            colleges = await User.find({ _id: { $in: collegeIds } }, 'insName code events userName collegeType units')
+            colleges = await User.find({ _id: { $in: collegeIds } }, 'insName code events userName collegeType units isRegistered')
                 .populate('units', 'unitNumber name');
         } else {
             // Admin Full
@@ -65,7 +65,7 @@ const getAdminStats = async (req, res) => {
                 .populate('collegeId', 'insName code')
                 .populate('unitId', 'name unitNumber');
 
-            colleges = await User.find({}, 'insName code events userName collegeType units')
+            colleges = await User.find({}, 'insName code events userName collegeType units isRegistered')
                 .populate('units', 'unitNumber name');
         }
 
@@ -398,6 +398,56 @@ const deleteAdminHead = async (req, res) => {
     }
 };
 
+const getAdminUnits = async (req, res) => {
+    if (req.user.role !== 'admin' && req.user.role !== 'nodal') {
+        return res.status(403).json({ success: false, message: "Unauthorized access" });
+    }
+
+    try {
+        const collegeIds = await getDistrictCollegeIds(req.user);
+        const filter = collegeIds ? { collegeId: { $in: collegeIds } } : {};
+
+        // Find units matching the filter
+        const units = await Unit.find(filter)
+            .populate('collegeId', 'insName code district collegeType adoptingVillages')
+            .populate({
+                path: 'head',
+                model: 'ProgramOfficer',
+                select: 'name email mobile gender designation qualification'
+            });
+
+        // For each unit, fetch members count and events list
+        const unitsWithCounts = await Promise.all(units.map(async (unit) => {
+            const membersCount = unit.members ? unit.members.length : 0;
+
+            const events = await Event.find({
+                $or: [
+                    { unitId: unit._id },
+                    { coOrganizers: unit._id }
+                ]
+            }).populate('collegeId', 'insName code').sort({ date: -1, dateFrom: -1 });
+
+            return {
+                _id: unit._id,
+                name: unit.name,
+                unitNumber: unit.unitNumber,
+                contact: unit.contact,
+                mail: unit.mail,
+                createdDate: unit.createdDate,
+                head: unit.head,
+                college: unit.collegeId,
+                membersCount,
+                events
+            };
+        }));
+
+        res.json({ success: true, units: unitsWithCounts });
+    } catch (error) {
+        console.error("Error in getAdminUnits:", error);
+        res.status(500).json({ success: false, message: "Internal Server Error" });
+    }
+};
+
 module.exports = {
     getAdminStats,
     getAdminEvents,
@@ -414,5 +464,6 @@ module.exports = {
     getAdminHeads,
     addAdminHead,
     updateAdminHead,
-    deleteAdminHead
+    deleteAdminHead,
+    getAdminUnits
 };
