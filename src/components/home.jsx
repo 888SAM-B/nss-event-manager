@@ -325,6 +325,101 @@ const Home = () => {
                          grid-template-columns: 1fr;
                      }
                  }
+
+                 /* Redesigned Administration Cards */
+                 .admin-card {
+                     background: var(--card);
+                     border: 1px solid rgba(37, 99, 235, 0.12);
+                     border-radius: 18px;
+                     box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.03), 0 8px 10px -6px rgba(0, 0, 0, 0.03);
+                     padding: 24px;
+                     display: flex;
+                     flex-direction: row;
+                     align-items: center;
+                     gap: 24px;
+                     width: 540px;
+                     max-width: 100%;
+                     height: 220px;
+                     box-sizing: border-box;
+                     transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.3s ease, border-color 0.3s ease;
+                 }
+                 .admin-card:hover {
+                     transform: translateY(-4px) scale(1.01);
+                     box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.06), 0 10px 10px -6px rgba(0, 0, 0, 0.04);
+                     border-color: rgba(37, 99, 235, 0.25);
+                 }
+                 .admin-card-photo-wrapper {
+                     width: 170px;
+                     height: 170px;
+                     min-width: 170px;
+                     border-radius: 14px;
+                     overflow: hidden;
+                     border: 1px solid var(--border);
+                     background: var(--bg-2);
+                 }
+                 .admin-card-photo {
+                     width: 100%;
+                     height: 100%;
+                     object-fit: cover;
+                 }
+                 .admin-card-details {
+                     flex: 1;
+                     display: flex;
+                     flex-direction: column;
+                     justify-content: center;
+                 }
+                 .admin-card-name {
+                     font-size: 20px;
+                     font-weight: 700;
+                     color: var(--txt-1);
+                     margin: 0;
+                     line-height: 1.2;
+                 }
+                 .admin-card-position {
+                     font-size: 16px;
+                     font-weight: 600;
+                     color: var(--primary-color);
+                     margin-top: 12px;
+                     margin-bottom: 0;
+                     line-height: 1.3;
+                 }
+                 .admin-card-designation {
+                     font-size: 14px;
+                     font-weight: 500;
+                     color: var(--txt-3);
+                     margin-top: 10px;
+                     margin-bottom: 0;
+                     line-height: 1.4;
+                 }
+                 .admin-card-qualification {
+                     font-size: 14px;
+                     font-weight: 500;
+                     color: var(--txt-3);
+                     margin-top: 4px;
+                     margin-bottom: 0;
+                     line-height: 1.4;
+                 }
+                 @media (max-width: 639px) {
+                     .admin-card {
+                         flex-direction: column;
+                         height: auto;
+                         text-align: center;
+                         align-items: center;
+                         padding: 24px;
+                         gap: 20px;
+                     }
+                     .admin-card-photo-wrapper {
+                         width: 170px;
+                         height: 170px;
+                         min-width: 170px;
+                     }
+                     .admin-card-details {
+                         align-items: center;
+                     }
+                     .admin-card-name {
+                         font-size: 24px;
+                     }
+                 }
             `}</style>
 
             {/* ── Sticky Navbar ── */}
@@ -565,12 +660,12 @@ const Home = () => {
             </section>
 
             {/* ── Section 1.6: Administration Section ── */}
-            <section id="administration" style={{ padding: "5rem 0", background: "var(--card)" }} data-aos="fade-up">
+            <section id="administration" style={{ padding: "5rem 0", background: "var(--bg)" }} data-aos="fade-up">
                 <div className="container">
                     <div style={{ textAlign: "center", marginBottom: "4rem" }}>
-                        <span style={{ fontSize: "0.75rem", fontWeight: 700, letterSpacing: "0.15em", color: "#2563eb", textTransform: "uppercase" }}>Organization Leadership</span>
-                        <h2 style={{ fontSize: "2.25rem", fontWeight: 800, marginTop: "0.5rem" }}>Administration Heads</h2>
-                        <p style={{ color: "var(--txt-2)", maxWidth: "550px", margin: "0.5rem auto 0" }}>The leadership guiding the Periyar University National Service Scheme cell.</p>
+                        <h2 style={{ fontSize: "2.25rem", fontWeight: 800, color: "var(--txt-1)", margin: "0 0 0.75rem 0" }}>Administration</h2>
+                        <div style={{ width: "40px", height: "4px", background: "#2563eb", borderRadius: "2px", margin: "0 auto 1.5rem" }}></div>
+                        <p style={{ color: "var(--txt-2)", fontSize: "1.05rem", maxWidth: "600px", margin: "0 auto" }}>Meet the dedicated team managing and coordinating NSS activities</p>
                     </div>
 
                     {adminHeads.length === 0 ? (
@@ -589,7 +684,7 @@ const Home = () => {
                         const sortedRows = Object.keys(headsByRow).sort((a, b) => Number(a) - Number(b));
 
                         return (
-                            <div style={{ display: "flex", flexDirection: "column", gap: "2.5rem", width: "100%" }}>
+                            <div style={{ display: "flex", flexDirection: "column", gap: "2.5rem", width: "100%", alignItems: "center" }}>
                                 {sortedRows.map(rowNum => (
                                     <div key={rowNum} style={{
                                         display: "flex",
@@ -599,78 +694,23 @@ const Home = () => {
                                         width: "100%"
                                     }}>
                                         {headsByRow[rowNum].map((head) => (
-                                            <div
-                                                key={head._id}
-                                                style={{
-                                                    background: "var(--bg)",
-                                                    padding: "2rem",
-                                                    borderRadius: "16px",
-                                                    border: "1px solid var(--border)",
-                                                    boxShadow: "var(--sh-sm)",
-                                                    textAlign: "center",
-                                                    display: "flex",
-                                                    flexDirection: "column",
-                                                    alignItems: "center",
-                                                    transition: "all 0.3s ease",
-                                                    width: "280px",
-                                                    boxSizing: "border-box"
-                                                }}
-                                                onMouseEnter={e => {
-                                                    e.currentTarget.style.transform = "translateY(-6px)";
-                                                    e.currentTarget.style.boxShadow = "var(--sh-md)";
-                                                    e.currentTarget.style.borderColor = "var(--brand-400)";
-                                                }}
-                                                onMouseLeave={e => {
-                                                    e.currentTarget.style.transform = "translateY(0)";
-                                                    e.currentTarget.style.boxShadow = "var(--sh-sm)";
-                                                    e.currentTarget.style.borderColor = "var(--border)";
-                                                }}
-                                            >
-                                                {/* Photo */}
-                                                <div style={{
-                                                    width: "100%",
-                                                    height: "200px",
-                                                    borderRadius: "12px",
-                                                    overflow: "hidden",
-                                                    border: "1px solid var(--border)",
-                                                    boxShadow: "var(--sh-sm)",
-                                                    marginBottom: "1.5rem",
-                                                    background: "#f1f5f9"
-                                                }}>
+                                            <div key={head._id} className="admin-card">
+                                                {/* Left Section (Photo) */}
+                                                <div className="admin-card-photo-wrapper">
                                                     <img
                                                         src={head.photo.startsWith('data:') || head.photo.startsWith('http') || head.photo.startsWith('/') ? head.photo : (head.photo.startsWith('uploads') ? `${import.meta.env.VITE_API_URL || ''}/${head.photo}` : "/sample-profile.png")}
                                                         alt={head.name}
-                                                        style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                                                        className="admin-card-photo"
                                                     />
                                                 </div>
 
-                                                {/* Position (Badge) */}
-                                                <span style={{
-                                                    fontSize: "0.7rem",
-                                                    fontWeight: 800,
-                                                    textTransform: "uppercase",
-                                                    color: "var(--primary-color)",
-                                                    background: "rgba(37,99,235,0.08)",
-                                                    padding: "0.25rem 0.75rem",
-                                                    borderRadius: "9999px",
-                                                    letterSpacing: "0.05em",
-                                                    marginBottom: "0.75rem"
-                                                }}>
-                                                    {head.position}
-                                                </span>
-
-                                                {/* Name */}
-                                                <h3 style={{ fontSize: "1.2rem", fontWeight: 700, margin: "0 0 0.5rem", color: "var(--txt-1)" }}>
-                                                    {head.name}
-                                                </h3>
-
-                                                {/* Designation & Qualification */}
-                                                <p style={{ fontSize: "0.85rem", color: "var(--txt-3)", margin: "0", fontWeight: 600 }}>
-                                                    {head.designation}
-                                                </p>
-                                                <p style={{ fontSize: "0.8rem", color: "var(--txt-3)", margin: "0.25rem 0 0", fontStyle: "italic" }}>
-                                                    {head.qualification}
-                                                </p>
+                                                {/* Right Section (Details) */}
+                                                <div className="admin-card-details">
+                                                    <h3 className="admin-card-name">{head.name}</h3>
+                                                    <div className="admin-card-position">{head.position}</div>
+                                                    {head.designation && <div className="admin-card-designation">{head.designation}</div>}
+                                                    {head.qualification && <div className="admin-card-qualification">{head.qualification}</div>}
+                                                </div>
                                             </div>
                                         ))}
                                     </div>

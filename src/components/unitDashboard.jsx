@@ -8,6 +8,8 @@ import * as XLSX from "xlsx";
 import toast from 'react-hot-toast';
 import ThemeToggle from "./ThemeToggle";
 import VolunteerEnrolmentModal from "./VolunteerEnrolmentModal";
+import UnitReportGenerator from "./UnitReportGenerator";
+import ProgramOfficerModal from "./ProgramOfficerModal";
 
 const UnitDashboard = () => {
     const navigate = useNavigate();
@@ -38,6 +40,7 @@ const UnitDashboard = () => {
     const [showVillageModal, setShowVillageModal] = useState(false);
     const [newVillage, setNewVillage] = useState({ name: "", address: "", block: "", taluk: "", district: "", pincode: "", distance: "" });
     const [isAddingVillage, setIsAddingVillage] = useState(false);
+    const [showEditPoModal, setShowEditPoModal] = useState(false);
 
 
 
@@ -47,8 +50,80 @@ const UnitDashboard = () => {
     const [activeTab, setActiveTab] = useState("overview");
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
-    useEffect(() => {
-        const token = localStorage.getItem("unitToken");
+    const generatePOPDF = async () => {
+        const formElement = document.getElementById("po-form-template");
+        const declElement = document.getElementById("po-declaration-template");
+        if (!formElement || !declElement) return;
+
+        toast.loading("Generating Multi-page PDF...");
+        try {
+            const { default: jsPDF } = await import("jspdf");
+            const { default: html2canvas } = await import("html2canvas");
+            
+            const pdf = new jsPDF("p", "mm", "a4");
+            const pdfWidth = pdf.internal.pageSize.getWidth();
+            const pdfHeight = pdf.internal.pageSize.getHeight();
+            const margin = 12; // 12mm margins
+            const maxWidth = pdfWidth - (margin * 2);
+            const maxHeight = pdfHeight - (margin * 2);
+
+            // Page 1: Nomination Form
+            formElement.style.display = "block";
+            const canvas1 = await html2canvas(formElement, { scale: 2, useCORS: true, logging: false });
+            formElement.style.display = "none";
+            const imgData1 = canvas1.toDataURL("image/png");
+            const imgProps1 = pdf.getImageProperties(imgData1);
+            
+            let imgWidth1 = maxWidth;
+            let imgHeight1 = (imgProps1.height * imgWidth1) / imgProps1.width;
+            if (imgHeight1 > maxHeight) {
+                imgHeight1 = maxHeight;
+                imgWidth1 = (imgProps1.width * imgHeight1) / imgProps1.height;
+            }
+            const xPos1 = margin + (maxWidth - imgWidth1) / 2;
+            const yPos1 = margin + (maxHeight - imgHeight1) / 2;
+            pdf.addImage(imgData1, "PNG", xPos1, yPos1, imgWidth1, imgHeight1);
+
+            // Page 1 Border
+            pdf.setDrawColor(0, 0, 0);
+            pdf.setLineWidth(0.5);
+            pdf.rect(8, 8, pdfWidth - 16, pdfHeight - 16);
+
+            // Page 2: Declaration
+            pdf.addPage();
+            declElement.style.display = "block";
+            const canvas2 = await html2canvas(declElement, { scale: 2, useCORS: true, logging: false });
+            declElement.style.display = "none";
+            const imgData2 = canvas2.toDataURL("image/png");
+            const imgProps2 = pdf.getImageProperties(imgData2);
+            
+            let imgWidth2 = maxWidth;
+            let imgHeight2 = (imgProps2.height * imgWidth2) / imgProps2.width;
+            if (imgHeight2 > maxHeight) {
+                imgHeight2 = maxHeight;
+                imgWidth2 = (imgProps2.width * imgHeight2) / imgProps2.height;
+            }
+            const xPos2 = margin + (maxWidth - imgWidth2) / 2;
+            const yPos2 = margin + (maxHeight - imgHeight2) / 2;
+            pdf.addImage(imgData2, "PNG", xPos2, yPos2, imgWidth2, imgHeight2);
+
+            // Page 2 Border
+            pdf.setDrawColor(0, 0, 0);
+            pdf.setLineWidth(0.5);
+            pdf.rect(8, 8, pdfWidth - 16, pdfHeight - 16);
+
+            pdf.save(`NSS_Nomination_${unit.head.name.replace(/\s+/g, "_")}.pdf`);
+            toast.dismiss();
+            toast.success("Programme Officer Nomination Form Downloaded!");
+        } catch (error) {
+            console.error("PDF Generation Error:", error);
+            toast.dismiss();
+            toast.error("Failed to generate PDF");
+        }
+    };
+
+    const fetchDashboardData = () => {
+        const token = localStorage.getItem("unitToken") || localStorage.getItem("nsstoken");
         if (!token) {
             navigate("/unit-login");
             return;
@@ -108,7 +183,10 @@ const UnitDashboard = () => {
                 }
             })
             .catch(err => console.error("Error fetching notifications:", err));
+    };
 
+    useEffect(() => {
+        fetchDashboardData();
     }, [navigate]);
 
     const handleExportExcel = () => {
@@ -635,6 +713,14 @@ const UnitDashboard = () => {
                             </span>
                         )}
                     </button>
+                    <button className={`sidebar-item ${activeTab === 'po-profile' ? 'active' : ''}`} onClick={() => { setActiveTab('po-profile'); setIsSidebarOpen(false); }}>
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                        Programme Officer
+                    </button>
+                    <button className={`sidebar-item ${activeTab === 'reports' ? 'active' : ''}`} onClick={() => { setActiveTab('reports'); setIsSidebarOpen(false); }}>
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+                        Periodical Reports
+                    </button>
                 </div>
 
                 <div className="sidebar-footer">
@@ -725,7 +811,7 @@ const UnitDashboard = () => {
                                     <span style={{ fontWeight: 600, color: 'var(--txt-1)' }}>{unit?.name}</span>
                                 </div>
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
-                                    <span style={{ fontSize: '0.75rem', color: 'var(--txt-3)' }}>UNIT HEAD / PROGRAM OFFICER</span>
+                                    <span style={{ fontSize: '0.75rem', color: 'var(--txt-3)' }}>UNIT HEAD / PROGRAMME OFFICER</span>
                                     <div className="d-flex align-items-center gap-2">
                                         <span style={{ fontWeight: 600, color: 'var(--txt-1)' }}>{unit?.head?.name || unit?.head || "Not Assigned"}</span>
                                         {isAccessedFromCollege && (!unit?.head || (typeof unit.head === 'string' && unit.head.trim() === '')) && (
@@ -1110,6 +1196,144 @@ const UnitDashboard = () => {
                         )}
                     </div>
                 )}
+
+                {activeTab === "reports" && (
+                    <UnitReportGenerator unit={unit} college={college} />
+                )}
+
+                {activeTab === "po-profile" && (
+                    <div style={{ color: 'var(--txt-1)' }}>
+                        <div className="flex-between mb-6">
+                            <div>
+                                <h1 style={{ fontSize: '1.75rem', fontWeight: 800, margin: 0, color: 'var(--txt-1)' }}>Programme Officer Profile</h1>
+                                <p style={{ margin: 0, color: 'var(--txt-3)', fontSize: '0.9rem' }}>Official designation, ETI training progress, and credentials for this unit's PO.</p>
+                            </div>
+                            {unit?.head && (
+                                <div style={{ display: 'flex', gap: '0.75rem' }}>
+                                    <button className="btn btn-outline-primary" onClick={() => setShowEditPoModal(true)} style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem' }}>
+                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg> Edit Profile
+                                    </button>
+                                    <button className="btn btn-primary" onClick={generatePOPDF} style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem' }}>
+                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg> Download Profile PDF
+                                    </button>
+                                </div>
+                            )}
+                        </div>
+
+                        {!unit?.head ? (
+                            <div className="card p-6 text-center" style={{ background: 'var(--card-bg)' }}>
+                                <p className="text-muted mb-0">No Programme Officer is currently assigned to this unit.</p>
+                            </div>
+                        ) : (
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '1.5rem', alignItems: 'start' }}>
+                                {/* Profile Left Card (Photo & Main) */}
+                                <div className="card p-6" style={{ background: 'var(--card-bg)', textAlign: 'center' }}>
+                                    <div style={{ 
+                                        width: '120px', 
+                                        height: '120px', 
+                                        borderRadius: '50%', 
+                                        border: '4px solid var(--brand-500)', 
+                                        margin: '0 auto 1.25rem', 
+                                        overflow: 'hidden',
+                                        background: 'var(--bg-tertiary)',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center'
+                                    }}>
+                                        {unit.head.image ? (
+                                            <img src={unit.head.image} alt={unit.head.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                        ) : (
+                                            <span style={{ fontSize: '2rem', color: 'var(--txt-3)', fontWeight: 'bold' }}>
+                                                {unit.head.name?.charAt(0).toUpperCase()}
+                                            </span>
+                                        )}
+                                    </div>
+                                    <h3 style={{ margin: '0 0 0.25rem 0', fontWeight: 800 }}>{unit.head.name}</h3>
+                                    <p className="badge badge-secondary mb-3" style={{ display: 'inline-block' }}>{unit.head.officerID || 'No ID'}</p>
+                                    
+                                    <div style={{ borderTop: '1px solid var(--border)', paddingTop: '1.25rem', marginTop: '0.5rem', textAlign: 'left', display: 'flex', flexDirection: 'column', gap: '0.75rem', fontSize: '0.85rem' }}>
+                                        <div className="flex-between">
+                                            <span style={{ color: 'var(--txt-3)' }}>Designation:</span>
+                                            <span style={{ fontWeight: 600 }}>{unit.head.designation}</span>
+                                        </div>
+                                        <div className="flex-between">
+                                            <span style={{ color: 'var(--txt-3)' }}>Department:</span>
+                                            <span style={{ fontWeight: 600 }}>{unit.head.department}</span>
+                                        </div>
+                                        <div className="flex-between">
+                                            <span style={{ color: 'var(--txt-3)' }}>NSS Unit:</span>
+                                            <span style={{ fontWeight: 600 }}>{unit.head.unit}</span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Profile Right Card (Detailed Info) */}
+                                <div className="card p-6" style={{ background: 'var(--card-bg)' }}>
+                                    <h3 className="mb-4 text-primary-400" style={{ fontSize: '1.15rem', borderBottom: '1px solid var(--border)', paddingBottom: '0.5rem' }}>Personal & Academic Details</h3>
+                                    <div className="grid-cols-2 gap-x-6 gap-y-4" style={{ fontSize: '0.9rem' }}>
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                                            <span style={{ fontSize: '0.75rem', color: 'var(--txt-3)' }}>GENDER</span>
+                                            <span style={{ fontWeight: 600 }}>{unit.head.gender || 'N/A'}</span>
+                                        </div>
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                                            <span style={{ fontSize: '0.75rem', color: 'var(--txt-3)' }}>DATE OF BIRTH</span>
+                                            <span style={{ fontWeight: 600 }}>{unit.head.dob}</span>
+                                        </div>
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                                            <span style={{ fontSize: '0.75rem', color: 'var(--txt-3)' }}>COMMUNITY</span>
+                                            <span style={{ fontWeight: 600 }}>{unit.head.community}</span>
+                                        </div>
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                                            <span style={{ fontSize: '0.75rem', color: 'var(--txt-3)' }}>QUALIFICATION</span>
+                                            <span style={{ fontWeight: 600 }}>{unit.head.qualification}</span>
+                                        </div>
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                                            <span style={{ fontSize: '0.75rem', color: 'var(--txt-3)' }}>EMAIL ADDRESS</span>
+                                            <span style={{ fontWeight: 600 }}>{unit.head.email}</span>
+                                        </div>
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                                            <span style={{ fontSize: '0.75rem', color: 'var(--txt-3)' }}>MOBILE NUMBER</span>
+                                            <span style={{ fontWeight: 600 }}>{unit.head.mobile}</span>
+                                        </div>
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                                            <span style={{ fontSize: '0.75rem', color: 'var(--txt-3)' }}>DATE OF APPOINTMENT</span>
+                                            <span style={{ fontWeight: 600 }}>{unit.head.dateOfAppointment}</span>
+                                        </div>
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                                            <span style={{ fontSize: '0.75rem', color: 'var(--txt-3)' }}>TEACHING EXPERIENCE</span>
+                                            <span style={{ fontWeight: 600 }}>{unit.head.teachingExperience || 'N/A'}</span>
+                                        </div>
+                                    </div>
+
+                                    <h3 className="mb-4 mt-6 text-primary-400" style={{ fontSize: '1.15rem', borderBottom: '1px solid var(--border)', paddingBottom: '0.5rem' }}>Training Status</h3>
+                                    <div className="grid-cols-2 gap-x-6 gap-y-4" style={{ fontSize: '0.9rem' }}>
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                                            <span style={{ fontSize: '0.75rem', color: 'var(--txt-3)' }}>ETI TRAINING COMPLETED</span>
+                                            <span style={{ fontWeight: 600 }}>{unit.head.etlTraining ? 'Yes' : 'No'}</span>
+                                        </div>
+                                        {unit.head.etlCertificate && (
+                                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                                                <span style={{ fontSize: '0.75rem', color: 'var(--txt-3)' }}>ETI CERTIFICATE</span>
+                                                <span>
+                                                    <a href={unit.head.etlCertificate} target="_blank" rel="noopener noreferrer" className="btn btn-sm btn-secondary" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem', textDecoration: 'none', padding: '2px 8px', fontSize: '0.75rem' }}>
+                                                        View Certificate
+                                                    </a>
+                                                </span>
+                                            </div>
+                                        )}
+                                    </div>
+                                    
+                                    {unit.head.achievements && (
+                                        <>
+                                            <h3 className="mb-3 mt-6 text-primary-400" style={{ fontSize: '1.15rem', borderBottom: '1px solid var(--border)', paddingBottom: '0.5rem' }}>Achievements</h3>
+                                            <p style={{ fontSize: '0.9rem', margin: 0, lineHeight: 1.6 }}>{unit.head.achievements}</p>
+                                        </>
+                                    )}
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                )}
             </main>
 
             {/* Modals & Overlays */}
@@ -1144,17 +1368,17 @@ const UnitDashboard = () => {
                 <div className="modal-overlay" onClick={() => setIsAssignModalOpen(false)}>
                     <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '500px' }}>
                         <div className="flex-between mb-4">
-                            <h2 className="mb-0">Assign Program Officer</h2>
+                            <h2 className="mb-0">Assign Programme Officer</h2>
                             <button className="btn btn-sm btn-secondary" onClick={() => setIsAssignModalOpen(false)}>&times;</button>
                         </div>
                         
                         <div className="p-2">
-                            <p className="text-sm text-muted mb-4">Select an unassigned Program Officer for this unit ({unit?.unitNumber}):</p>
+                            <p className="text-sm text-muted mb-4">Select an unassigned Programme Officer for this unit ({unit?.unitNumber}):</p>
                             
                             {unassignedOfficers.length === 0 ? (
                                 <div className="text-center p-4">
-                                    <p>No unassigned Program Officers found in this college.</p>
-                                    <p className="text-xs text-muted">Register a Program Officer without assigning a unit first.</p>
+                                    <p>No unassigned Programme Officers found in this college.</p>
+                                    <p className="text-xs text-muted">Register a Programme Officer without assigning a unit first.</p>
                                 </div>
                             ) : (
                                 <div className="d-flex flex-column gap-2" style={{ maxHeight: '300px', overflowY: 'auto' }}>
@@ -1281,6 +1505,168 @@ const UnitDashboard = () => {
                         </div>
                     </div>
                 </div>
+            )}
+
+            {/* HIDDEN PDF TEMPLATE */}
+            {unit?.head && (
+                <>
+                    <div id="po-form-template" style={{
+                        display: "none",
+                        width: "210mm",
+                        padding: "20mm",
+                        backgroundColor: "#fff",
+                        color: "#000",
+                        fontFamily: "serif",
+                        lineHeight: "1.6"
+                    }}>
+                        <style>{`
+                            #po-form-template * {
+                                color: #000 !important;
+                            }
+                            #po-form-template h1, 
+                            #po-form-template h2, 
+                            #po-form-template h3, 
+                            #po-form-template h4, 
+                            #po-form-template p, 
+                            #po-form-template strong, 
+                            #po-form-template li {
+                                color: #000 !important;
+                            }
+                        `}</style>
+                        <div style={{ textAlign: "center", marginBottom: "30px", borderBottom: "2px solid #000", paddingBottom: "10px" }}>
+                            <h1 style={{ margin: "0", fontSize: "20px" }}>NOMINATION OF NEW PROGRAMME OFFICER TO LOOK AFTER</h1>
+                            <h2 style={{ margin: "5px 0", fontSize: "20px" }}>THE NSS UNIT IN THE COLLEGE</h2>
+                            <h3 style={{ margin: "10px 0 0 0", fontSize: "16px", textTransform: "uppercase", textDecoration: "underline" }}>{unit.head.college || college?.insName}</h3>
+                        </div>
+
+                        <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "20px" }}>
+                            <div style={{ flex: 1 }}>
+                                <p><strong>Name:</strong> {unit.head.name}</p>
+                                <p><strong>Designation:</strong> {unit.head.designation}</p>
+                                <p><strong>Department:</strong> {unit.head.department}</p>
+                                <p><strong>Unit Assigned:</strong> {unit.head.unit}</p>
+                            </div>
+                            <div style={{ width: "35mm", height: "45mm", border: "1px solid #000", display: "flex", justifyContent: "center", alignItems: "center" }}>
+                                {unit.head.image ? (
+                                    <img src={unit.head.image} alt="Officer" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                                ) : (
+                                    <span style={{ fontSize: "10px", textAlign: "center" }}>Affix Passport Size Photo</span>
+                                )}
+                            </div>
+                        </div>
+
+                        <h4 style={{ borderBottom: "1px solid #000", marginTop: "20px" }}>PERSONAL DETAILS</h4>
+                        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" }}>
+                            <p><strong>Date of Birth:</strong> {unit.head.dob}</p>
+                            <p><strong>Gender:</strong> {unit.head.gender || 'N/A'}</p>
+                            <p><strong>Community:</strong> {unit.head.community}</p>
+                            <p><strong>Email:</strong> {unit.head.email}</p>
+                            <p><strong>Mobile:</strong> {unit.head.mobile}</p>
+                            <p><strong>Block:</strong> {unit.head.block}</p>
+                            <p><strong>Taluk:</strong> {unit.head.taluk}</p>
+                            <p><strong>District:</strong> {unit.head.district}</p>
+                            <p><strong>Pincode:</strong> {unit.head.pincode}</p>
+                            <p><strong>Date of Appointment:</strong> {unit.head.dateOfAppointment}</p>
+                            <p><strong>Teaching Experience:</strong> {unit.head.teachingExperience}</p>
+                        </div>
+                        <p style={{ marginTop: "10px" }}><strong>Address:</strong> {unit.head.address}</p>
+
+                        <h4 style={{ borderBottom: "1px solid #000", marginTop: "20px" }}>ACADEMIC & ETI</h4>
+                        <p><strong>Educational Qualification:</strong> {unit.head.qualification}</p>
+                        <p><strong>ETI Training Completed:</strong> {unit.head.etiCompleted}</p>
+                        <p><strong>Seminars / Workshops / Courses:</strong></p>
+                        <ul style={{ paddingLeft: "20px" }}>
+                            {unit.head.seminars && unit.head.seminars.map((s, i) => s && <li key={i}>{s}</li>)}
+                        </ul>
+
+                        <h4 style={{ borderBottom: "1px solid #000", marginTop: "20px" }}>GENERAL</h4>
+                        <p><strong>NSS Experience:</strong></p>
+                        <ul style={{ paddingLeft: "20px" }}>
+                            {unit.head.nssExperience && unit.head.nssExperience.map((x, i) => x && <li key={i}>{x}</li>)}
+                        </ul>
+                        <p><strong>Special Talents / Skills:</strong></p>
+                        <ul style={{ paddingLeft: "20px" }}>
+                            {unit.head.specialTalent && unit.head.specialTalent.map((t, i) => t && <li key={i}>{t}</li>)}
+                        </ul>
+
+                        <div style={{ marginTop: "50px", display: "flex", justifyContent: "space-between" }}>
+                            <div style={{ textAlign: "center" }}>
+                                <br /><br />
+                                <p>__________________________</p>
+                                <p><strong>Signature of Programme Officer</strong></p>
+                            </div>
+                            <div style={{ textAlign: "center" }}>
+                                <br /><br />
+                                <p>__________________________</p>
+                                <p><strong>Signature of Principal / Head</strong></p>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* HIDDEN DECLARATION PAGE (PAGE 2) */}
+                    <div id="po-declaration-template" style={{
+                        display: "none",
+                        width: "210mm",
+                        padding: "20mm 25mm",
+                        backgroundColor: "#fff",
+                        color: "#000",
+                        fontFamily: "serif",
+                        lineHeight: "1.8",
+                        minHeight: "297mm"
+                    }}>
+                        <style>{`
+                            #po-declaration-template * {
+                                color: #000 !important;
+                            }
+                        `}</style>
+                        <div style={{ textAlign: "center", marginBottom: "50px" }}>
+                            <h2 style={{ fontSize: "20px", textDecoration: "underline", fontWeight: "bold" }}>DECLARATION</h2>
+                        </div>
+
+                        <div style={{ textAlign: "justify", fontSize: "16px" }}>
+                            <p>
+                                I, <strong>{unit.head.name}</strong>, Designation: <strong>{unit.head.designation}</strong> ({unit.head.department}),
+                                (Programme Officer-Unit-{unit.head.unit}) of <strong>{unit.head.college || college?.insName}</strong> here by assure that as NSS Programme Officer,
+                                I will carry out the principles enunciated in the NSS Manual in true letter and spirit.
+                            </p>
+                            <p style={{ marginTop: "20px" }}>
+                                I shall undergo the General Orientation Course within one year from the date of appointment as Programme Officer.
+                            </p>
+                            <p style={{ marginTop: "20px" }}>
+                                I shall maintain the records prescribed in the Manual and handover them to the person(s) concerned as and when required.
+                            </p>
+                            <p style={{ marginTop: "20px" }}>
+                                I shall discharge duties honestly to boost the image of the NSS and the parent Institution.
+                            </p>
+                        </div>
+
+                        <div style={{ marginTop: "100px", textAlign: "right" }}>
+                            <p><strong>Signature of the newly nominated NSS officer</strong></p>
+                        </div>
+
+                        <div style={{ marginTop: "80px" }}>
+                            <p><strong>Countersigned</strong></p>
+                        </div>
+
+                        <div style={{ marginTop: "60px", textAlign: "right" }}>
+                            <p><strong>Signature of the Principal with office seal</strong></p>
+                        </div>
+                    </div>
+                </>
+            )}
+            {showEditPoModal && unit?.head && (
+                <ProgramOfficerModal
+                    isOpen={showEditPoModal}
+                    onClose={() => setShowEditPoModal(false)}
+                    insName={college?.insName}
+                    insCode={college?.code}
+                    units={[unit.unitNumber]}
+                    initialData={unit.head}
+                    readOnly={false}
+                    onSuccess={() => {
+                        fetchDashboardData();
+                    }}
+                />
             )}
         </div>
     );

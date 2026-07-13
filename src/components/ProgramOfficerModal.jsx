@@ -13,6 +13,7 @@ const ProgramOfficerModal = ({ isOpen, onClose, insName, insCode, units, initial
         unit: "",
         college: insName || "",
         dob: "",
+        gender: "Male",
         community: "General",
         email: "",
         mobile: "",
@@ -39,6 +40,7 @@ const ProgramOfficerModal = ({ isOpen, onClose, insName, insCode, units, initial
             setFormData({
                 ...initialData,
                 college: initialData.college || insName || "",
+                gender: initialData.gender || "Male",
                 seminars: initialData.seminars?.length ? initialData.seminars : [""],
                 nssExperience: initialData.nssExperience?.length ? initialData.nssExperience : [""],
                 specialTalent: initialData.specialTalent?.length ? initialData.specialTalent : ["",],
@@ -54,6 +56,7 @@ const ProgramOfficerModal = ({ isOpen, onClose, insName, insCode, units, initial
                 unit: "",
                 college: insName || "",
                 dob: "",
+                gender: "Male",
                 community: "General",
                 email: "",
                 mobile: "",
@@ -124,7 +127,12 @@ const ProgramOfficerModal = ({ isOpen, onClose, insName, insCode, units, initial
     };
 
     const handleEtlTrainingChange = (val) => {
-        setFormData({ ...formData, etlTraining: val, etlCertificate: val ? formData.etlCertificate : "" });
+        setFormData({ 
+            ...formData, 
+            etlTraining: val, 
+            etiCompleted: val ? "Yes" : "No",
+            etlCertificate: val ? formData.etlCertificate : "" 
+        });
     };
 
     const generatePDF = async () => {
@@ -136,6 +144,10 @@ const ProgramOfficerModal = ({ isOpen, onClose, insName, insCode, units, initial
         try {
             const pdf = new jsPDF("p", "mm", "a4");
             const pdfWidth = pdf.internal.pageSize.getWidth();
+            const pdfHeight = pdf.internal.pageSize.getHeight();
+            const margin = 12; // 12mm margins
+            const maxWidth = pdfWidth - (margin * 2);
+            const maxHeight = pdfHeight - (margin * 2);
 
             // Page 1: Nomination Form
             formElement.style.display = "block";
@@ -143,8 +155,21 @@ const ProgramOfficerModal = ({ isOpen, onClose, insName, insCode, units, initial
             formElement.style.display = "none";
             const imgData1 = canvas1.toDataURL("image/png");
             const imgProps1 = pdf.getImageProperties(imgData1);
-            const pdfHeight1 = (imgProps1.height * pdfWidth) / imgProps1.width;
-            pdf.addImage(imgData1, "PNG", 0, 0, pdfWidth, pdfHeight1);
+            
+            let imgWidth1 = maxWidth;
+            let imgHeight1 = (imgProps1.height * imgWidth1) / imgProps1.width;
+            if (imgHeight1 > maxHeight) {
+                imgHeight1 = maxHeight;
+                imgWidth1 = (imgProps1.width * imgHeight1) / imgProps1.height;
+            }
+            const xPos1 = margin + (maxWidth - imgWidth1) / 2;
+            const yPos1 = margin + (maxHeight - imgHeight1) / 2;
+            pdf.addImage(imgData1, "PNG", xPos1, yPos1, imgWidth1, imgHeight1);
+
+            // Page 1 Border
+            pdf.setDrawColor(0, 0, 0);
+            pdf.setLineWidth(0.5);
+            pdf.rect(8, 8, pdfWidth - 16, pdfHeight - 16);
 
             // Page 2: Declaration
             pdf.addPage();
@@ -153,8 +178,21 @@ const ProgramOfficerModal = ({ isOpen, onClose, insName, insCode, units, initial
             declElement.style.display = "none";
             const imgData2 = canvas2.toDataURL("image/png");
             const imgProps2 = pdf.getImageProperties(imgData2);
-            const pdfHeight2 = (imgProps2.height * pdfWidth) / imgProps2.width;
-            pdf.addImage(imgData2, "PNG", 0, 0, pdfWidth, pdfHeight2);
+            
+            let imgWidth2 = maxWidth;
+            let imgHeight2 = (imgProps2.height * imgWidth2) / imgProps2.width;
+            if (imgHeight2 > maxHeight) {
+                imgHeight2 = maxHeight;
+                imgWidth2 = (imgProps2.width * imgHeight2) / imgProps2.height;
+            }
+            const xPos2 = margin + (maxWidth - imgWidth2) / 2;
+            const yPos2 = margin + (maxHeight - imgHeight2) / 2;
+            pdf.addImage(imgData2, "PNG", xPos2, yPos2, imgWidth2, imgHeight2);
+
+            // Page 2 Border
+            pdf.setDrawColor(0, 0, 0);
+            pdf.setLineWidth(0.5);
+            pdf.rect(8, 8, pdfWidth - 16, pdfHeight - 16);
 
             pdf.save(`NSS_Nomination_${formData.name.replace(/\s+/g, "_")}.pdf`);
             toast.dismiss();
@@ -174,15 +212,16 @@ const ProgramOfficerModal = ({ isOpen, onClose, insName, insCode, units, initial
                 ? `${import.meta.env.VITE_API_URL}/update-program-officer/${initialData._id}`
                 : `${import.meta.env.VITE_API_URL}/register-program-officer`;
 
+            const token = localStorage.getItem("unitToken") || localStorage.getItem("nsstoken");
             const res = await axios.post(url, {
                 officerData: formData,
                 collegeCode: insCode
             }, {
-                headers: { Authorization: `Bearer ${localStorage.getItem("nsstoken")}` }
+                headers: { Authorization: `Bearer ${token}` }
             });
 
             if (res.data.success) {
-                toast.success(initialData ? "Program Officer Updated Successfully!" : "Program Officer Registered Successfully!");
+                toast.success(initialData ? "Programme Officer Updated Successfully!" : "Programme Officer Registered Successfully!");
                 if (onSuccess) onSuccess();
                 onClose();
             } else {
@@ -200,7 +239,7 @@ const ProgramOfficerModal = ({ isOpen, onClose, insName, insCode, units, initial
         <div className="modal-overlay">
             <div className="modal-content" style={{ maxWidth: "800px" }}>
                 <div className="flex-between mb-6">
-                    <h2 className="mb-0">{readOnly ? "Program Officer Details" : "Register Program Officer Pro-form-a"}</h2>
+                    <h2 className="mb-0">{readOnly ? "Programme Officer Details" : "Register Programme Officer Pro-form-a"}</h2>
                     <button className="btn btn-sm btn-secondary" onClick={onClose}>&times;</button>
                 </div>
 
@@ -218,7 +257,7 @@ const ProgramOfficerModal = ({ isOpen, onClose, insName, insCode, units, initial
                                 </div>
                             )}
                             <div className="form-group">
-                                <label>Name of Program Officer</label>
+                                <label>Name of Programme Officer</label>
                                 <input className="form-input" name="name" value={formData.name} onChange={handleInputChange} required disabled={readOnly} />
                             </div>
                             <div className="form-group">
@@ -260,6 +299,14 @@ const ProgramOfficerModal = ({ isOpen, onClose, insName, insCode, units, initial
                             <div className="form-group">
                                 <label>Date of Birth</label>
                                 <input type="date" className="form-input" name="dob" value={formData.dob} onChange={handleInputChange} required disabled={readOnly} />
+                            </div>
+                            <div className="form-group">
+                                <label>Gender</label>
+                                <select className="form-input" name="gender" value={formData.gender} onChange={handleInputChange} disabled={readOnly}>
+                                    <option value="Male">Male</option>
+                                    <option value="Female">Female</option>
+                                    <option value="Transgender">Transgender</option>
+                                </select>
                             </div>
                             <div className="form-group">
                                 <label>Community</label>
@@ -336,18 +383,6 @@ const ProgramOfficerModal = ({ isOpen, onClose, insName, insCode, units, initial
                             <label>ETI Training Completed?</label>
                             <div className="d-flex gap-4">
                                 <label className="form-check-label d-flex align-items-center gap-2">
-                                    <input type="radio" name="etiCompleted" value="Yes" checked={formData.etiCompleted === "Yes"} onChange={handleInputChange} disabled={readOnly} /> Yes
-                                </label>
-                                <label className="form-check-label d-flex align-items-center gap-2">
-                                    <input type="radio" name="etiCompleted" value="No" checked={formData.etiCompleted === "No"} onChange={handleInputChange} disabled={readOnly} /> No
-                                </label>
-                            </div>
-                        </div>
-
-                        <div className="form-group" style={{ marginTop: '1rem' }}>
-                            <label>ETL Training Completed?</label>
-                            <div className="d-flex gap-4">
-                                <label className="form-check-label d-flex align-items-center gap-2">
                                     <input type="radio" name="etlTraining" value="Yes" checked={formData.etlTraining === true} onChange={() => handleEtlTrainingChange(true)} disabled={readOnly} /> Yes
                                 </label>
                                 <label className="form-check-label d-flex align-items-center gap-2">
@@ -359,7 +394,7 @@ const ProgramOfficerModal = ({ isOpen, onClose, insName, insCode, units, initial
                                 <div style={{ marginTop: '0.75rem' }}>
                                     {!readOnly && (
                                         <div className="form-group">
-                                            <label style={{ fontSize: '0.8rem', color: 'var(--txt-2)' }}>ETL Training Certificate (PDF/Image)</label>
+                                            <label style={{ fontSize: '0.8rem', color: 'var(--txt-2)' }}>ETI Training Certificate (PDF/Image)</label>
                                             <input type="file" className="form-input" accept="image/*,application/pdf" onChange={handleEtlCertificateChange} />
                                         </div>
                                     )}
@@ -481,6 +516,7 @@ const ProgramOfficerModal = ({ isOpen, onClose, insName, insCode, units, initial
                     <h4 style={{ borderBottom: "1px solid #000", marginTop: "20px" }}>PERSONAL DETAILS</h4>
                     <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" }}>
                         <p><strong>Date of Birth:</strong> {formData.dob}</p>
+                        <p><strong>Gender:</strong> {formData.gender}</p>
                         <p><strong>Community:</strong> {formData.community}</p>
                         <p><strong>Email:</strong> {formData.email}</p>
                         <p><strong>Mobile:</strong> {formData.mobile}</p>

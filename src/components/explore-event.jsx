@@ -16,6 +16,11 @@ const ExploreEvents = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
+  // Filter states
+  const [searchQuery, setSearchQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [hoveredEventId, setHoveredEventId] = useState(null);
+
   // New state for selected event for modal
   const [selectedEvent, setSelectedEvent] = useState(null);
   // State for gallery modal
@@ -30,7 +35,9 @@ const ExploreEvents = () => {
     collegesCount: "",
     outcome: "",
     reportFile: "", // For PDF
-    reportPhotos: [] // Up to 5
+    reportPhotos: [], // Up to 5
+    treesPlanted: "",
+    bloodUnitsCollected: ""
   });
   const [reportFiles, setReportFiles] = useState({ pdf: null, photos: [] });
   const [isSubmittingReport, setIsSubmittingReport] = useState(false);
@@ -190,7 +197,9 @@ const ExploreEvents = () => {
       collegesCount: event.report?.collegesCount || "",
       outcome: event.report?.outcome || "",
       reportPhotos: event.report?.reportPhotos || [],
-      guests: event.report?.guests && event.report.guests.length > 0 ? event.report.guests : [""]
+      guests: event.report?.guests && event.report.guests.length > 0 ? event.report.guests : [""],
+      treesPlanted: event.report?.treesPlanted || "",
+      bloodUnitsCollected: event.report?.bloodUnitsCollected || ""
     });
     setReportFiles({ pdf: null, photos: [] });
     setShowReportModal(true);
@@ -250,7 +259,9 @@ const ExploreEvents = () => {
         outcome: reportForm.outcome,
         guests: reportForm.guests.filter(g => g.trim() !== ""),
         reportPhotos: photoUrls,
-        submittedAt: new Date()
+        submittedAt: new Date(),
+        ...(reportingEvent.category === 'Tree Plantation' && reportForm.treesPlanted !== "" && { treesPlanted: Number(reportForm.treesPlanted) }),
+        ...(reportingEvent.category === 'Blood Donation' && reportForm.bloodUnitsCollected !== "" && { bloodUnitsCollected: Number(reportForm.bloodUnitsCollected) })
       };
 
       const res = await axios.post(`${import.meta.env.VITE_API_URL}/submitReport`, {
@@ -275,115 +286,282 @@ const ExploreEvents = () => {
     }
   };
 
+  // SVG Icons for cards
+  const CalendarIcon = () => (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ display: 'inline', verticalAlign: 'middle', marginRight: '6px' }}>
+      <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
+      <line x1="16" y1="2" x2="16" y2="6" />
+      <line x1="8" y1="2" x2="8" y2="6" />
+      <line x1="3" y1="10" x2="21" y2="10" />
+    </svg>
+  );
+
+  const ClockIcon = () => (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ display: 'inline', verticalAlign: 'middle', marginRight: '6px' }}>
+      <circle cx="12" cy="12" r="10" />
+      <polyline points="12 6 12 12 16 14" />
+    </svg>
+  );
+
+  const MapPinIcon = () => (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ display: 'inline', verticalAlign: 'middle', marginRight: '6px' }}>
+      <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
+      <circle cx="12" cy="10" r="3" />
+    </svg>
+  );
+
+  const filterEvents = (events) => {
+    return events.filter(evt => {
+      const matchesSearch = !searchQuery || 
+                            evt.name?.toLowerCase().includes(searchQuery.toLowerCase()) || 
+                            evt.category?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                            evt.venue?.toLowerCase().includes(searchQuery.toLowerCase());
+      
+      const borderColor = getEventStatusColor(evt);
+      let status = "ongoing";
+      if (borderColor === 'var(--danger-500)') status = "completed";
+      else if (borderColor === 'var(--success-500)') status = "upcoming";
+
+      const matchesStatus = statusFilter === "all" || status === statusFilter;
+
+      return matchesSearch && matchesStatus;
+    });
+  };
+
   const EventCard = ({ event, isOwnEvent }) => {
     const borderColor = getEventStatusColor(event);
     const isCompleted = borderColor === 'var(--danger-500)';
-    let statusText = event.eventCode;
+    const isHovered = hoveredEventId === event._id;
+
+    let statusText = "Ongoing";
+    let statusBg = "rgba(245, 158, 11, 0.1)";
+    let statusColor = "var(--warning-500)";
+
+    if (borderColor === 'var(--danger-500)') {
+      statusText = "Completed";
+      statusBg = "rgba(239, 68, 68, 0.1)";
+      statusColor = "var(--danger-500)";
+    } else if (borderColor === 'var(--success-500)') {
+      statusText = "Upcoming";
+      statusBg = "rgba(16, 185, 129, 0.1)";
+      statusColor = "var(--success-500)";
+    }
 
     return (
       <div
-        className="card h-100"
+        className="card"
         style={{
           display: 'flex',
           flexDirection: 'column',
           cursor: 'pointer',
-          transition: 'transform 0.2s',
-          borderLeft: `5px solid ${borderColor}`,
-          position: 'relative'
+          transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+          border: isHovered ? `1px solid ${statusColor}` : '1px solid var(--border-color)',
+          borderTop: `4px solid ${statusColor}`,
+          borderRadius: '12px',
+          background: 'var(--card-bg, #ffffff)',
+          position: 'relative',
+          padding: '1.25rem',
+          height: '100%',
+          transform: isHovered ? 'translateY(-6px)' : 'translateY(0)',
+          boxShadow: isHovered 
+            ? '0 12px 24px -10px rgba(0, 0, 0, 0.15), 0 8px 16px -8px rgba(0, 0, 0, 0.1)' 
+            : 'var(--card-shadow, 0 2px 4px rgba(0, 0, 0, 0.02))',
         }}
+        onMouseEnter={() => setHoveredEventId(event._id)}
+        onMouseLeave={() => setHoveredEventId(null)}
         onClick={() => setSelectedEvent(event)}
       >
-        <div style={{
-          position: 'absolute',
-          top: '10px',
-          right: '10px',
-          color: borderColor,
-          fontWeight: 'bold',
-          fontSize: '0.75rem',
-          textTransform: 'uppercase',
-          border: `1px solid ${borderColor}`,
-          padding: '2px 6px',
-          borderRadius: '4px'
+        <div className="flex-between mb-3" style={{ alignItems: 'center' }}>
+          <span style={{
+            fontFamily: 'monospace',
+            fontWeight: 700,
+            fontSize: '0.8rem',
+            color: 'var(--txt-3)',
+            background: 'var(--bg-secondary)',
+            padding: '2px 8px',
+            borderRadius: '6px',
+            border: '1px solid var(--border-color)'
+          }}>
+            {event.eventCode}
+          </span>
+          <span style={{
+            background: statusBg,
+            color: statusColor,
+            fontWeight: 700,
+            fontSize: '0.7rem',
+            textTransform: 'uppercase',
+            padding: '3px 8px',
+            borderRadius: '9999px',
+            letterSpacing: '0.5px'
+          }}>
+            {statusText}
+          </span>
+        </div>
+
+        <div className="mb-2">
+          <span className="badge" style={{
+            background: 'rgba(59, 130, 246, 0.08)',
+            color: 'var(--primary-color, #3b82f6)',
+            border: '1px solid rgba(59, 130, 246, 0.15)',
+            fontSize: '0.7rem',
+            padding: '3px 8px',
+            borderRadius: '9999px',
+            fontWeight: 600,
+            display: 'inline-block',
+            marginBottom: '0.5rem'
+          }}>
+            {event.category}
+          </span>
+          <h3 className="mb-2" style={{ 
+            fontSize: '1.15rem', 
+            fontWeight: 700, 
+            color: 'var(--txt-1)', 
+            lineHeight: '1.4',
+            margin: 0
+          }}>
+            {event.name}
+          </h3>
+        </div>
+
+        <p className="text-sm text-muted mb-4" style={{ 
+          flex: 1, 
+          overflow: 'hidden', 
+          display: '-webkit-box', 
+          WebkitLineClamp: 3, 
+          WebkitBoxOrient: 'vertical',
+          lineHeight: '1.5',
+          fontSize: '0.875rem'
         }}>
-          {statusText}
-        </div>
-
-        <div className="flex-between mb-2 mt-4">
-          <span className="badge evt-cat badge-primary">{event.category}</span>
-          {event.singleDay ? (
-            <span className="text-xs text-muted">{event.date}</span>
-          ) : (
-            <span className="text-xs text-muted">{event.dateFrom} - {event.dateTo}</span>
-          )}
-        </div>
-
-        <h3 className="mb-2" style={{ fontSize: '1.25rem' }}>{event.name}</h3>
-        <p className="text-sm text-muted mb-3" style={{ flex: 1, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical' }}>
           {event.description}
         </p>
 
-        <div className="mt-auto">
-          <p className="text-xs mb-1"><strong>Time:</strong> {event.timeFrom} - {event.timeTo}</p>
-          <p className="text-xs mb-0"><strong>Venue:</strong> {event.venue}</p>
+        <div style={{
+          background: 'var(--bg-secondary)',
+          borderRadius: '8px',
+          padding: '0.75rem',
+          marginBottom: '1.25rem',
+          fontSize: '0.8rem',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '6px'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', color: 'var(--txt-2)' }}>
+            <CalendarIcon />
+            <span>
+              {event.singleDay ? event.date : `${event.dateFrom} - ${event.dateTo}`}
+            </span>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', color: 'var(--txt-2)' }}>
+            <ClockIcon />
+            <span>{event.timeFrom} - {event.timeTo}</span>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', color: 'var(--txt-2)' }}>
+            <MapPinIcon />
+            <span style={{ 
+              overflow: 'hidden', 
+              textOverflow: 'ellipsis', 
+              whiteSpace: 'nowrap' 
+            }}>
+              {event.venue}
+            </span>
+          </div>
+        </div>
 
-          {isOwnEvent && (
-            <div className="mt-3">
-              <div className="d-flex gap-2 mb-2">
-                {!isCompleted && (
-                  <button
-                    className="btn btn-primary btn-sm w-100"
-                    onClick={(e) => handleEditEvent(event, e)}
-                    style={{ fontSize: '0.8rem', padding: '0.3rem 0.5rem' }}
-                  >
-                    Edit
-                  </button>
-                )}
+        {isOwnEvent && (
+          <div className="mt-auto" onClick={(e) => e.stopPropagation()}>
+            <div className="d-flex gap-2">
+              {!isCompleted && (
                 <button
-                  className="btn btn-danger btn-sm w-100"
-                  onClick={(e) => handleDeleteEvent(event._id, e)}
-                  style={{ fontSize: '0.8rem', padding: '0.3rem 0.5rem' }}
-                  disabled={isDeleting}
+                  className="btn btn-sm"
+                  onClick={(e) => handleEditEvent(event, e)}
+                  style={{ 
+                    flex: 1,
+                    fontSize: '0.8rem', 
+                    padding: '0.4rem 0.75rem',
+                    background: 'var(--bg-secondary)',
+                    border: '1px solid var(--border-color)',
+                    color: 'var(--txt-1)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '4px',
+                    borderRadius: '6px'
+                  }}
                 >
-                  {isDeleting ? "Deleting..." : "Delete"}
-                </button>
-              </div>
-              {isCompleted && (
-                <button
-                  className="btn btn-success btn-sm w-100"
-                  onClick={(e) => openReportModal(event, e)}
-                  style={{ fontSize: '0.8rem', padding: '0.3rem 0.5rem' }}
-                >
-                  {event.report ? "Edit Report" : "Generate Report"}
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+                  Edit
                 </button>
               )}
+              <button
+                className="btn btn-sm btn-outline-danger"
+                onClick={(e) => handleDeleteEvent(event._id, e)}
+                style={{ 
+                  flex: 1,
+                  fontSize: '0.8rem', 
+                  padding: '0.4rem 0.75rem',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '4px',
+                  borderRadius: '6px'
+                }}
+                disabled={isDeleting}
+              >
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                {isDeleting ? "..." : "Delete"}
+              </button>
             </div>
-          )}
-        </div>
+            {isCompleted && (
+              <button
+                className="btn btn-sm btn-success w-100 mt-2"
+                onClick={(e) => openReportModal(event, e)}
+                style={{ 
+                  fontSize: '0.8rem', 
+                  padding: '0.4rem 0.75rem',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '4px',
+                  borderRadius: '6px'
+                }}
+              >
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+                {event.report ? "Edit Report" : "Generate Report"}
+              </button>
+            )}
+          </div>
+        )}
       </div>
     );
   };
 
-  const Section = ({ title, events, isOwnEvent }) => (
-    <div className="mb-8">
-      <div className="flex-between mb-4" style={{ paddingBottom: '0.5rem', borderBottom: '1px solid var(--border-color)' }}>
-        <h2 className="mb-0">{title}</h2>
-        {isOwnEvent && (
-          <button className="btn btn-primary btn-sm" onClick={handleAddEvent}>
-            + Add Event
-          </button>
+  const Section = ({ title, events, isOwnEvent }) => {
+    const filtered = filterEvents(events);
+    
+    return (
+      <div className="mb-8">
+        <div className="flex-between mb-4" style={{ paddingBottom: '0.5rem', borderBottom: '1px solid var(--border-color)', alignItems: 'center' }}>
+          <h2 className="mb-0" style={{ fontSize: '1.4rem', fontWeight: 700, color: 'var(--txt-1)' }}>{title} ({filtered.length})</h2>
+          {isOwnEvent && (
+            <button className="btn btn-primary btn-sm" onClick={handleAddEvent} style={{ borderRadius: '6px' }}>
+              + Add Event
+            </button>
+          )}
+        </div>
+        {filtered.length > 0 ? (
+          <div className="grid-cols-3" style={{ gap: '1.25rem' }}>
+            {filtered.map((event) => (
+              <EventCard key={event._id} event={event} isOwnEvent={isOwnEvent} />
+            ))}
+          </div>
+        ) : (
+          <div className="card p-6 text-center" style={{ background: 'var(--card-bg)', border: '1px dashed var(--border-color)', borderRadius: '8px' }}>
+            <p className="text-muted mb-0">No matching events found in this category.</p>
+          </div>
         )}
       </div>
-      {events.length > 0 ? (
-        <div className="grid-cols-3">
-          {events.map((event) => (
-            <EventCard key={event._id} event={event} isOwnEvent={isOwnEvent} />
-          ))}
-        </div>
-      ) : (
-        <p className="text-muted">No events found in this category.</p>
-      )}
-    </div>
-  );
+    );
+  };
 
   if (loading) return (
     <div className="flex-center" style={{ height: '100vh' }}>
@@ -402,20 +580,66 @@ const ExploreEvents = () => {
 
   return (
     <div style={{ minHeight: '100vh', background: 'var(--bg-color)' }}>
-      <header className="dashboard-header">
-        <div className="container flex-between">
+      <header className="dashboard-header" style={{ borderBottom: '1px solid var(--border-color)', background: 'var(--card-bg)' }}>
+        <div className="container flex-between" style={{ padding: '1rem 0' }}>
           <div>
-            <h1 className="mb-0" style={{ fontSize: '1.5rem' }}>Explore Events</h1>
-            <p className="text-sm text-muted mb-0">Discover what's happening in your unit and college</p>
+            <h1 className="mb-0" style={{ fontSize: '1.6rem', fontWeight: 800, color: 'var(--txt-1)' }}>Explore Events</h1>
+            <p className="text-sm text-muted mb-0">Discover and manage activities in your unit and college</p>
           </div>
           <div className="d-flex align-items-center width-set gap-3">
             <ThemeToggle />
-            <button className="btn btn-secondary" onClick={() => navigate(-1)}>Back to Dashboard</button>
+            <button className="btn btn-secondary" onClick={() => navigate(-1)} style={{ borderRadius: '6px' }}>Back to Dashboard</button>
           </div>
         </div>
       </header>
 
-      <main className="container main-container pb-6">
+      <main className="container main-container pb-6" style={{ marginTop: '2rem' }}>
+        {/* Search & Filter Bar */}
+        <div className="card p-4 mb-6" style={{ 
+          background: 'var(--card-bg)',
+          border: '1px solid var(--border-color)',
+          borderRadius: '12px',
+          boxShadow: 'var(--card-shadow, 0 2px 4px rgba(0, 0, 0, 0.02))'
+        }}>
+          <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap', alignItems: 'center' }}>
+            <div style={{ flex: 1, minWidth: '250px', position: 'relative' }}>
+              <input
+                type="text"
+                className="form-input"
+                placeholder="Search events by name, category, or venue..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                style={{ paddingLeft: '2.5rem', width: '100%', borderRadius: '8px' }}
+              />
+              <svg 
+                width="16" 
+                height="16" 
+                viewBox="0 0 24 24" 
+                fill="none" 
+                stroke="currentColor" 
+                strokeWidth="2" 
+                style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--txt-3)' }}
+              >
+                <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+              </svg>
+            </div>
+            
+            <div style={{ minWidth: '180px' }}>
+              <select
+                className="form-input"
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value)}
+                style={{ width: '100%', borderRadius: '8px' }}
+              >
+                <option value="all">All Statuses</option>
+                <option value="upcoming">Upcoming</option>
+                <option value="ongoing">Ongoing</option>
+                <option value="completed">Completed</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
         {location.state?.fromRole !== 'college' && (
           <Section title="My Unit Events" events={unitEvents} isOwnEvent={true} />
         )}
@@ -472,6 +696,46 @@ const ExploreEvents = () => {
                   />
                 </div>
               </div>
+
+              {/* Tree Plantation specific field */}
+              {reportingEvent.category === 'Tree Plantation' && (
+                <div className="form-group mb-3 p-3" style={{ background: 'rgba(16,185,129,0.07)', border: '1px solid rgba(16,185,129,0.25)', borderRadius: 'var(--radius-md)' }}>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontWeight: 700, color: 'var(--success-600)' }}>
+                    🌱 Number of Trees Planted <span className="text-danger">*</span>
+                  </label>
+                  <input
+                    type="number"
+                    name="treesPlanted"
+                    className="form-control"
+                    value={reportForm.treesPlanted}
+                    onChange={handleReportInputChange}
+                    required
+                    min="1"
+                    placeholder="e.g. 100"
+                  />
+                  <small className="text-muted">Total number of saplings/trees planted during this event.</small>
+                </div>
+              )}
+
+              {/* Blood Donation specific field */}
+              {reportingEvent.category === 'Blood Donation' && (
+                <div className="form-group mb-3 p-3" style={{ background: 'rgba(239,68,68,0.06)', border: '1px solid rgba(239,68,68,0.25)', borderRadius: 'var(--radius-md)' }}>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontWeight: 700, color: 'var(--danger-600)' }}>
+                    🩸 Units of Blood Donated <span className="text-danger">*</span>
+                  </label>
+                  <input
+                    type="number"
+                    name="bloodUnitsCollected"
+                    className="form-control"
+                    value={reportForm.bloodUnitsCollected}
+                    onChange={handleReportInputChange}
+                    required
+                    min="1"
+                    placeholder="e.g. 25"
+                  />
+                  <small className="text-muted">Total units of blood collected during the donation drive.</small>
+                </div>
+              )}
 
               {/* Guest / Resource Person Dynamic Fields */}
               <div className="form-group mb-3 p-3" style={{ background: 'var(--bg-secondary)', borderRadius: 'var(--radius-md)' }}>
@@ -614,6 +878,18 @@ const ExploreEvents = () => {
                   <p><strong>Status:</strong> {selectedEvent.report.participantsCount ? (selectedEvent.report.conductedOnDate ? "Conducted on time" : "Delayed/Rescheduled") : "Yet to be updated"}</p>
                   <p><strong>Participants:</strong> {selectedEvent.report.participantsCount}</p>
                   <p><strong>Colleges:</strong> {selectedEvent.report.collegesCount}</p>
+                  {selectedEvent.category === 'Tree Plantation' && selectedEvent.report.treesPlanted != null && (
+                    <p style={{ gridColumn: '1 / -1' }}>
+                      <strong>🌱 Trees Planted:</strong>{' '}
+                      <span style={{ color: 'var(--success-600)', fontWeight: 700 }}>{selectedEvent.report.treesPlanted}</span>
+                    </p>
+                  )}
+                  {selectedEvent.category === 'Blood Donation' && selectedEvent.report.bloodUnitsCollected != null && (
+                    <p style={{ gridColumn: '1 / -1' }}>
+                      <strong>🩸 Blood Units Donated:</strong>{' '}
+                      <span style={{ color: 'var(--danger-500)', fontWeight: 700 }}>{selectedEvent.report.bloodUnitsCollected} units</span>
+                    </p>
+                  )}
                 </div>
                 {selectedEvent.report.guests && selectedEvent.report.guests.length > 0 && (
                   <p className="mt-2 mb-2"><strong>Guest / Resource Person(s):</strong> {selectedEvent.report.guests.join(', ')}</p>
