@@ -1,9 +1,37 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import axios from 'axios';
 import toast from 'react-hot-toast';
 import * as XLSX from 'xlsx';
 import { jsPDF } from 'jspdf';
 import html2canvas from 'html2canvas';
+
+const activitiesConfig = [
+    { key: "blood_donation", label: "Blood Donation Camps", beneficiaryField: "bloodUnits", beneficiaryLabel: "Units of Blood" },
+    { key: "health_camps", label: "Health Camps", beneficiaryField: "beneficiaries", beneficiaryLabel: "" },
+    { key: "anti_drug", label: "Anti Drug Camps", beneficiaryField: "beneficiaries", beneficiaryLabel: "" },
+    { key: "voter_sir", label: "Voters Awareness SIR", beneficiaryField: "beneficiaries", beneficiaryLabel: "" },
+    { key: "voter_sveep", label: "Voters Awareness SVEEP", beneficiaryField: "beneficiaries", beneficiaryLabel: "" },
+    { key: "road_safety", label: "Road Safety Awareness", beneficiaryField: "beneficiaries", beneficiaryLabel: "" },
+    { key: "tree_plantation", label: "Tree Plantation", beneficiaryField: "saplings", beneficiaryLabel: "Saplings" },
+    { key: "important_days", label: "Important Days Celebrations", beneficiaryField: null, beneficiaryLabel: "-" },
+    { key: "pledge", label: "Pledge taken", beneficiaryField: null, beneficiaryLabel: "-" },
+    { key: "rallies", label: "Rallies conducted", beneficiaryField: "distance", beneficiaryLabel: "KMs" },
+    { key: "hosted_meetings", label: "Hosted Meetings", beneficiaryField: "beneficiaries", beneficiaryLabel: "" },
+    { key: "any_other", label: "Any Other Programmes", beneficiaryField: "beneficiaries", beneficiaryLabel: "" }
+];
+
+const isValidSocialLink = (url) => {
+    if (!url) return false;
+    const clean = url.trim().toLowerCase();
+    return clean !== "" && 
+           clean !== "nil" && 
+           clean !== "-" && 
+           clean !== "none" && 
+           clean !== "no link" && 
+           clean !== "n/a" && 
+           clean !== "na" &&
+           clean !== "nil.";
+};
 
 const AdminReportGenerator = () => {
     const [colleges, setColleges] = useState([]);
@@ -16,6 +44,15 @@ const AdminReportGenerator = () => {
 
     const [reports, setReports] = useState([]);
     const [loading, setLoading] = useState(false);
+
+    // New Cumulative and Drill-down states
+    const [selectedDistrict, setSelectedDistrict] = useState('');
+    const [selectedPeriod, setSelectedPeriod] = useState('');
+    const [activeView, setActiveView] = useState('cumulative'); // 'cumulative' | 'individual'
+    const [hoveredCell, setHoveredCell] = useState(null);
+    const [hoveredSocial, setHoveredSocial] = useState(null);
+    const [drillDownData, setDrillDownData] = useState(null);
+    const [activePreviewReport, setActivePreviewReport] = useState(null);
 
     useEffect(() => {
         fetchColleges();
@@ -71,6 +108,123 @@ const AdminReportGenerator = () => {
             setLoading(false);
         }
     };
+
+    // Extract unique districts from colleges and reports
+    const uniqueDistricts = useMemo(() => {
+        const distSet = new Set();
+        colleges.forEach(c => {
+            if (c.district) distSet.add(c.district);
+        });
+        reports.forEach(r => {
+            const dist = r.collegeDetails?.district || r.collegeId?.district;
+            if (dist) distSet.add(dist);
+        });
+        return [...distSet].sort();
+    }, [colleges, reports]);
+
+    // Extract unique periods from reports
+    const uniquePeriods = useMemo(() => {
+        const periodSet = new Set();
+        reports.forEach(r => {
+            if (r.periodLabel) periodSet.add(r.periodLabel);
+        });
+        return [...periodSet].sort();
+    }, [reports]);
+
+    // Client-side filtering for District and Period Label
+    const filteredReports = useMemo(() => {
+        return reports.filter(r => {
+            const dist = r.collegeDetails?.district || r.collegeId?.district || '';
+            if (selectedDistrict && dist.toLowerCase() !== selectedDistrict.toLowerCase()) return false;
+            if (selectedPeriod && r.periodLabel !== selectedPeriod) return false;
+            return true;
+        });
+    }, [reports, selectedDistrict, selectedPeriod]);
+
+    // Real-time Aggregation Logic
+    const aggregatedMetrics = useMemo(() => {
+        const metrics = activitiesConfig.map(act => {
+            let programmesSum = 0;
+            let volunteersSum = 0;
+            let beneficiarySum = 0;
+            const contributors = [];
+
+            // Unique colleges tracker
+            const collegeIdsSet = new Set();
+
+            filteredReports.forEach(rep => {
+                const activityData = rep.activities?.[act.key] || {};
+                const progCount = activityData.programmes || 0;
+                
+                if (progCount > 0) {
+                    programmesSum += progCount;
+                    volunteersSum += activityData.volunteers || 0;
+                    
+                    if (rep.collegeId?._id) {
+                        collegeIdsSet.add(rep.collegeId._id);
+                    }
+
+                    let val = 0;
+                    if (act.beneficiaryField) {
+                        val = activityData[act.beneficiaryField] || 0;
+                        beneficiarySum += val;
+                    }
+
+                    contributors.push({
+                        report: rep,
+                        value: val,
+                        programmes: progCount,
+                        volunteers: activityData.volunteers || 0
+                    });
+                }
+            });
+
+            return {
+                ...act,
+                programmes: programmesSum,
+                collegesCount: collegeIdsSet.size,
+                volunteers: volunteersSum,
+                beneficiaryValue: beneficiarySum,
+                contributors
+            };
+        });
+
+        const socialMediaPlatforms = [
+            { key: "instagram", label: "Instagram" },
+            { key: "facebook", label: "Facebook" },
+            { key: "youtube", label: "YouTube" },
+            { key: "twitter", label: "X (Twitter)" },
+            { key: "other", label: "Other Platforms" }
+        ];
+
+        const socialMetrics = socialMediaPlatforms.map(platform => {
+            let activeCount = 0;
+            const contributors = [];
+
+            filteredReports.forEach(rep => {
+                const linkVal = rep.socialMedia?.[platform.key] || '';
+                if (isValidSocialLink(linkVal)) {
+                    activeCount++;
+                    contributors.push({
+                        report: rep,
+                        value: linkVal
+                    });
+                }
+            });
+
+            return {
+                key: platform.key,
+                label: platform.label,
+                count: activeCount,
+                contributors
+            };
+        });
+
+        return {
+            activities: metrics,
+            socialMedia: socialMetrics
+        };
+    }, [filteredReports]);
 
     const handleDeleteReport = async (reportId) => {
         if (!window.confirm("Are you sure you want to delete this report permanently?")) return;
@@ -202,6 +356,55 @@ const AdminReportGenerator = () => {
         });
     };
 
+    const downloadCumulativePDF = () => {
+        toast.loading("Generating Cumulative PDF...", { id: "cum-pdf" });
+        const element = document.getElementById("cumulative-pdf-pane");
+        if (!element) {
+            toast.error("Print template not found", { id: "cum-pdf" });
+            return;
+        }
+
+        const originalStyle = element.style.display;
+        element.style.display = "block";
+
+        html2canvas(element, { scale: 2, useCORS: true }).then((canvas) => {
+            const pdf = new jsPDF('l', 'mm', 'a4');
+            const pdfWidth = 297;
+            const pdfHeight = 210;
+            const margin = 12; // 12mm margins
+            const printableWidth = pdfWidth - (margin * 2);
+            const printableHeight = pdfHeight - (margin * 2);
+
+            const imgData = canvas.toDataURL('image/png');
+            
+            let imgWidth = printableWidth;
+            let imgHeight = (canvas.height * imgWidth) / canvas.width;
+            
+            if (imgHeight > printableHeight) {
+                imgHeight = printableHeight;
+                imgWidth = (canvas.width * imgHeight) / canvas.height;
+            }
+            
+            const xPos = margin + (printableWidth - imgWidth) / 2;
+            const yPos = margin + (printableHeight - imgHeight) / 2;
+
+            pdf.addImage(imgData, 'PNG', xPos, yPos, imgWidth, imgHeight);
+
+            // Draw a beautiful page border
+            pdf.setDrawColor(0, 0, 0);
+            pdf.setLineWidth(0.5);
+            pdf.rect(8, 8, pdfWidth - 16, pdfHeight - 16);
+
+            const periodLabelSafe = selectedPeriod ? selectedPeriod.replace(/\s+/g, '_') : 'All_Periods';
+            pdf.save(`NSS_Cumulative_Report_${selectedDistrict || 'All_Districts'}_${periodLabelSafe}.pdf`);
+            element.style.display = originalStyle;
+            toast.success("Cumulative PDF Downloaded successfully!", { id: "cum-pdf" });
+        }).catch(err => {
+            console.error("PDF generation error:", err);
+            toast.error("Failed to generate PDF", { id: "cum-pdf" });
+        });
+    };
+
     // Bulk/Consolidated Excel Export for all filtered units
     const handleConsolidatedExport = () => {
         if (reports.length === 0) {
@@ -264,7 +467,12 @@ const AdminReportGenerator = () => {
                     <h1 style={{ fontSize: '1.75rem', fontWeight: 800, margin: 0, color: 'var(--txt-1)' }}>Unit Periodical Reports</h1>
                     <p style={{ margin: 0, color: 'var(--txt-3)', fontSize: '0.9rem' }}>Monitor, verify, search, and export periodical reports submitted by colleges and units.</p>
                 </div>
-                <div>
+                <div className="d-flex gap-2">
+                    {activeView === 'cumulative' && (
+                        <button className="btn btn-primary" onClick={downloadCumulativePDF}>
+                            Download Cumulative PDF (Landscape)
+                        </button>
+                    )}
                     <button className="btn btn-success" onClick={handleConsolidatedExport}>
                         Export Consolidated Excel
                     </button>
@@ -319,246 +527,788 @@ const AdminReportGenerator = () => {
                         </select>
                     </div>
 
+                    <div className="form-group">
+                        <label className="form-label">District</label>
+                        <select 
+                            className="form-input" 
+                            value={selectedDistrict} 
+                            onChange={(e) => setSelectedDistrict(e.target.value)}
+                        >
+                            <option value="">All Districts</option>
+                            {uniqueDistricts.map(d => (
+                                <option key={d} value={d}>{d}</option>
+                            ))}
+                        </select>
+                    </div>
+                </div>
+
+                <div className="grid-cols-4 gap-4 mt-4 align-items-end">
+                    <div className="form-group">
+                        <label className="form-label">Reporting Period</label>
+                        <select 
+                            className="form-input" 
+                            value={selectedPeriod} 
+                            onChange={(e) => setSelectedPeriod(e.target.value)}
+                        >
+                            <option value="">All Periods</option>
+                            {uniquePeriods.map(p => (
+                                <option key={p} value={p}>{p}</option>
+                            ))}
+                        </select>
+                    </div>
+
+                    <div className="form-group">
+                        <label className="form-label">From Date</label>
+                        <input type="date" className="form-input" value={fromDate} onChange={(e) => setFromDate(e.target.value)} />
+                    </div>
+
+                    <div className="form-group">
+                        <label className="form-label">To Date</label>
+                        <input type="date" className="form-input" value={toDate} onChange={(e) => setToDate(e.target.value)} />
+                    </div>
+
                     <div>
                         <button className="btn btn-primary w-100" style={{ height: '42px' }} onClick={fetchReports}>
                             Apply Filters
                         </button>
                     </div>
                 </div>
+            </div>
 
-                <div className="grid-cols-2 gap-4 mt-4">
-                    <div className="form-group">
-                        <label className="form-label">From Date</label>
-                        <input type="date" className="form-input" value={fromDate} onChange={(e) => setFromDate(e.target.value)} />
+            {/* View Sub-tab Toggles */}
+            <div className="flex gap-4 mb-6">
+                <button 
+                    className={`btn ${activeView === 'cumulative' ? 'btn-primary' : 'btn-outline-primary'}`}
+                    onClick={() => setActiveView('cumulative')}
+                >
+                    Cumulative Summary View
+                </button>
+                <button 
+                    className={`btn ${activeView === 'individual' ? 'btn-primary' : 'btn-outline-primary'}`}
+                    onClick={() => setActiveView('individual')}
+                >
+                    Detailed Submissions List
+                </button>
+            </div>
+
+            {/* Main Views Container */}
+            {activeView === 'cumulative' ? (
+                <div className="card p-6" style={{ background: 'var(--card-bg)' }}>
+                    <h3 className="mb-4 text-lg">Consolidated Performance Metrics</h3>
+                    {loading ? (
+                        <p className="text-muted">Loading metrics...</p>
+                    ) : filteredReports.length === 0 ? (
+                        <p className="text-muted">No reports matching filters found.</p>
+                    ) : (
+                        <>
+                            <div style={{ overflowX: 'auto' }}>
+                                <table style={{
+                                    width: '100%',
+                                    borderCollapse: 'collapse',
+                                    marginTop: '1rem',
+                                    fontSize: '0.95rem',
+                                    color: 'var(--txt-1)',
+                                    textAlign: 'left'
+                                }}>
+                                    <thead>
+                                        <tr style={{ borderBottom: '2px solid var(--border)', background: 'none' }}>
+                                            <th style={{ padding: '12px 8px', fontWeight: '800', width: '5%' }}>S.No</th>
+                                            <th style={{ padding: '12px 8px', fontWeight: '800', width: '35%' }}>Activity / Event Scope</th>
+                                            <th style={{ padding: '12px 8px', fontWeight: '800', textAlign: 'center', width: '15%' }}>No. of Programmes Conducted</th>
+                                            <th style={{ padding: '12px 8px', fontWeight: '800', textAlign: 'center', width: '15%' }}>No. of Colleges Participated</th>
+                                            <th style={{ padding: '12px 8px', fontWeight: '800', textAlign: 'center', width: '15%' }}>No. of NSS Volunteers Participated</th>
+                                            <th style={{ padding: '12px 8px', fontWeight: '800', textAlign: 'left', width: '15%' }}>Beneficiary Metrics / Details</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {aggregatedMetrics.activities.map((act, index) => {
+                                            return (
+                                                <tr 
+                                                    key={act.key} 
+                                                    style={{ borderBottom: '1px solid var(--border)' }}
+                                                >
+                                                    <td style={{ padding: '12px 8px', textAlign: 'center' }}>{index + 1}</td>
+                                                    <td style={{ padding: '12px 8px', fontWeight: 'bold' }}>{act.label}</td>
+                                                    
+                                                    {/* Programmes Conducted Cell */}
+                                                    <td 
+                                                        onClick={() => {
+                                                            if (act.programmes > 0) {
+                                                                setDrillDownData({
+                                                                    title: `${act.label} - Programmes Conducted`,
+                                                                    contributors: act.contributors.map(c => ({
+                                                                        collegeName: c.report.collegeId?.insName,
+                                                                        district: c.report.collegeDetails?.district || c.report.collegeId?.district,
+                                                                        poName: c.report.poDetails?.name,
+                                                                        value: c.programmes,
+                                                                        report: c.report
+                                                                    })),
+                                                                    isLink: false
+                                                                });
+                                                            }
+                                                        }}
+                                                        style={{
+                                                            padding: '12px 8px',
+                                                            textAlign: 'center',
+                                                            cursor: act.programmes > 0 ? 'pointer' : 'default',
+                                                            backgroundColor: (act.programmes > 0 && hoveredCell === `${act.key}-prog`) ? '#e3f2fd' : 'transparent',
+                                                            color: (act.programmes > 0 && hoveredCell === `${act.key}-prog`) ? '#0d47a1' : 'inherit',
+                                                            fontWeight: act.programmes > 0 ? 'bold' : 'normal',
+                                                            transition: 'all 0.15s ease'
+                                                        }}
+                                                        onMouseEnter={() => act.programmes > 0 && setHoveredCell(`${act.key}-prog`)}
+                                                        onMouseLeave={() => setHoveredCell(null)}
+                                                    >
+                                                        {act.programmes}
+                                                    </td>
+
+                                                    {/* Colleges Participated Cell */}
+                                                    <td 
+                                                        onClick={() => {
+                                                            if (act.collegesCount > 0) {
+                                                                const uniqueCollegeReports = [];
+                                                                const seenColleges = new Set();
+                                                                act.contributors.forEach(c => {
+                                                                    if (c.report.collegeId?._id && !seenColleges.has(c.report.collegeId._id)) {
+                                                                        seenColleges.add(c.report.collegeId._id);
+                                                                        uniqueCollegeReports.push(c);
+                                                                    }
+                                                                });
+
+                                                                setDrillDownData({
+                                                                    title: `${act.label} - Participating Colleges`,
+                                                                    contributors: uniqueCollegeReports.map(c => ({
+                                                                        collegeName: c.report.collegeId?.insName,
+                                                                        district: c.report.collegeDetails?.district || c.report.collegeId?.district,
+                                                                        poName: c.report.poDetails?.name,
+                                                                        value: c.programmes,
+                                                                        report: c.report
+                                                                    })),
+                                                                    isLink: false
+                                                                });
+                                                            }
+                                                        }}
+                                                        style={{
+                                                            padding: '12px 8px',
+                                                            textAlign: 'center',
+                                                            cursor: act.collegesCount > 0 ? 'pointer' : 'default',
+                                                            backgroundColor: (act.collegesCount > 0 && hoveredCell === `${act.key}-colleges`) ? '#e3f2fd' : 'transparent',
+                                                            color: (act.collegesCount > 0 && hoveredCell === `${act.key}-colleges`) ? '#0d47a1' : 'inherit',
+                                                            fontWeight: act.collegesCount > 0 ? 'bold' : 'normal',
+                                                            transition: 'all 0.15s ease'
+                                                        }}
+                                                        onMouseEnter={() => act.collegesCount > 0 && setHoveredCell(`${act.key}-colleges`)}
+                                                        onMouseLeave={() => setHoveredCell(null)}
+                                                    >
+                                                        {act.collegesCount}
+                                                    </td>
+
+                                                    {/* Volunteers Cell */}
+                                                    <td 
+                                                        onClick={() => {
+                                                            if (act.volunteers > 0) {
+                                                                setDrillDownData({
+                                                                    title: `${act.label} - Volunteers Participated`,
+                                                                    contributors: act.contributors.map(c => ({
+                                                                        collegeName: c.report.collegeId?.insName,
+                                                                        district: c.report.collegeDetails?.district || c.report.collegeId?.district,
+                                                                        poName: c.report.poDetails?.name,
+                                                                        value: c.volunteers,
+                                                                        report: c.report
+                                                                    })),
+                                                                    isLink: false
+                                                                });
+                                                            }
+                                                        }}
+                                                        style={{
+                                                            padding: '12px 8px',
+                                                            textAlign: 'center',
+                                                            cursor: act.volunteers > 0 ? 'pointer' : 'default',
+                                                            backgroundColor: (act.volunteers > 0 && hoveredCell === `${act.key}-vols`) ? '#e3f2fd' : 'transparent',
+                                                            color: (act.volunteers > 0 && hoveredCell === `${act.key}-vols`) ? '#0d47a1' : 'inherit',
+                                                            fontWeight: act.volunteers > 0 ? 'bold' : 'normal',
+                                                            transition: 'all 0.15s ease'
+                                                        }}
+                                                        onMouseEnter={() => act.volunteers > 0 && setHoveredCell(`${act.key}-vols`)}
+                                                        onMouseLeave={() => setHoveredCell(null)}
+                                                    >
+                                                        {act.volunteers}
+                                                    </td>
+
+                                                    {/* Beneficiaries/Key Details Cell */}
+                                                    <td 
+                                                        onClick={() => {
+                                                            if (act.beneficiaryValue > 0 && act.beneficiaryField) {
+                                                                setDrillDownData({
+                                                                    title: `${act.label} - ${act.beneficiaryLabel || 'Beneficiaries'}`,
+                                                                    contributors: act.contributors.map(c => ({
+                                                                        collegeName: c.report.collegeId?.insName,
+                                                                        district: c.report.collegeDetails?.district || c.report.collegeId?.district,
+                                                                        poName: c.report.poDetails?.name,
+                                                                        value: c.value,
+                                                                        report: c.report
+                                                                    })),
+                                                                    isLink: false
+                                                                });
+                                                            }
+                                                        }}
+                                                        style={{
+                                                            padding: '12px 8px',
+                                                            cursor: (act.beneficiaryValue > 0 && act.beneficiaryField) ? 'pointer' : 'default',
+                                                            backgroundColor: (act.beneficiaryValue > 0 && act.beneficiaryField && hoveredCell === `${act.key}-beneficiary`) ? '#e3f2fd' : 'transparent',
+                                                            color: (act.beneficiaryValue > 0 && act.beneficiaryField && hoveredCell === `${act.key}-beneficiary`) ? '#0d47a1' : 'inherit',
+                                                            fontWeight: (act.beneficiaryValue > 0 && act.beneficiaryField) ? 'bold' : 'normal',
+                                                            transition: 'all 0.15s ease'
+                                                        }}
+                                                        onMouseEnter={() => act.beneficiaryValue > 0 && act.beneficiaryField && setHoveredCell(`${act.key}-beneficiary`)}
+                                                        onMouseLeave={() => setHoveredCell(null)}
+                                                    >
+                                                        {act.beneficiaryField ? (
+                                                            act.key === 'blood_donation' ? (
+                                                                `${act.beneficiaryValue} Units of Blood`
+                                                            ) : act.key === 'tree_plantation' ? (
+                                                                `${act.beneficiaryValue} Saplings`
+                                                            ) : act.key === 'rallies' ? (
+                                                                `${act.beneficiaryValue} KMs`
+                                                            ) : (
+                                                                act.beneficiaryValue
+                                                            )
+                                                        ) : (
+                                                            '-'
+                                                        )}
+                                                    </td>
+                                                </tr>
+                                            );
+                                        })}
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            {/* Inline Social Media Row */}
+                            <div className="card p-4 mt-6" style={{ background: 'var(--card-bg)', border: '1px solid var(--border)' }}>
+                                <h4 className="mb-3 text-md" style={{ fontWeight: 'bold' }}>Social Media Campaign Metrics</h4>
+                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '1.5rem', fontSize: '0.95rem' }}>
+                                    {aggregatedMetrics.socialMedia.map((sm, idx) => (
+                                        <div 
+                                            key={sm.key}
+                                            onClick={() => {
+                                                if (sm.count > 0) {
+                                                    setDrillDownData({
+                                                        title: `Active College Submissions - ${sm.label}`,
+                                                        contributors: sm.contributors.map(c => ({
+                                                            collegeName: c.report.collegeId?.insName,
+                                                            district: c.report.collegeDetails?.district || c.report.collegeId?.district,
+                                                            poName: c.report.poDetails?.name,
+                                                            value: c.value,
+                                                            report: c.report
+                                                        })),
+                                                        isLink: true
+                                                    });
+                                                }
+                                            }}
+                                            style={{
+                                                padding: '6px 12px',
+                                                borderRadius: '4px',
+                                                cursor: sm.count > 0 ? 'pointer' : 'default',
+                                                backgroundColor: (sm.count > 0 && hoveredSocial === sm.key) ? '#e3f2fd' : 'transparent',
+                                                color: (sm.count > 0 && hoveredSocial === sm.key) ? '#0d47a1' : 'inherit',
+                                                transition: 'all 0.15s ease'
+                                            }}
+                                            onMouseEnter={() => sm.count > 0 && setHoveredSocial(sm.key)}
+                                            onMouseLeave={() => setHoveredSocial(null)}
+                                        >
+                                            <strong>{idx + 1}. {sm.label}:</strong> <span className="badge badge-secondary" style={{ marginLeft: '4px' }}>{sm.count}</span>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        </>
+                    )}
+                </div>
+            ) : (
+                <div className="card p-6" style={{ background: 'var(--card-bg)' }}>
+                    <h3 className="mb-4 text-lg">Reports List</h3>
+                    {loading ? (
+                        <p className="text-muted">Loading reports...</p>
+                    ) : reports.length === 0 ? (
+                        <p className="text-muted">No reports matching filters found.</p>
+                    ) : (
+                        <div style={{ overflowX: 'auto' }}>
+                            <table className="styled-table" style={{ margin: 0, boxShadow: 'none' }}>
+                                <thead>
+                                    <tr>
+                                        <th>S.No</th>
+                                        <th>College Name</th>
+                                        <th>Unit Number</th>
+                                        <th>District</th>
+                                        <th>Report Period</th>
+                                        <th>Submitted Date</th>
+                                        <th className="text-center">Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {reports.map((rep, idx) => (
+                                        <tr key={rep._id}>
+                                            <td>{idx + 1}</td>
+                                            <td>{rep.collegeId?.insName}</td>
+                                            <td><span className="badge badge-secondary">{rep.unitId?.unitNumber}</span></td>
+                                            <td>{rep.collegeDetails?.district || rep.collegeId?.district || 'N/A'}</td>
+                                            <td>{rep.periodLabel}</td>
+                                            <td>{new Date(rep.submittedAt).toLocaleDateString()}</td>
+                                            <td>
+                                                <div className="d-flex gap-2 justify-content-center">
+                                                    <button className="btn btn-sm btn-success" onClick={() => exportToExcel(rep)}>
+                                                        Excel
+                                                    </button>
+                                                    <button className="btn btn-sm btn-outline-success" onClick={() => downloadPDF(rep)}>
+                                                        PDF
+                                                    </button>
+                                                    <button className="btn btn-sm btn-danger" onClick={() => handleDeleteReport(rep._id)}>
+                                                        Delete
+                                                    </button>
+                                                </div>
+
+                                                {/* Hidden PDF Template element for each report */}
+                                                <div 
+                                                    id={`pdf-preview-pane-admin-${rep._id}`} 
+                                                    style={{
+                                                        display: 'none',
+                                                        position: 'absolute',
+                                                        left: '-9999px',
+                                                        top: '-9999px',
+                                                        width: '794px',
+                                                        padding: '40px',
+                                                        background: '#ffffff',
+                                                        color: '#000000',
+                                                        fontFamily: "'Courier New', Courier, monospace"
+                                                    }}
+                                                >
+                                                    <div style={{ textAlign: 'center', borderBottom: '3px double #000', paddingBottom: '15px', marginBottom: '20px' }}>
+                                                        <h2 style={{ margin: '0 0 5px 0', fontSize: '20px', textTransform: 'uppercase', letterSpacing: '1px' }}>NATIONAL SERVICE SCHEME (NSS)</h2>
+                                                        <h3 style={{ margin: '0 0 10px 0', fontSize: '16px', fontWeight: 'normal' }}>PERIODICAL ACTIVITY REPORT</h3>
+                                                        <div style={{ fontSize: '14px', fontWeight: 'bold', background: '#f0f0f0', padding: '5px 10px', display: 'inline-block', borderRadius: '4px' }}>
+                                                            Period: {rep.periodLabel} ({rep.reportType})
+                                                        </div>
+                                                    </div>
+
+                                                    <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: '20px', fontSize: '13px' }}>
+                                                        <tbody>
+                                                            <tr>
+                                                                <td style={{ width: '180px', padding: '6px', fontWeight: 'bold', border: '1px solid #ddd' }}>College Name:</td>
+                                                                <td style={{ padding: '6px', border: '1px solid #ddd' }}>{rep.collegeId?.insName}</td>
+                                                            </tr>
+                                                            <tr>
+                                                                <td style={{ padding: '6px', fontWeight: 'bold', border: '1px solid #ddd' }}>District:</td>
+                                                                <td style={{ padding: '6px', border: '1px solid #ddd' }}>{rep.collegeDetails?.district || rep.collegeId?.district}</td>
+                                                            </tr>
+                                                            <tr>
+                                                                <td style={{ padding: '6px', fontWeight: 'bold', border: '1px solid #ddd' }}>Unit Code:</td>
+                                                                <td style={{ padding: '6px', border: '1px solid #ddd' }}>{rep.unitId?.unitNumber}</td>
+                                                            </tr>
+                                                            <tr>
+                                                                <td style={{ padding: '6px', fontWeight: 'bold', border: '1px solid #ddd' }}>Program Officer:</td>
+                                                                <td style={{ padding: '6px', border: '1px solid #ddd' }}>{rep.poDetails?.name}</td>
+                                                            </tr>
+                                                            <tr>
+                                                                <td style={{ padding: '6px', fontWeight: 'bold', border: '1px solid #ddd' }}>PO Contact Info:</td>
+                                                                <td style={{ padding: '6px', border: '1px solid #ddd' }}>Mobile: {rep.poDetails?.mobile} | Email: {rep.poDetails?.email}</td>
+                                                            </tr>
+                                                        </tbody>
+                                                    </table>
+
+                                                    <h4 style={{ fontSize: '15px', borderBottom: '1px solid #000', paddingBottom: '5px', marginBottom: '10px', marginTop: '30px' }}>ACTIVITY-WISE SUMMARY</h4>
+                                                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px' }}>
+                                                        <thead>
+                                                            <tr style={{ background: '#f5f5f5' }}>
+                                                                <th style={{ border: '1px solid #000', padding: '8px', textAlign: 'left', width: '5%' }}>S.No</th>
+                                                                <th style={{ border: '1px solid #000', padding: '8px', textAlign: 'left', width: '35%' }}>Activity / Event Scope</th>
+                                                                <th style={{ border: '1px solid #000', padding: '8px', textAlign: 'center', width: '15%' }}>Programmes</th>
+                                                                <th style={{ border: '1px solid #000', padding: '8px', textAlign: 'center', width: '15%' }}>Volunteers</th>
+                                                                <th style={{ border: '1px solid #000', padding: '8px', textAlign: 'left', width: '30%' }}>Key Metrics / Details</th>
+                                                            </tr>
+                                                        </thead>
+                                                        <tbody>
+                                                            {activitiesConfig.map((act, index) => {
+                                                                const repAct = rep.activities?.[act.key] || {};
+                                                                return (
+                                                                    <tr key={act.key}>
+                                                                        <td style={{ border: '1px solid #000', padding: '8px', textAlign: 'center' }}>{index + 1}</td>
+                                                                        <td style={{ border: '1px solid #000', padding: '8px', fontWeight: 'bold' }}>{act.label}</td>
+                                                                        <td style={{ border: '1px solid #000', padding: '8px', textAlign: 'center' }}>{repAct.programmes || 0}</td>
+                                                                        <td style={{ border: '1px solid #000', padding: '8px', textAlign: 'center' }}>{repAct.volunteers || 0}</td>
+                                                                        <td style={{ border: '1px solid #000', padding: '8px' }}>
+                                                                            {act.beneficiaryField ? (
+                                                                                `${act.beneficiaryLabel ? act.beneficiaryLabel + ': ' : ''}${repAct[act.beneficiaryField] || 0}`
+                                                                            ) : (
+                                                                                act.key === 'important_days' ? `Date: ${repAct.date || 'N/A'}` : '-'
+                                                                            )}
+                                                                        </td>
+                                                                    </tr>
+                                                                );
+                                                            })}
+                                                        </tbody>
+                                                    </table>
+
+                                                    <div style={{ marginTop: '30px', fontSize: '12px' }}>
+                                                        <p><strong>Social Media Links:</strong></p>
+                                                        <ul style={{ margin: '5px 0', paddingLeft: '20px' }}>
+                                                            {rep.socialMedia?.instagram && <li>Instagram: {rep.socialMedia.instagram}</li>}
+                                                            {rep.socialMedia?.facebook && <li>Facebook: {rep.socialMedia.facebook}</li>}
+                                                            {rep.socialMedia?.youtube && <li>YouTube: {rep.socialMedia.youtube}</li>}
+                                                            {rep.socialMedia?.twitter && <li>Twitter: {rep.socialMedia.twitter}</li>}
+                                                        </ul>
+                                                    </div>
+
+                                                    <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '60px', fontSize: '13px' }}>
+                                                        <div style={{ textAlign: 'center', width: '200px' }}>
+                                                            <div style={{ borderTop: '1px solid #000', paddingTop: '5px' }}>
+                                                                Signature of the PO
+                                                            </div>
+                                                        </div>
+                                                        <div style={{ textAlign: 'center', width: '200px' }}>
+                                                            <div style={{ borderTop: '1px solid #000', paddingTop: '5px' }}>
+                                                                Signature of the Principal
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    )}
+                </div>
+            )}
+
+            {/* Hidden Landscape PDF Template for Cumulative Report */}
+            <div 
+                id="cumulative-pdf-pane" 
+                style={{
+                    display: 'none',
+                    position: 'absolute',
+                    left: '-9999px',
+                    top: '-9999px',
+                    width: '1060px', // Matches A4 landscape aspect ratio at standard resolution
+                    padding: '40px',
+                    background: '#ffffff',
+                    color: '#000000',
+                    fontFamily: 'serif'
+                }}
+            >
+                <div style={{ textAlign: 'center', borderBottom: '3px double #000', paddingBottom: '15px', marginBottom: '20px' }}>
+                    <h2 style={{ margin: '0 0 5px 0', fontSize: '22px', textTransform: 'uppercase', color: '#000' }}>NATIONAL SERVICE SCHEME (NSS)</h2>
+                    <h3 style={{ margin: '0 0 10px 0', fontSize: '18px', color: '#000' }}>CONSOLIDATED PERFORMANCE METRICS</h3>
+                    <div style={{ fontSize: '14px', fontWeight: 'bold', background: '#f0f0f0', padding: '5px 10px', display: 'inline-block', color: '#000' }}>
+                        District: {selectedDistrict || 'All Districts'} | Period: {selectedPeriod || 'All Periods'}
                     </div>
-                    <div className="form-group">
-                        <label className="form-label">To Date</label>
-                        <input type="date" className="form-input" value={toDate} onChange={(e) => setToDate(e.target.value)} />
+                </div>
+
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px', color: '#000' }}>
+                    <thead>
+                        <tr style={{ background: '#f2f2f2' }}>
+                            <th style={{ border: '1px solid #000', padding: '8px', textAlign: 'center', width: '5%', color: '#000' }}>S.No</th>
+                            <th style={{ border: '1px solid #000', padding: '8px', textAlign: 'left', width: '35%', color: '#000' }}>Activity / Event Scope</th>
+                            <th style={{ border: '1px solid #000', padding: '8px', textAlign: 'center', width: '15%', color: '#000' }}>No. of Programmes Conducted</th>
+                            <th style={{ border: '1px solid #000', padding: '8px', textAlign: 'center', width: '15%', color: '#000' }}>No. of Colleges Participated</th>
+                            <th style={{ border: '1px solid #000', padding: '8px', textAlign: 'center', width: '15%', color: '#000' }}>No. of NSS Volunteers Participated</th>
+                            <th style={{ border: '1px solid #000', padding: '8px', textAlign: 'left', width: '15%', color: '#000' }}>Beneficiary Metrics / Details</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {aggregatedMetrics.activities.map((act, index) => (
+                            <tr key={act.key}>
+                                <td style={{ border: '1px solid #000', padding: '8px', textAlign: 'center', color: '#000' }}>{index + 1}</td>
+                                <td style={{ border: '1px solid #000', padding: '8px', fontWeight: 'bold', color: '#000' }}>{act.label}</td>
+                                <td style={{ border: '1px solid #000', padding: '8px', textAlign: 'center', color: '#000' }}>{act.programmes}</td>
+                                <td style={{ border: '1px solid #000', padding: '8px', textAlign: 'center', color: '#000' }}>{act.collegesCount}</td>
+                                <td style={{ border: '1px solid #000', padding: '8px', textAlign: 'center', color: '#000' }}>{act.volunteers}</td>
+                                <td style={{ border: '1px solid #000', padding: '8px', color: '#000' }}>
+                                    {act.beneficiaryField ? (
+                                        act.key === 'blood_donation' ? (
+                                            `${act.beneficiaryValue} Units of Blood`
+                                        ) : act.key === 'tree_plantation' ? (
+                                            `${act.beneficiaryValue} Saplings`
+                                        ) : act.key === 'rallies' ? (
+                                            `${act.beneficiaryValue} KMs`
+                                        ) : (
+                                            act.beneficiaryValue
+                                        )
+                                    ) : (
+                                        '-'
+                                    )}
+                                </td>
+                            </tr>
+                        ))}
+                    </tbody>
+                </table>
+
+                <div style={{ marginTop: '25px', padding: '12px', border: '1px solid #000', fontSize: '11px', color: '#000' }}>
+                    <strong style={{ display: 'block', marginBottom: '6px', color: '#000' }}>Social Media Campaigns (Units Active):</strong>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '20px', color: '#000' }}>
+                        {aggregatedMetrics.socialMedia.map((sm, idx) => (
+                            <span key={sm.key} style={{ color: '#000' }}>
+                                <strong>{idx + 1}. {sm.label}:</strong> {sm.count}
+                            </span>
+                        ))}
+                    </div>
+                </div>
+
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '50px', fontSize: '12px', color: '#000' }}>
+                    <div style={{ textAlign: 'center', width: '250px', color: '#000' }}>
+                        <div style={{ borderTop: '1px solid #000', paddingTop: '5px', color: '#000' }}>
+                            NSS Program Coordinator Signature
+                        </div>
+                    </div>
+                    <div style={{ textAlign: 'center', width: '250px', color: '#000' }}>
+                        <div style={{ borderTop: '1px solid #000', paddingTop: '5px', color: '#000' }}>
+                            University Registrar Signature
+                        </div>
                     </div>
                 </div>
             </div>
 
-            {/* Reports List */}
-            <div className="card p-6" style={{ background: 'var(--card-bg)' }}>
-                <h3 className="mb-4 text-lg">Reports List</h3>
-                {loading ? (
-                    <p className="text-muted">Loading reports...</p>
-                ) : reports.length === 0 ? (
-                    <p className="text-muted">No reports matching filters found.</p>
-                ) : (
-                    <div style={{ overflowX: 'auto' }}>
-                        <table className="styled-table" style={{ margin: 0, boxShadow: 'none' }}>
-                            <thead>
-                                <tr>
-                                    <th>S.No</th>
-                                    <th>College Name</th>
-                                    <th>Unit Number</th>
-                                    <th>District</th>
-                                    <th>Report Period</th>
-                                    <th>Submitted Date</th>
-                                    <th className="text-center">Action</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {reports.map((rep, idx) => (
-                                    <tr key={rep._id}>
-                                        <td>{idx + 1}</td>
-                                        <td>{rep.collegeId?.insName}</td>
-                                        <td><span className="badge badge-secondary">{rep.unitId?.unitNumber}</span></td>
-                                        <td>{rep.collegeDetails?.district || rep.collegeId?.district || 'N/A'}</td>
-                                        <td>{rep.periodLabel}</td>
-                                        <td>{new Date(rep.submittedAt).toLocaleDateString()}</td>
-                                        <td>
-                                            <div className="d-flex gap-2 justify-content-center">
-                                                <button className="btn btn-sm btn-success" onClick={() => exportToExcel(rep)}>
-                                                    Excel
-                                                </button>
-                                                <button className="btn btn-sm btn-outline-success" onClick={() => downloadPDF(rep)}>
-                                                    PDF
-                                                </button>
-                                                <button className="btn btn-sm btn-danger" onClick={() => handleDeleteReport(rep._id)}>
-                                                    Delete
-                                                </button>
-                                            </div>
-
-                                            {/* Hidden PDF Template element for each report */}
-                                            <div 
-                                                id={`pdf-preview-pane-admin-${rep._id}`} 
-                                                style={{
-                                                    display: 'none',
-                                                    position: 'absolute',
-                                                    left: '-9999px',
-                                                    top: '-9999px',
-                                                    width: '794px',
-                                                    padding: '40px',
-                                                    background: '#ffffff',
-                                                    color: '#000000',
-                                                    fontFamily: "'Courier New', Courier, monospace"
-                                                }}
-                                            >
-                                                <div style={{ textAlign: 'center', borderBottom: '3px double #000', paddingBottom: '15px', marginBottom: '20px' }}>
-                                                    <h2 style={{ margin: '0 0 5px 0', fontSize: '20px', textTransform: 'uppercase', letterSpacing: '1px' }}>NATIONAL SERVICE SCHEME (NSS)</h2>
-                                                    <h3 style={{ margin: '0 0 10px 0', fontSize: '16px', fontWeight: 'normal' }}>PERIODICAL ACTIVITY REPORT</h3>
-                                                    <div style={{ fontSize: '14px', fontWeight: 'bold', background: '#f0f0f0', padding: '5px 10px', display: 'inline-block', borderRadius: '4px' }}>
-                                                        Period: {rep.periodLabel} ({rep.reportType})
-                                                    </div>
-                                                </div>
-
-                                                <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: '20px', fontSize: '13px' }}>
-                                                    <tbody>
-                                                        <tr>
-                                                            <td style={{ width: '180px', padding: '6px', fontWeight: 'bold', border: '1px solid #ddd' }}>College Name:</td>
-                                                            <td style={{ padding: '6px', border: '1px solid #ddd' }}>{rep.collegeId?.insName}</td>
-                                                        </tr>
-                                                        <tr>
-                                                            <td style={{ padding: '6px', fontWeight: 'bold', border: '1px solid #ddd' }}>District:</td>
-                                                            <td style={{ padding: '6px', border: '1px solid #ddd' }}>{rep.collegeDetails?.district || rep.collegeId?.district}</td>
-                                                        </tr>
-                                                        <tr>
-                                                            <td style={{ padding: '6px', fontWeight: 'bold', border: '1px solid #ddd' }}>Unit Code:</td>
-                                                            <td style={{ padding: '6px', border: '1px solid #ddd' }}>{rep.unitId?.unitNumber}</td>
-                                                        </tr>
-                                                        <tr>
-                                                            <td style={{ padding: '6px', fontWeight: 'bold', border: '1px solid #ddd' }}>Program Officer:</td>
-                                                            <td style={{ padding: '6px', border: '1px solid #ddd' }}>{rep.poDetails?.name}</td>
-                                                        </tr>
-                                                        <tr>
-                                                            <td style={{ padding: '6px', fontWeight: 'bold', border: '1px solid #ddd' }}>PO Contact Info:</td>
-                                                            <td style={{ padding: '6px', border: '1px solid #ddd' }}>Mobile: {rep.poDetails?.mobile} | Email: {rep.poDetails?.email}</td>
-                                                        </tr>
-                                                    </tbody>
-                                                </table>
-
-                                                <h4 style={{ fontSize: '15px', borderBottom: '1px solid #000', paddingBottom: '5px', marginBottom: '10px', marginTop: '30px' }}>ACTIVITY-WISE SUMMARY</h4>
-                                                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px' }}>
-                                                    <thead>
-                                                        <tr style={{ background: '#f5f5f5' }}>
-                                                            <th style={{ border: '1px solid #000', padding: '8px', textAlign: 'left', width: '5%' }}>S.No</th>
-                                                            <th style={{ border: '1px solid #000', padding: '8px', textAlign: 'left', width: '35%' }}>Activity / Event Scope</th>
-                                                            <th style={{ border: '1px solid #000', padding: '8px', textAlign: 'center', width: '15%' }}>Programmes</th>
-                                                            <th style={{ border: '1px solid #000', padding: '8px', textAlign: 'center', width: '15%' }}>Volunteers</th>
-                                                            <th style={{ border: '1px solid #000', padding: '8px', textAlign: 'left', width: '30%' }}>Key Metrics / Details</th>
-                                                        </tr>
-                                                    </thead>
-                                                    <tbody>
-                                                        <tr>
-                                                            <td style={{ border: '1px solid #000', padding: '8px', textAlign: 'center' }}>1</td>
-                                                            <td style={{ border: '1px solid #000', padding: '8px', fontWeight: 'bold' }}>Blood Donation Camps</td>
-                                                            <td style={{ border: '1px solid #000', padding: '8px', textAlign: 'center' }}>{rep.activities?.blood_donation?.programmes || 0}</td>
-                                                            <td style={{ border: '1px solid #000', padding: '8px', textAlign: 'center' }}>{rep.activities?.blood_donation?.volunteers || 0}</td>
-                                                            <td style={{ border: '1px solid #000', padding: '8px' }}>Units Donated: {rep.activities?.blood_donation?.bloodUnits || 0}</td>
-                                                        </tr>
-                                                        <tr>
-                                                            <td style={{ border: '1px solid #000', padding: '8px', textAlign: 'center' }}>2</td>
-                                                            <td style={{ border: '1px solid #000', padding: '8px', fontWeight: 'bold' }}>Health Camps</td>
-                                                            <td style={{ border: '1px solid #000', padding: '8px', textAlign: 'center' }}>{rep.activities?.health_camps?.programmes || 0}</td>
-                                                            <td style={{ border: '1px solid #000', padding: '8px', textAlign: 'center' }}>{rep.activities?.health_camps?.volunteers || 0}</td>
-                                                            <td style={{ border: '1px solid #000', padding: '8px' }}>Beneficiaries: {rep.activities?.health_camps?.beneficiaries || 0}</td>
-                                                        </tr>
-                                                        <tr>
-                                                            <td style={{ border: '1px solid #000', padding: '8px', textAlign: 'center' }}>3</td>
-                                                            <td style={{ border: '1px solid #000', padding: '8px', fontWeight: 'bold' }}>Anti Drug Camps</td>
-                                                            <td style={{ border: '1px solid #000', padding: '8px', textAlign: 'center' }}>{rep.activities?.anti_drug?.programmes || 0}</td>
-                                                            <td style={{ border: '1px solid #000', padding: '8px', textAlign: 'center' }}>{rep.activities?.anti_drug?.volunteers || 0}</td>
-                                                            <td style={{ border: '1px solid #000', padding: '8px' }}>Beneficiaries: {rep.activities?.anti_drug?.beneficiaries || 0}</td>
-                                                        </tr>
-                                                        <tr>
-                                                            <td style={{ border: '1px solid #000', padding: '8px', textAlign: 'center' }}>4</td>
-                                                            <td style={{ border: '1px solid #000', padding: '8px', fontWeight: 'bold' }}>Voters Awareness SIR</td>
-                                                            <td style={{ border: '1px solid #000', padding: '8px', textAlign: 'center' }}>{rep.activities?.voter_sir?.programmes || 0}</td>
-                                                            <td style={{ border: '1px solid #000', padding: '8px', textAlign: 'center' }}>{rep.activities?.voter_sir?.volunteers || 0}</td>
-                                                            <td style={{ border: '1px solid #000', padding: '8px' }}>Beneficiaries: {rep.activities?.voter_sir?.beneficiaries || 0}</td>
-                                                        </tr>
-                                                        <tr>
-                                                            <td style={{ border: '1px solid #000', padding: '8px', textAlign: 'center' }}>5</td>
-                                                            <td style={{ border: '1px solid #000', padding: '8px', fontWeight: 'bold' }}>Voters Awareness SVEEP</td>
-                                                            <td style={{ border: '1px solid #000', padding: '8px', textAlign: 'center' }}>{rep.activities?.voter_sveep?.programmes || 0}</td>
-                                                            <td style={{ border: '1px solid #000', padding: '8px', textAlign: 'center' }}>{rep.activities?.voter_sveep?.volunteers || 0}</td>
-                                                            <td style={{ border: '1px solid #000', padding: '8px' }}>Beneficiaries: {rep.activities?.voter_sveep?.beneficiaries || 0}</td>
-                                                        </tr>
-                                                        <tr>
-                                                            <td style={{ border: '1px solid #000', padding: '8px', textAlign: 'center' }}>6</td>
-                                                            <td style={{ border: '1px solid #000', padding: '8px', fontWeight: 'bold' }}>Road Safety Awareness</td>
-                                                            <td style={{ border: '1px solid #000', padding: '8px', textAlign: 'center' }}>{rep.activities?.road_safety?.programmes || 0}</td>
-                                                            <td style={{ border: '1px solid #000', padding: '8px', textAlign: 'center' }}>{rep.activities?.road_safety?.volunteers || 0}</td>
-                                                            <td style={{ border: '1px solid #000', padding: '8px' }}>Beneficiaries: {rep.activities?.road_safety?.beneficiaries || 0}</td>
-                                                        </tr>
-                                                        <tr>
-                                                            <td style={{ border: '1px solid #000', padding: '8px', textAlign: 'center' }}>7</td>
-                                                            <td style={{ border: '1px solid #000', padding: '8px', fontWeight: 'bold' }}>Tree Plantation</td>
-                                                            <td style={{ border: '1px solid #000', padding: '8px', textAlign: 'center' }}>{rep.activities?.tree_plantation?.programmes || 0}</td>
-                                                            <td style={{ border: '1px solid #000', padding: '8px', textAlign: 'center' }}>{rep.activities?.tree_plantation?.volunteers || 0}</td>
-                                                            <td style={{ border: '1px solid #000', padding: '8px' }}>Saplings Planted: {rep.activities?.tree_plantation?.saplings || 0}</td>
-                                                        </tr>
-                                                        <tr>
-                                                            <td style={{ border: '1px solid #000', padding: '8px', textAlign: 'center' }}>8</td>
-                                                            <td style={{ border: '1px solid #000', padding: '8px', fontWeight: 'bold' }}>Important Days Celebrations</td>
-                                                            <td style={{ border: '1px solid #000', padding: '8px', textAlign: 'center' }}>{rep.activities?.important_days?.programmes || 0}</td>
-                                                            <td style={{ border: '1px solid #000', padding: '8px', textAlign: 'center' }}>{rep.activities?.important_days?.volunteers || 0}</td>
-                                                            <td style={{ border: '1px solid #000', padding: '8px' }}>Date: {rep.activities?.important_days?.date || 'N/A'}</td>
-                                                        </tr>
-                                                        <tr>
-                                                            <td style={{ border: '1px solid #000', padding: '8px', textAlign: 'center' }}>9</td>
-                                                            <td style={{ border: '1px solid #000', padding: '8px', fontWeight: 'bold' }}>Pledges Taken</td>
-                                                            <td style={{ border: '1px solid #000', padding: '8px', textAlign: 'center' }}>{rep.activities?.pledge?.programmes || 0}</td>
-                                                            <td style={{ border: '1px solid #000', padding: '8px', textAlign: 'center' }}>{rep.activities?.pledge?.volunteers || 0}</td>
-                                                            <td style={{ border: '1px solid #000', padding: '8px' }}>-</td>
-                                                        </tr>
-                                                        <tr>
-                                                            <td style={{ border: '1px solid #000', padding: '8px', textAlign: 'center' }}>10</td>
-                                                            <td style={{ border: '1px solid #000', padding: '8px', fontWeight: 'bold' }}>Rallies conducted</td>
-                                                            <td style={{ border: '1px solid #000', padding: '8px', textAlign: 'center' }}>{rep.activities?.rallies?.programmes || 0}</td>
-                                                            <td style={{ border: '1px solid #000', padding: '8px', textAlign: 'center' }}>{rep.activities?.rallies?.volunteers || 0}</td>
-                                                            <td style={{ border: '1px solid #000', padding: '8px' }}>Date: {rep.activities?.rallies?.date || 'N/A'} | Dist: {rep.activities?.rallies?.distance || 0} KM</td>
-                                                        </tr>
-                                                        <tr>
-                                                            <td style={{ border: '1px solid #000', padding: '8px', textAlign: 'center' }}>11</td>
-                                                            <td style={{ border: '1px solid #000', padding: '8px', fontWeight: 'bold' }}>Hosted Meetings</td>
-                                                            <td style={{ border: '1px solid #000', padding: '8px', textAlign: 'center' }}>{rep.activities?.hosted_meetings?.programmes || 0}</td>
-                                                            <td style={{ border: '1px solid #000', padding: '8px', textAlign: 'center' }}>{rep.activities?.hosted_meetings?.volunteers || 0}</td>
-                                                            <td style={{ border: '1px solid #000', padding: '8px' }}>Guests: {rep.activities?.hosted_meetings?.guestName || 'None'} | Benefic: {rep.activities?.hosted_meetings?.beneficiaries || 0}</td>
-                                                        </tr>
-                                                        <tr>
-                                                            <td style={{ border: '1px solid #000', padding: '8px', textAlign: 'center' }}>12</td>
-                                                            <td style={{ border: '1px solid #000', padding: '8px', fontWeight: 'bold' }}>Any Other Programs</td>
-                                                            <td style={{ border: '1px solid #000', padding: '8px', textAlign: 'center' }}>{rep.activities?.any_other?.programmes || 0}</td>
-                                                            <td style={{ border: '1px solid #000', padding: '8px', textAlign: 'center' }}>{rep.activities?.any_other?.volunteers || 0}</td>
-                                                            <td style={{ border: '1px solid #000', padding: '8px' }}>Colleges: {rep.activities?.any_other?.colleges || 0} | Remarks: {rep.activities?.any_other?.remarks || 'N/A'}</td>
-                                                        </tr>
-                                                    </tbody>
-                                                </table>
-
-                                                <div style={{ marginTop: '30px', fontSize: '12px' }}>
-                                                    <p><strong>Social Media Links:</strong></p>
-                                                    <ul style={{ margin: '5px 0', paddingLeft: '20px' }}>
-                                                        {rep.socialMedia?.instagram && <li>Instagram: {rep.socialMedia.instagram}</li>}
-                                                        {rep.socialMedia?.facebook && <li>Facebook: {rep.socialMedia.facebook}</li>}
-                                                        {rep.socialMedia?.youtube && <li>YouTube: {rep.socialMedia.youtube}</li>}
-                                                        {rep.socialMedia?.twitter && <li>Twitter: {rep.socialMedia.twitter}</li>}
-                                                    </ul>
-                                                </div>
-
-                                                <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '60px', fontSize: '13px' }}>
-                                                    <div style={{ textAlign: 'center', width: '200px' }}>
-                                                        <div style={{ borderTop: '1px solid #000', paddingTop: '5px' }}>
-                                                            Signature of the PO
-                                                        </div>
-                                                    </div>
-                                                    <div style={{ textAlign: 'center', width: '200px' }}>
-                                                        <div style={{ borderTop: '1px solid #000', paddingTop: '5px' }}>
-                                                            Signature of the Principal
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
+            {/* Drill-down Dialog */}
+            {drillDownData && (
+                <div style={{
+                    position: 'fixed',
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    backgroundColor: 'rgba(0, 0, 0, 0.65)',
+                    backdropFilter: 'blur(8px)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    zIndex: 1000,
+                    padding: '20px'
+                }}>
+                    <div className="card p-6" style={{
+                        background: 'var(--card-bg)',
+                        maxWidth: '800px',
+                        width: '100%',
+                        maxHeight: '90vh',
+                        overflowY: 'auto',
+                        borderRadius: '12px',
+                        boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.3), 0 10px 10px -5px rgba(0, 0, 0, 0.3)',
+                        border: '1px solid var(--border)'
+                    }}>
+                        <div className="flex-between mb-4 pb-2" style={{ borderBottom: '1px solid var(--border)' }}>
+                            <h3 style={{ margin: 0, fontWeight: 800, fontSize: '1.25rem' }}>{drillDownData.title}</h3>
+                            <button 
+                                onClick={() => setDrillDownData(null)}
+                                style={{
+                                    background: 'none',
+                                    border: 'none',
+                                    color: 'var(--txt-3)',
+                                    fontSize: '1.5rem',
+                                    cursor: 'pointer',
+                                    lineHeight: 1
+                                }}
+                            >
+                                &times;
+                            </button>
+                        </div>
+                        
+                        {drillDownData.contributors.length === 0 ? (
+                            <p className="text-muted text-center py-4">No contributors found.</p>
+                        ) : (
+                            <div style={{ overflowX: 'auto' }}>
+                                <table className="styled-table" style={{ margin: 0, width: '100%' }}>
+                                    <thead>
+                                        <tr>
+                                            <th>College Name</th>
+                                            <th>District</th>
+                                            <th>Programme Officer</th>
+                                            <th>Submitted Value</th>
+                                            <th className="text-center">Action</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {drillDownData.contributors.map((c, idx) => (
+                                            <tr key={idx}>
+                                                <td style={{ fontWeight: 'bold' }}>{c.collegeName}</td>
+                                                <td>{c.district}</td>
+                                                <td>{c.poName}</td>
+                                                <td>
+                                                    {drillDownData.isLink ? (
+                                                        <a 
+                                                            href={c.value} 
+                                                            target="_blank" 
+                                                            rel="noopener noreferrer" 
+                                                            style={{ color: 'var(--brand-500)', textDecoration: 'underline', wordBreak: 'break-all' }}
+                                                        >
+                                                            {c.value}
+                                                        </a>
+                                                    ) : (
+                                                        <span className="badge badge-primary">{c.value}</span>
+                                                    )}
+                                                </td>
+                                                <td className="text-center">
+                                                    <button 
+                                                        className="btn btn-sm btn-primary"
+                                                        onClick={() => {
+                                                            setDrillDownData(null);
+                                                            setActivePreviewReport(c.report);
+                                                        }}
+                                                    >
+                                                        View Report
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        )}
+                        
+                        <div className="text-right mt-4">
+                            <button className="btn btn-secondary" onClick={() => setDrillDownData(null)}>
+                                Close
+                            </button>
+                        </div>
                     </div>
-                )}
-            </div>
+                </div>
+            )}
+
+            {/* Detailed Document Preview Modal */}
+            {activePreviewReport && (
+                <div style={{
+                    position: 'fixed',
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+                    backdropFilter: 'blur(8px)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    zIndex: 1010,
+                    padding: '20px'
+                }}>
+                    <div className="card p-6" style={{
+                        background: '#ffffff',
+                        color: '#000000',
+                        maxWidth: '900px',
+                        width: '100%',
+                        maxHeight: '90vh',
+                        overflowY: 'auto',
+                        borderRadius: '12px',
+                        boxShadow: '0 25px 50px -12px rgba(0,0,0,0.5)',
+                        border: '1px solid #ddd'
+                    }}>
+                        <div className="flex-between mb-4 pb-2" style={{ borderBottom: '2px solid #333' }}>
+                            <h3 style={{ margin: 0, fontWeight: 800, color: '#333' }}>Detailed Report View</h3>
+                            <button 
+                                onClick={() => setActivePreviewReport(null)}
+                                style={{
+                                    background: 'none',
+                                    border: 'none',
+                                    color: '#666',
+                                    fontSize: '1.8rem',
+                                    cursor: 'pointer',
+                                    lineHeight: 1
+                                }}
+                            >
+                                &times;
+                            </button>
+                        </div>
+                        
+                        {/* Report Content styled matching PDF standard */}
+                        <div style={{ padding: '10px', color: '#000000', fontFamily: 'serif' }}>
+                            <div style={{ textAlign: 'center', borderBottom: '3px double #000', paddingBottom: '15px', marginBottom: '20px' }}>
+                                <h2 style={{ margin: '0 0 5px 0', fontSize: '20px', textTransform: 'uppercase', color: '#000' }}>NATIONAL SERVICE SCHEME (NSS)</h2>
+                                <h3 style={{ margin: '0 0 10px 0', fontSize: '16px', fontWeight: 'normal', color: '#000' }}>PERIODICAL ACTIVITY REPORT</h3>
+                                <div style={{ fontSize: '14px', fontWeight: 'bold', background: '#f0f0f0', padding: '5px 10px', display: 'inline-block', borderRadius: '4px', color: '#000' }}>
+                                    Period: {activePreviewReport.periodLabel} ({activePreviewReport.reportType})
+                                </div>
+                            </div>
+
+                            <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: '20px', fontSize: '14px', color: '#000' }}>
+                                <tbody>
+                                    <tr>
+                                        <td style={{ width: '180px', padding: '8px', fontWeight: 'bold', border: '1px solid #ddd', color: '#000' }}>College Name:</td>
+                                        <td style={{ padding: '8px', border: '1px solid #ddd', color: '#000' }}>{activePreviewReport.collegeId?.insName}</td>
+                                    </tr>
+                                    <tr>
+                                        <td style={{ padding: '8px', fontWeight: 'bold', border: '1px solid #ddd', color: '#000' }}>District:</td>
+                                        <td style={{ padding: '8px', border: '1px solid #ddd', color: '#000' }}>{activePreviewReport.collegeDetails?.district || activePreviewReport.collegeId?.district}</td>
+                                    </tr>
+                                    <tr>
+                                        <td style={{ padding: '8px', fontWeight: 'bold', border: '1px solid #ddd', color: '#000' }}>Unit Code:</td>
+                                        <td style={{ padding: '8px', border: '1px solid #ddd', color: '#000' }}>{activePreviewReport.unitId?.unitNumber}</td>
+                                    </tr>
+                                    <tr>
+                                        <td style={{ padding: '8px', fontWeight: 'bold', border: '1px solid #ddd', color: '#000' }}>Program Officer:</td>
+                                        <td style={{ padding: '8px', border: '1px solid #ddd', color: '#000' }}>{activePreviewReport.poDetails?.name}</td>
+                                    </tr>
+                                    <tr>
+                                        <td style={{ padding: '8px', fontWeight: 'bold', border: '1px solid #ddd', color: '#000' }}>PO Contact Info:</td>
+                                        <td style={{ padding: '8px', border: '1px solid #ddd', color: '#000' }}>Mobile: {activePreviewReport.poDetails?.mobile} | Email: {activePreviewReport.poDetails?.email}</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+
+                            <h4 style={{ fontSize: '16px', borderBottom: '1px solid #000', paddingBottom: '5px', marginBottom: '10px', marginTop: '30px', color: '#000' }}>ACTIVITY-WISE SUMMARY</h4>
+                            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px', color: '#000' }}>
+                                <thead>
+                                    <tr style={{ background: '#f5f5f5' }}>
+                                        <th style={{ border: '1px solid #000', padding: '8px', textAlign: 'left', width: '5%', color: '#000' }}>S.No</th>
+                                        <th style={{ border: '1px solid #000', padding: '8px', textAlign: 'left', width: '35%', color: '#000' }}>Activity / Event Scope</th>
+                                        <th style={{ border: '1px solid #000', padding: '8px', textAlign: 'center', width: '15%', color: '#000' }}>Programmes</th>
+                                        <th style={{ border: '1px solid #000', padding: '8px', textAlign: 'center', width: '15%', color: '#000' }}>Volunteers</th>
+                                        <th style={{ border: '1px solid #000', padding: '8px', textAlign: 'left', width: '30%', color: '#000' }}>Key Metrics / Details</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {activitiesConfig.map((act, index) => {
+                                        const repAct = activePreviewReport.activities?.[act.key] || {};
+                                        return (
+                                            <tr key={act.key}>
+                                                <td style={{ border: '1px solid #000', padding: '8px', textAlign: 'center', color: '#000' }}>{index + 1}</td>
+                                                <td style={{ border: '1px solid #000', padding: '8px', fontWeight: 'bold', color: '#000' }}>{act.label}</td>
+                                                <td style={{ border: '1px solid #000', padding: '8px', textAlign: 'center', color: '#000' }}>{repAct.programmes || 0}</td>
+                                                <td style={{ border: '1px solid #000', padding: '8px', textAlign: 'center', color: '#000' }}>{repAct.volunteers || 0}</td>
+                                                <td style={{ border: '1px solid #000', padding: '8px', color: '#000' }}>
+                                                    {act.beneficiaryField ? (
+                                                        `${act.beneficiaryLabel ? act.beneficiaryLabel + ': ' : ''}${repAct[act.beneficiaryField] || 0}`
+                                                    ) : (
+                                                        act.key === 'important_days' ? `Date: ${repAct.date || 'N/A'}` : '-'
+                                                    )}
+                                                </td>
+                                            </tr>
+                                        );
+                                    })}
+                                </tbody>
+                            </table>
+
+                            <div style={{ marginTop: '30px', fontSize: '13px', color: '#000' }}>
+                                <p style={{ color: '#000' }}><strong>Social Media Links:</strong></p>
+                                <ul style={{ margin: '5px 0', paddingLeft: '20px', color: '#000' }}>
+                                    {activePreviewReport.socialMedia?.instagram && <li style={{ color: '#000' }}>Instagram: <a href={activePreviewReport.socialMedia.instagram} target="_blank" rel="noopener noreferrer" style={{ color: 'blue', textDecoration: 'underline' }}>{activePreviewReport.socialMedia.instagram}</a></li>}
+                                    {activePreviewReport.socialMedia?.facebook && <li style={{ color: '#000' }}>Facebook: <a href={activePreviewReport.socialMedia.facebook} target="_blank" rel="noopener noreferrer" style={{ color: 'blue', textDecoration: 'underline' }}>{activePreviewReport.socialMedia.facebook}</a></li>}
+                                    {activePreviewReport.socialMedia?.youtube && <li style={{ color: '#000' }}>YouTube: <a href={activePreviewReport.socialMedia.youtube} target="_blank" rel="noopener noreferrer" style={{ color: 'blue', textDecoration: 'underline' }}>{activePreviewReport.socialMedia.youtube}</a></li>}
+                                    {activePreviewReport.socialMedia?.twitter && <li style={{ color: '#000' }}>Twitter: <a href={activePreviewReport.socialMedia.twitter} target="_blank" rel="noopener noreferrer" style={{ color: 'blue', textDecoration: 'underline' }}>{activePreviewReport.socialMedia.twitter}</a></li>}
+                                </ul>
+                            </div>
+                        </div>
+                        
+                        <div className="text-right mt-6 pt-4" style={{ borderTop: '1px solid #eee' }}>
+                            <button className="btn btn-secondary mr-2" onClick={() => setActivePreviewReport(null)}>
+                                Close
+                            </button>
+                            <button className="btn btn-primary" onClick={() => {
+                                downloadPDF(activePreviewReport);
+                            }}>
+                                Download PDF
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };
