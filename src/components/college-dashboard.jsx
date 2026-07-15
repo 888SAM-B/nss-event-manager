@@ -735,6 +735,7 @@ const CollegeDashboard = () => {
                                             <span className="badge badge-success">{unit.unitNumber}</span>
                                         </div>
                                         <div className="mb-4">
+                                            <p className="mb-1 text-sm"><strong className="text-white">Unit Code:</strong> {unit.unitNumber}</p>
                                             <p className="mb-1 text-sm"><strong className="text-white">Head:</strong> {unit.head?.name || unit.head || "Not Assigned"}</p>
                                             <p className="mb-1 text-sm"><strong className="text-white">Created:</strong> {unit.createdDate}</p>
                                             <p className="mb-1 text-sm"><strong className="text-white">Members:</strong> {unit.members ? unit.members.length : 0}</p>

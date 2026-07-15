@@ -32,12 +32,15 @@ const ExploreEvents = () => {
   const [reportForm, setReportForm] = useState({
     conductedOnDate: true,
     participantsCount: "",
+    volunteersParticipated: "",
+    beneficiariesCount: "",
     collegesCount: "",
     outcome: "",
-    reportFile: "", // For PDF
-    reportPhotos: [], // Up to 5
+    reportFile: "",
+    reportPhotos: [],
     treesPlanted: "",
-    bloodUnitsCollected: ""
+    bloodUnitsCollected: "",
+    rallyDistance: ""
   });
   const [reportFiles, setReportFiles] = useState({ pdf: null, photos: [] });
   const [isSubmittingReport, setIsSubmittingReport] = useState(false);
@@ -194,12 +197,15 @@ const ExploreEvents = () => {
     setReportForm({
       conductedOnDate: event.report?.conductedOnDate ?? true,
       participantsCount: event.report?.participantsCount || "",
+      volunteersParticipated: event.report?.volunteersParticipated ?? event.report?.participantsCount ?? "",
+      beneficiariesCount: event.report?.beneficiariesCount || "",
       collegesCount: event.report?.collegesCount || "",
       outcome: event.report?.outcome || "",
       reportPhotos: event.report?.reportPhotos || [],
       guests: event.report?.guests && event.report.guests.length > 0 ? event.report.guests : [""],
       treesPlanted: event.report?.treesPlanted || "",
-      bloodUnitsCollected: event.report?.bloodUnitsCollected || ""
+      bloodUnitsCollected: event.report?.bloodUnitsCollected || "",
+      rallyDistance: event.report?.rallyDistance || ""
     });
     setReportFiles({ pdf: null, photos: [] });
     setShowReportModal(true);
@@ -254,14 +260,17 @@ const ExploreEvents = () => {
 
       const finalReportData = {
         conductedOnDate: reportForm.conductedOnDate,
-        participantsCount: reportForm.participantsCount,
+        participantsCount: Number(reportForm.participantsCount),
+        volunteersParticipated: Number(reportForm.volunteersParticipated) || Number(reportForm.participantsCount) || 0,
         collegesCount: reportForm.collegesCount,
         outcome: reportForm.outcome,
         guests: reportForm.guests.filter(g => g.trim() !== ""),
         reportPhotos: photoUrls,
         submittedAt: new Date(),
+        ...(reportForm.beneficiariesCount !== "" && { beneficiariesCount: Number(reportForm.beneficiariesCount) }),
         ...(reportingEvent.category === 'Tree Plantation' && reportForm.treesPlanted !== "" && { treesPlanted: Number(reportForm.treesPlanted) }),
-        ...(reportingEvent.category === 'Blood Donation' && reportForm.bloodUnitsCollected !== "" && { bloodUnitsCollected: Number(reportForm.bloodUnitsCollected) })
+        ...(reportingEvent.category === 'Blood Donation' && reportForm.bloodUnitsCollected !== "" && { bloodUnitsCollected: Number(reportForm.bloodUnitsCollected) }),
+        ...(['Cleanliness Rally', 'Road Safety Awareness'].includes(reportingEvent.category) && reportForm.rallyDistance !== "" && { rallyDistance: Number(reportForm.rallyDistance) })
       };
 
       const res = await axios.post(`${import.meta.env.VITE_API_URL}/submitReport`, {
@@ -734,6 +743,43 @@ const ExploreEvents = () => {
                     placeholder="e.g. 25"
                   />
                   <small className="text-muted">Total units of blood collected during the donation drive.</small>
+                </div>
+              )}
+
+              {/* Beneficiaries Count */}
+              {['Health & Hygiene Awareness', 'Road Safety Awareness', 'Digital Literacy Workshop', 'Disaster Management Training'].includes(reportingEvent.category) && (
+                <div className="form-group mb-3 p-3" style={{ background: 'rgba(99,102,241,0.06)', border: '1px solid rgba(99,102,241,0.2)', borderRadius: 'var(--radius-md)' }}>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontWeight: 700, color: 'var(--primary-color)' }}>
+                    👥 Number of Beneficiaries
+                  </label>
+                  <input
+                    type="number"
+                    name="beneficiariesCount"
+                    className="form-control"
+                    value={reportForm.beneficiariesCount}
+                    onChange={handleReportInputChange}
+                    min="0"
+                    placeholder="e.g. 200"
+                  />
+                </div>
+              )}
+
+              {/* Rally Distance */}
+              {['Cleanliness Rally', 'Road Safety Awareness'].includes(reportingEvent.category) && (
+                <div className="form-group mb-3 p-3" style={{ background: 'rgba(245,158,11,0.06)', border: '1px solid rgba(245,158,11,0.2)', borderRadius: 'var(--radius-md)' }}>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontWeight: 700, color: 'var(--warning-600)' }}>
+                    📍 Rally Distance (km)
+                  </label>
+                  <input
+                    type="number"
+                    name="rallyDistance"
+                    className="form-control"
+                    value={reportForm.rallyDistance}
+                    onChange={handleReportInputChange}
+                    min="0"
+                    step="0.1"
+                    placeholder="e.g. 3.5"
+                  />
                 </div>
               )}
 

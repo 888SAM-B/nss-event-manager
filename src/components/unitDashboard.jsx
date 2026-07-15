@@ -42,6 +42,66 @@ const UnitDashboard = () => {
     const [isAddingVillage, setIsAddingVillage] = useState(false);
     const [showEditPoModal, setShowEditPoModal] = useState(false);
 
+    // Events State
+    const [unitEvents, setUnitEvents] = useState([]);
+    const [collegeEvents, setCollegeEvents] = useState([]);
+    const [externalEvents, setExternalEvents] = useState([]);
+    const [loadingEvents, setLoadingEvents] = useState(false);
+    const [selectedEvent, setSelectedEvent] = useState(null);
+    const [showDetailModal, setShowDetailModal] = useState(false);
+    
+    // Add/Edit Event Form State
+    const [showEventFormModal, setShowEventFormModal] = useState(false);
+    const [isEditingEvent, setIsEditingEvent] = useState(null);
+    const [isExternalEventForm, setIsExternalEventForm] = useState(false);
+    const [eventForm, setEventForm] = useState({
+        name: "",
+        description: "",
+        category: "Blood Donation",
+        otherCategory: "",
+        singleDay: true,
+        date: "",
+        dateFrom: "",
+        dateTo: "",
+        timeFrom: "",
+        timeTo: "",
+        venue: "",
+        resourcePerson: "",
+        level: "College",
+        sponsorship: "",
+        registeredMeriBharath: "No",
+        meriBharathUrl: "",
+        images: [],
+        brochure: "",
+        attendees: []
+    });
+    const [selectedFiles, setSelectedFiles] = useState([]);
+    const [uploading, setUploading] = useState(false);
+    const [brochureFile, setBrochureFile] = useState(null);
+    const [uploadingBrochure, setUploadingBrochure] = useState(false);
+
+    // Collaboration units
+    const [availableUnits, setAvailableUnits] = useState([]);
+    const [collaborators, setCollaborators] = useState([]);
+    const [selectedCollaborator, setSelectedCollaborator] = useState("");
+
+    // Event Report State
+    const [showReportModal, setShowReportModal] = useState(false);
+    const [reportingEvent, setReportingEvent] = useState(null);
+    const [reportForm, setReportForm] = useState({
+        conductedOnDate: false,
+        participantsCount: 0,
+        volunteersParticipated: 0,
+        beneficiariesCount: "",
+        collegesCount: 0,
+        outcome: "",
+        reportPhotos: [],
+        guests: [""],
+        treesPlanted: "",
+        bloodUnitsCollected: "",
+        rallyDistance: ""
+    });
+
 
 
     // Check if accessed from college dashboard (admin or college user)
@@ -188,6 +248,50 @@ const UnitDashboard = () => {
     useEffect(() => {
         fetchDashboardData();
     }, [navigate]);
+
+    const fetchDashboardEvents = async () => {
+        const token = localStorage.getItem("unitToken") || localStorage.getItem("nsstoken");
+        if (!token) return;
+
+        const unitCode = localStorage.getItem("nssunitCode");
+        const collegeCode = localStorage.getItem("nsscollegeCode");
+        if (!unitCode || !collegeCode) return;
+
+        setLoadingEvents(true);
+        try {
+            const res = await axios.get(`${import.meta.env.VITE_API_URL}/getEvents/${collegeCode}/${unitCode}`, {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+            if (res.data.success) {
+                setUnitEvents(res.data.unitEvents || []);
+                setCollegeEvents(res.data.collegeEvents || []);
+                setExternalEvents(res.data.externalEvents || []);
+            }
+        } catch (err) {
+            console.error("Error fetching events:", err);
+            toast.error("Failed to load events");
+        } finally {
+            setLoadingEvents(false);
+        }
+    };
+
+    useEffect(() => {
+        if (activeTab === "events") {
+            fetchDashboardEvents();
+            const collegeCode = localStorage.getItem("nsscollegeCode");
+            const unitCode = localStorage.getItem("nssunitCode");
+            if (collegeCode) {
+                axios.get(`${import.meta.env.VITE_API_URL}/units/${collegeCode}`)
+                    .then(res => {
+                        if (res.data.success) {
+                            const otherUnits = res.data.units.filter(u => u.unitNumber !== unitCode);
+                            setAvailableUnits(otherUnits);
+                        }
+                    })
+                    .catch(err => console.error("Error fetching units:", err));
+            }
+        }
+    }, [activeTab]);
 
     const handleExportExcel = () => {
         if (!filteredMembers) return;
@@ -503,13 +607,494 @@ const UnitDashboard = () => {
         }
     };
 
-    const handleAddEventClick = () => {
-        navigate('/events', { state: { unitCode: unit.unitNumber, collegeCode: college.code } });
+    // --- NSS Events Portal Methods ---
+    const CLOUDINARY_CLOUD_NAME = import.meta.env.VITE_CLOUD_NAME;
+    const CLOUDINARY_UPLOAD_PRESET = import.meta.env.VITE_UPLOAD_PRESET;
+    const CLOUDINARY_PDF_CLOUD_NAME = import.meta.env.VITE_PDF_CLOUD_NAME;
+    const CLOUDINARY_PDF_UPLOAD_PRESET = import.meta.env.VITE_PDF_UPLOAD_PRESET;
+
+    const standardCategories = [
+        "Blood Donation", "Tree Plantation", "Cleanliness Drive", "Awareness Program",
+        "Conference", "Seminar", "Workshop", "Sports", "Cultural", "Health",
+        "Environmental", "Social", "Exhibition", "Health care", "Creation of Assets"
+    ];
+
+    const [eventsTab, setEventsTab] = useState("all"); // "all" | "my" | "college" | "external"
+    const [volunteerSearch, setVolunteerSearch] = useState("");
+    const [isSubmittingReport, setIsSubmittingReport] = useState(false);
+    const [reportFiles, setReportFiles] = useState({ pdf: null, photos: [] });
+
+    const getEventStatus = (event) => {
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+
+        let startDate, endDate;
+
+        if (event.singleDay) {
+            startDate = new Date(event.date);
+            endDate = new Date(event.date);
+        } else {
+            startDate = new Date(event.dateFrom);
+            endDate = new Date(event.dateTo);
+        }
+
+        if (isNaN(startDate.getTime())) {
+            startDate = new Date();
+        }
+        if (isNaN(endDate.getTime())) {
+            endDate = new Date();
+        }
+
+        startDate.setHours(0, 0, 0, 0);
+        endDate.setHours(0, 0, 0, 0);
+
+        if (event.report && event.report.submittedAt) {
+            return { label: 'Report Submitted', color: 'var(--success-500)', bg: 'rgba(34,197,94,0.1)' };
+        }
+
+        if (today > endDate) {
+            return { label: 'Completed', color: 'var(--danger-500)', bg: 'rgba(239,68,68,0.1)' };
+        } else if (today < startDate) {
+            return { label: 'Upcoming', color: 'var(--primary-color)', bg: 'rgba(37,99,235,0.1)' };
+        } else {
+            return { label: 'Ongoing', color: 'var(--warning-500)', bg: 'rgba(245,158,11,0.1)' };
+        }
     };
 
-    const handleExploreEventClick = () => {
-        navigate('/explore-events', { state: { unitCode: unit.unitNumber, collegeCode: college.code } })
-    }
+    const renderEventCard = (event, isMyEvent, isExternalEvent) => {
+        const status = getEventStatus(event);
+        const dateStr = event.singleDay 
+            ? new Date(event.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+            : `${new Date(event.dateFrom).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} - ${new Date(event.dateTo).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`;
+
+        const isCompleted = status.label === 'Completed' || status.label === 'Report Submitted';
+
+        return (
+            <div key={event._id} className="card p-5 d-flex flex-column justify-content-between" style={{ height: '340px', background: 'var(--card)', overflow: 'hidden' }}>
+                <div>
+                    {/* Badges */}
+                    <div className="flex-between mb-2">
+                        <span className="badge" style={{ color: status.color, background: status.bg, fontSize: '0.7rem', padding: '0.2rem 0.5rem', borderRadius: '4px' }}>
+                            {status.label}
+                        </span>
+                        <span style={{ fontSize: '0.75rem', color: 'var(--txt-3)', fontWeight: 600 }}>
+                            {event.eventCode}
+                        </span>
+                    </div>
+
+                    {/* Title and Category */}
+                    <span className="badge badge-secondary mb-2" style={{ fontSize: '0.65rem' }}>{event.category}</span>
+                    <h4 style={{ 
+                        fontSize: '1.05rem', 
+                        fontWeight: 700, 
+                        margin: '0 0 6px', 
+                        color: 'var(--txt-1)',
+                        display: '-webkit-box',
+                        WebkitLineClamp: 2,
+                        WebkitBoxOrient: 'vertical',
+                        overflow: 'hidden',
+                        height: '2.6em',
+                        lineHeight: '1.3',
+                        wordBreak: 'break-word'
+                    }}>
+                        {event.name}
+                    </h4>
+
+                    {/* Description */}
+                    <p className="text-sm text-muted mb-3" style={{ 
+                        display: '-webkit-box',
+                        WebkitLineClamp: 2,
+                        WebkitBoxOrient: 'vertical',
+                        overflow: 'hidden',
+                        height: '2.8em',
+                        lineHeight: '1.4',
+                        margin: 0,
+                        wordBreak: 'break-word',
+                        overflowWrap: 'break-word'
+                    }}>
+                        {event.description}
+                    </p>
+                </div>
+
+                {/* Date, Venue and Buttons */}
+                <div>
+                    <div style={{ fontSize: '0.8rem', color: 'var(--txt-2)', borderTop: '1px solid var(--border)', paddingTop: '8px', marginBottom: '10px' }}>
+                        <div className="d-flex align-items-center gap-1 mb-1" style={{ fontSize: '0.75rem', color: 'var(--txt-3)' }}>
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                            <span>{dateStr}</span>
+                        </div>
+                        <div className="d-flex align-items-center gap-1" style={{ fontSize: '0.75rem', color: 'var(--txt-3)' }}>
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+                            <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{event.venue}</span>
+                        </div>
+                    </div>
+
+                    <div className="d-flex gap-2">
+                        <button className="btn btn-secondary btn-sm flex-grow-1" onClick={() => { setSelectedEvent(event); setShowDetailModal(true); }}>
+                            Details
+                        </button>
+                        {isCompleted && (isMyEvent || isExternalEvent) && (
+                            <button 
+                                className={`btn btn-sm ${event.report?.submittedAt ? 'btn-outline-success' : 'btn-success'} flex-grow-1`}
+                                onClick={(e) => handleOpenReportModal(event, e)}
+                            >
+                                {event.report?.submittedAt ? 'Edit Report' : 'Submit Report'}
+                            </button>
+                        )}
+                        {(isMyEvent || isExternalEvent) && !isCompleted && (
+                            <div className="d-flex gap-1">
+                                <button 
+                                    className="btn btn-secondary btn-sm" 
+                                    style={{ padding: '0.375rem' }} 
+                                    title="Edit Event"
+                                    onClick={() => handleOpenEventForm(true, event)}
+                                >
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 1 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                                </button>
+                                <button 
+                                    className="btn btn-danger btn-sm" 
+                                    style={{ padding: '0.375rem' }} 
+                                    title="Delete Event"
+                                    onClick={() => handleDeleteEventClick(event)}
+                                >
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                                </button>
+                            </div>
+                        )}
+                    </div>
+                </div>
+            </div>
+        );
+    };
+
+    const handleOpenEventForm = (isEdit, event = null, isExternal = false) => {
+        setIsEditingEvent(isEdit ? event : null);
+        setIsExternalEventForm(isEdit && event ? !!event.isExternal : isExternal);
+        if (isEdit && event) {
+            setEventForm({
+                name: event.name || "",
+                description: event.description || "",
+                category: standardCategories.includes(event.category) ? event.category : "Other",
+                otherCategory: standardCategories.includes(event.category) ? "" : (event.category || ""),
+                singleDay: event.singleDay ?? true,
+                date: event.date ? event.date.substring(0, 10) : "",
+                dateFrom: event.dateFrom ? event.dateFrom.substring(0, 10) : "",
+                dateTo: event.dateTo ? event.dateTo.substring(0, 10) : "",
+                timeFrom: event.timeFrom || "",
+                timeTo: event.timeTo || "",
+                venue: event.venue || "",
+                resourcePerson: event.resourcePerson || "",
+                level: event.level || "College",
+                sponsorship: event.sponsorship || "",
+                registeredMeriBharath: event.registeredMeriBharath || "No",
+                meriBharathUrl: event.meriBharathUrl || "",
+                images: event.images || [],
+                brochure: event.brochure || "",
+                attendees: event.attendees ? event.attendees.map(a => typeof a === 'object' ? a._id : a) : []
+            });
+            setCollaborators(event.collaborators || []);
+        } else {
+            setEventForm({
+                name: "",
+                description: "",
+                category: "Blood Donation",
+                otherCategory: "",
+                singleDay: true,
+                date: "",
+                dateFrom: "",
+                dateTo: "",
+                timeFrom: "",
+                timeTo: "",
+                venue: "",
+                resourcePerson: "",
+                level: "College",
+                sponsorship: "",
+                registeredMeriBharath: "No",
+                meriBharathUrl: "",
+                images: [],
+                brochure: "",
+                attendees: []
+            });
+            setCollaborators([]);
+        }
+        setSelectedFiles([]);
+        setBrochureFile(null);
+        setSelectedCollaborator("");
+        setVolunteerSearch("");
+        setShowEventFormModal(true);
+    };
+
+    const handleOpenReportModal = (event, e) => {
+        if (e) e.stopPropagation();
+        setReportingEvent(event);
+        setReportForm({
+            conductedOnDate: event.report?.conductedOnDate ?? true,
+            participantsCount: event.report?.participantsCount || "",
+            volunteersParticipated: event.report?.volunteersParticipated ?? event.report?.participantsCount ?? "",
+            beneficiariesCount: event.report?.beneficiariesCount || "",
+            collegesCount: event.report?.collegesCount || "",
+            outcome: event.report?.outcome || "",
+            reportPhotos: event.report?.reportPhotos || [],
+            guests: event.report?.guests && event.report.guests.length > 0 ? event.report.guests : [""],
+            treesPlanted: event.report?.treesPlanted || "",
+            bloodUnitsCollected: event.report?.bloodUnitsCollected || "",
+            rallyDistance: event.report?.rallyDistance || ""
+        });
+        setReportFiles({ pdf: null, photos: [] });
+        setShowReportModal(true);
+    };
+
+    const handleReportInputChange = (e) => {
+        const { name, value, type, checked } = e.target;
+        setReportForm(prev => ({
+            ...prev,
+            [name]: type === 'checkbox' ? checked : value
+        }));
+    };
+
+    const handleReportFileChange = (e) => {
+        const files = Array.from(e.target.files).slice(0, 5); // Max 5 photos
+        setReportFiles(prev => ({ ...prev, photos: files }));
+    };
+
+    const uploadToCloudinary = async (file, resourceType = 'image', isPdf = false) => {
+        const formData = new FormData();
+        formData.append('file', file);
+
+        const uploadPreset = isPdf ? CLOUDINARY_PDF_UPLOAD_PRESET : CLOUDINARY_UPLOAD_PRESET;
+        const cloudName = isPdf ? CLOUDINARY_PDF_CLOUD_NAME : CLOUDINARY_CLOUD_NAME;
+        const resourceType1 = isPdf ? 'raw' : 'image';
+        formData.append('upload_preset', uploadPreset);
+        const response = await axios.post(
+            `https://api.cloudinary.com/v1_1/${cloudName}/${resourceType1}/upload`,
+            formData
+        );
+        return response.data.secure_url;
+    };
+
+    const handleReportSubmit = async (e) => {
+        e.preventDefault();
+        if (reportFiles.photos.length === 0 && reportForm.reportPhotos.length === 0) {
+            toast.error("Please upload at least one photo (newspaper cutting, invitation, or certificate).");
+            return;
+        }
+        setIsSubmittingReport(true);
+        const toastId = toast.loading("Submitting report...");
+
+        try {
+            let photoUrls = [...reportForm.reportPhotos];
+
+            if (reportFiles.photos.length > 0) {
+                const uploadedPhotos = await Promise.all(
+                    reportFiles.photos.map(file => uploadToCloudinary(file, 'image', false))
+                );
+                photoUrls = [...photoUrls.slice(0, 5 - uploadedPhotos.length), ...uploadedPhotos].slice(0, 5);
+            }
+
+            const finalReportData = {
+                conductedOnDate: reportForm.conductedOnDate,
+                participantsCount: Number(reportForm.participantsCount),
+                volunteersParticipated: Number(reportForm.volunteersParticipated) || Number(reportForm.participantsCount) || 0,
+                collegesCount: reportForm.collegesCount,
+                outcome: reportForm.outcome,
+                guests: reportForm.guests.filter(g => g.trim() !== ""),
+                reportPhotos: photoUrls,
+                submittedAt: new Date(),
+                ...(reportForm.beneficiariesCount !== "" && { beneficiariesCount: Number(reportForm.beneficiariesCount) }),
+                ...(reportingEvent.category === 'Tree Plantation' && reportForm.treesPlanted !== "" && { treesPlanted: Number(reportForm.treesPlanted) }),
+                ...(reportingEvent.category === 'Blood Donation' && reportForm.bloodUnitsCollected !== "" && { bloodUnitsCollected: Number(reportForm.bloodUnitsCollected) }),
+                ...(['Cleanliness Rally', 'Road Safety Awareness'].includes(reportingEvent.category) && reportForm.rallyDistance !== "" && { rallyDistance: Number(reportForm.rallyDistance) })
+            };
+
+            const token = localStorage.getItem("unitToken") || localStorage.getItem("nsstoken");
+            const res = await axios.post(`${import.meta.env.VITE_API_URL}/submitReport`, {
+                eventId: reportingEvent._id,
+                reportData: finalReportData
+            }, {
+                headers: {
+                    Authorization: `Bearer ${token}`
+                }
+            });
+
+            if (res.data.success) {
+                toast.success("Report submitted successfully!", { id: toastId });
+                fetchDashboardEvents();
+                setShowReportModal(false);
+            }
+        } catch (err) {
+            console.error("Report submission error:", err);
+            toast.error("Failed to submit report.", { id: toastId });
+        } finally {
+            setIsSubmittingReport(false);
+        }
+    };
+
+    const handleEventFileChange = (e) => {
+        const files = Array.from(e.target.files);
+        const validFiles = [];
+        const invalidFiles = [];
+        const MAX_FILE_SIZE = 250 * 1024; // 250KB
+
+        for (const file of files) {
+            if (file.size > MAX_FILE_SIZE) {
+                invalidFiles.push(file.name);
+            } else {
+                validFiles.push(file);
+            }
+        }
+
+        if (invalidFiles.length > 0) {
+            toast.error(`Files exceed 250KB limit: ${invalidFiles.join(', ')}`);
+        }
+
+        setSelectedFiles(validFiles);
+    };
+
+    const handleUploadEventImages = async () => {
+        if (selectedFiles.length === 0) {
+            toast.error("Please select files first.");
+            return;
+        }
+
+        setUploading(true);
+        const imageUrls = [...eventForm.images];
+        const toastId = toast.loading("Uploading images...");
+
+        try {
+            for (const file of selectedFiles) {
+                const formData = new FormData();
+                formData.append('file', file);
+                formData.append('upload_preset', CLOUDINARY_UPLOAD_PRESET);
+
+                const response = await axios.post(
+                    `https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/image/upload`,
+                    formData
+                );
+                imageUrls.push(response.data.secure_url);
+            }
+
+            setEventForm(prev => ({ ...prev, images: imageUrls }));
+            setSelectedFiles([]);
+            toast.success("Images uploaded successfully!", { id: toastId });
+        } catch (error) {
+            console.error(error);
+            toast.error("Failed to upload images", { id: toastId });
+        } finally {
+            setUploading(false);
+        }
+    };
+
+    const handleUploadEventBrochure = async () => {
+        if (!brochureFile) return;
+
+        setUploadingBrochure(true);
+        const toastId = toast.loading("Uploading brochure...");
+        try {
+            const formData = new FormData();
+            formData.append('file', brochureFile);
+            formData.append('upload_preset', CLOUDINARY_PDF_UPLOAD_PRESET);
+
+            const response = await axios.post(
+                `https://api.cloudinary.com/v1_1/${CLOUDINARY_PDF_CLOUD_NAME}/raw/upload`,
+                formData
+            );
+            setEventForm(prev => ({ ...prev, brochure: response.data.secure_url }));
+            setBrochureFile(null);
+            toast.success("Brochure uploaded successfully!", { id: toastId });
+        } catch (error) {
+            console.error(error);
+            toast.error("Failed to upload brochure.", { id: toastId });
+        } finally {
+            setUploadingBrochure(false);
+        }
+    };
+
+    const handleSaveEvent = async (e) => {
+        e.preventDefault();
+
+        if (!eventForm.name || !eventForm.description || !eventForm.venue) {
+            toast.error("Please fill in Name, Description, and Venue.");
+            return;
+        }
+
+        const categoryValue = eventForm.category === "Other" ? eventForm.otherCategory : eventForm.category;
+        if (!categoryValue) {
+            toast.error("Please select or enter a category.");
+            return;
+        }
+
+        const token = localStorage.getItem("unitToken") || localStorage.getItem("nsstoken");
+        const unitCode = localStorage.getItem("nssunitCode");
+        const collegeCode = localStorage.getItem("nsscollegeCode");
+
+        const payload = {
+            ...eventForm,
+            category: categoryValue,
+            unitCode,
+            collegeCode,
+            isExternal: isExternalEventForm,
+            collaborators
+        };
+
+        if (!isExternalEventForm) {
+            delete payload.attendees;
+        }
+
+        const toastId = toast.loading("Saving event...");
+        try {
+            let res;
+            if (isEditingEvent) {
+                res = await axios.put(`${import.meta.env.VITE_API_URL}/updateEvent`, {
+                    eventId: isEditingEvent._id,
+                    eventData: payload
+                }, {
+                    headers: { Authorization: `Bearer ${token}` }
+                });
+            } else {
+                res = await axios.post(`${import.meta.env.VITE_API_URL}/addEvent`, {
+                    eventData: payload
+                }, {
+                    headers: { Authorization: `Bearer ${token}` }
+                });
+            }
+
+            if (res.data.success) {
+                toast.success(isEditingEvent ? "Event updated successfully!" : "Event created successfully!", { id: toastId });
+                setShowEventFormModal(false);
+                fetchDashboardEvents();
+            }
+        } catch (err) {
+            console.error(err);
+            toast.error(err.response?.data?.message || "Failed to save event", { id: toastId });
+        }
+    };
+
+    const handleDeleteEventClick = async (event) => {
+        if (!window.confirm(`Are you sure you want to delete "${event.name}"?`)) return;
+
+        const token = localStorage.getItem("unitToken") || localStorage.getItem("nsstoken");
+        const unitCode = localStorage.getItem("nssunitCode");
+        const collegeCode = localStorage.getItem("nsscollegeCode");
+
+        const toastId = toast.loading("Deleting event...");
+        try {
+            const res = await axios.post(`${import.meta.env.VITE_API_URL}/deleteEvent`, {
+                eventId: event._id,
+                unitCode,
+                collegeCode
+            }, {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+
+            if (res.data.success) {
+                toast.success("Event deleted successfully!", { id: toastId });
+                fetchDashboardEvents();
+            }
+        } catch (err) {
+            console.error(err);
+            toast.error("Failed to delete event", { id: toastId });
+        }
+    };
 
 
     const fetchUnassignedOfficers = async () => {
@@ -843,36 +1428,101 @@ const UnitDashboard = () => {
 
                 {activeTab === "events" && (
                     <div>
+                        {/* Header */}
                         <div className="flex-between mb-6" style={{ flexWrap: 'wrap', gap: '1rem' }}>
                             <div>
-                                <h1 style={{ fontSize: '1.75rem', fontWeight: 800, margin: 0, color: 'var(--txt-1)' }}>NSS Events Portal</h1>
-                                <p style={{ margin: 0, color: 'var(--txt-3)', fontSize: '0.9rem' }}>Create events and explore activities across other college units</p>
+                                <h1 style={{ fontSize: '1.75rem', fontWeight: 800, margin: 0, color: 'var(--txt-1)' }}>NSS Events</h1>
+                                <p style={{ margin: 0, color: 'var(--txt-3)', fontSize: '0.9rem' }}>Manage events and track student volunteer participation</p>
                             </div>
-                        </div>
-
-                        <div className="grid-cols-2 gap-4">
-                            <div className="card p-6 flex-column align-items-center text-center justify-content-center" style={{ minHeight: '240px' }}>
-                                <div style={{ width: '60px', height: '60px', borderRadius: '50%', background: 'rgba(20,184,166,0.1)', color: 'var(--success-color)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '1.25rem' }}>
-                                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-                                </div>
-                                <h3 className="mb-2">Create New Event</h3>
-                                <p className="text-sm text-muted mb-4" style={{ maxWidth: '320px' }}>Create and manage events for your unit, set dates, add descriptions, and track student attendance.</p>
-                                <button className="btn btn-primary btn-lg w-100" onClick={handleAddEventClick} style={{ maxWidth: '240px' }}>
-                                    Create Event
+                            <div className="d-flex gap-2">
+                                <button className="btn btn-outline-primary" onClick={() => handleOpenEventForm(false, null, true)}>
+                                    + Add External Event
                                 </button>
-                            </div>
-
-                            <div className="card p-6 flex-column align-items-center text-center justify-content-center" style={{ minHeight: '240px' }}>
-                                <div style={{ width: '60px', height: '60px', borderRadius: '50%', background: 'rgba(99,102,241,0.1)', color: 'var(--primary-color)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '1.25rem' }}>
-                                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
-                                </div>
-                                <h3 className="mb-2">Explore All Events</h3>
-                                <p className="text-sm text-muted mb-4" style={{ maxWidth: '320px' }}>Browse activities from other units, initiate collaborations, and view state or national level announcements.</p>
-                                <button className="btn btn-primary btn-lg w-100" onClick={handleExploreEventClick} style={{ maxWidth: '240px' }}>
-                                    Explore Events
+                                <button className="btn btn-primary" onClick={() => handleOpenEventForm(false, null, false)}>
+                                    + Add Unit Event
                                 </button>
                             </div>
                         </div>
+
+                        {/* Event Category Tabs */}
+                        <div className="d-flex gap-2 mb-6" style={{ borderBottom: '1px solid var(--border)', paddingBottom: '1rem', overflowX: 'auto' }}>
+                            <button className={`btn btn-sm ${eventsTab === 'all' ? 'btn-primary' : 'btn-secondary'}`} onClick={() => setEventsTab('all')}>
+                                All Events ({unitEvents.length + collegeEvents.length + externalEvents.length})
+                            </button>
+                            <button className={`btn btn-sm ${eventsTab === 'my' ? 'btn-primary' : 'btn-secondary'}`} onClick={() => setEventsTab('my')}>
+                                My Events ({unitEvents.length})
+                            </button>
+                            <button className={`btn btn-sm ${eventsTab === 'college' ? 'btn-primary' : 'btn-secondary'}`} onClick={() => setEventsTab('college')}>
+                                College Events ({collegeEvents.length})
+                            </button>
+                            <button className={`btn btn-sm ${eventsTab === 'external' ? 'btn-primary' : 'btn-secondary'}`} onClick={() => setEventsTab('external')}>
+                                External Events ({externalEvents.length})
+                            </button>
+                        </div>
+
+                        {loadingEvents ? (
+                            <div className="text-center py-10">
+                                <div style={{ fontSize: '1rem', color: 'var(--txt-3)' }}>Loading events...</div>
+                            </div>
+                        ) : (
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+                                {/* My Events */}
+                                {(eventsTab === 'all' || eventsTab === 'my') && (
+                                    <div>
+                                        <div className="flex-between mb-4">
+                                            <h3 className="text-lg mb-0" style={{ fontWeight: 700 }}>My Unit Events</h3>
+                                            {eventsTab === 'my' && (
+                                                <button className="btn btn-primary btn-sm" onClick={() => handleOpenEventForm(false, null, false)}>
+                                                    + Add Event
+                                                </button>
+                                            )}
+                                        </div>
+                                        {unitEvents.length === 0 ? (
+                                            <div className="card p-6 text-center text-muted" style={{ background: 'var(--card)' }}>No unit events created yet.</div>
+                                        ) : (
+                                            <div className="grid-cols-3 gap-4">
+                                                {unitEvents.map(event => renderEventCard(event, true, false))}
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
+
+                                {/* College Events */}
+                                {(eventsTab === 'all' || eventsTab === 'college') && (
+                                    <div>
+                                        <h3 className="text-lg mb-4" style={{ fontWeight: 700 }}>College Events</h3>
+                                        {collegeEvents.length === 0 ? (
+                                            <div className="card p-6 text-center text-muted" style={{ background: 'var(--card)' }}>No college events from other units.</div>
+                                        ) : (
+                                            <div className="grid-cols-3 gap-4">
+                                                {collegeEvents.map(event => renderEventCard(event, false, false))}
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
+
+                                {/* External Events */}
+                                {(eventsTab === 'all' || eventsTab === 'external') && (
+                                    <div>
+                                        <div className="flex-between mb-4">
+                                            <h3 className="text-lg mb-0" style={{ fontWeight: 700 }}>External Events Participated</h3>
+                                            {eventsTab === 'external' && (
+                                                <button className="btn btn-primary btn-sm" onClick={() => handleOpenEventForm(false, null, true)}>
+                                                    + Add External Event
+                                                </button>
+                                            )}
+                                        </div>
+                                        {externalEvents.length === 0 ? (
+                                            <div className="card p-6 text-center text-muted" style={{ background: 'var(--card)' }}>No external participations logged.</div>
+                                        ) : (
+                                            <div className="grid-cols-3 gap-4">
+                                                {externalEvents.map(event => renderEventCard(event, false, true))}
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
+                            </div>
+                        )}
                     </div>
                 )}
 
@@ -1654,6 +2304,658 @@ const UnitDashboard = () => {
                     </div>
                 </>
             )}
+            {/* Event Details Modal */}
+            {selectedEvent && !showReportModal && (
+                <div className="modal-overlay">
+                    <div className="modal-content" style={{ maxWidth: '800px', width: '90%', maxHeight: '90vh', overflowY: 'auto' }}>
+                        <div className="flex-between mb-4">
+                            <div>
+                                <span className="badge badge-secondary mb-1">{selectedEvent.category}</span>
+                                <h2 className="mb-0" style={{ fontSize: '1.5rem', fontWeight: 800 }}>{selectedEvent.name}</h2>
+                            </div>
+                            <button className="btn btn-sm btn-secondary" onClick={() => setSelectedEvent(null)}>&times;</button>
+                        </div>
+
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem', marginBottom: '1.5rem' }}>
+                            <div>
+                                <p className="mb-2"><strong>Venue:</strong> {selectedEvent.venue}</p>
+                                <p className="mb-2"><strong>Level:</strong> <span className="badge badge-primary">{selectedEvent.level || "College"}</span></p>
+                                <p className="mb-2"><strong>Sponsorship:</strong> {selectedEvent.sponsorship || "N/A"}</p>
+                            </div>
+                            <div>
+                                <p className="mb-2"><strong>Date:</strong> {selectedEvent.singleDay ? new Date(selectedEvent.date).toLocaleDateString() : `${new Date(selectedEvent.dateFrom).toLocaleDateString()} to ${new Date(selectedEvent.dateTo).toLocaleDateString()}`}</p>
+                                <p className="mb-2"><strong>Time:</strong> {selectedEvent.timeFrom || "N/A"} - {selectedEvent.timeTo || "N/A"}</p>
+                                {selectedEvent.resourcePerson && (
+                                    <p className="mb-2"><strong>Resource Person:</strong> {selectedEvent.resourcePerson}</p>
+                                )}
+                            </div>
+                        </div>
+
+                        <div className="mb-4">
+                            <h4 style={{ fontSize: '1rem', fontWeight: 700, marginBottom: '0.5rem' }}>Description</h4>
+                            <p className="text-muted" style={{ whiteSpace: 'pre-wrap', fontSize: '0.9rem' }}>{selectedEvent.description}</p>
+                        </div>
+
+                        {selectedEvent.brochure && (
+                            <div className="mb-4">
+                                <a href={selectedEvent.brochure} target="_blank" rel="noopener noreferrer" className="btn btn-secondary btn-sm">
+                                    📄 Download Brochure / Circular
+                                </a>
+                            </div>
+                        )}
+
+                        {selectedEvent.collaborators && selectedEvent.collaborators.length > 0 && (
+                            <div className="mb-4">
+                                <h4 style={{ fontSize: '1rem', fontWeight: 700, marginBottom: '0.5rem' }}>Collaborators / Co-Organizers</h4>
+                                <div className="d-flex flex-wrap gap-2">
+                                    {selectedEvent.collaborators.map((c, i) => (
+                                        <span key={i} className="badge badge-indigo" style={{ textTransform: 'none' }}>Unit {c}</span>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+
+                        {selectedEvent.attendees && selectedEvent.attendees.length > 0 && (
+                            <div className="mb-4">
+                                <h4 style={{ fontSize: '1rem', fontWeight: 700, marginBottom: '0.5rem' }}>Participation List ({selectedEvent.attendees.length} Volunteers)</h4>
+                                <div style={{ maxHeight: '180px', overflowY: 'auto', background: 'var(--bg-2)', padding: '10px', borderRadius: '8px', border: '1px solid var(--border)' }}>
+                                    <div className="d-flex flex-wrap gap-2">
+                                        {selectedEvent.attendees.map(attendee => (
+                                            <span key={attendee._id} className="badge badge-secondary" style={{ padding: '0.4rem 0.6rem', textTransform: 'none' }}>
+                                                {attendee.name} ({attendee.regNo}) - {attendee.dept}
+                                            </span>
+                                        ))}
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
+                        {selectedEvent.images && selectedEvent.images.length > 0 && (
+                            <div className="mb-4">
+                                <h4 style={{ fontSize: '1rem', fontWeight: 700, marginBottom: '0.5rem' }}>Event Photos</h4>
+                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(120px, 1fr))', gap: '0.5rem' }}>
+                                    {selectedEvent.images.map((img, idx) => (
+                                        <a href={img} target="_blank" rel="noopener noreferrer" key={idx} style={{ borderRadius: '6px', overflow: 'hidden', height: '90px', border: '1px solid var(--border)' }}>
+                                            <img src={img} alt={`Event photo ${idx + 1}`} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                        </a>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+
+                        <div className="pt-4" style={{ borderTop: '1px solid var(--border)' }}>
+                            <button className="btn btn-secondary w-100" onClick={() => setSelectedEvent(null)}>Close</button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Event Add/Edit Form Modal */}
+            {showEventFormModal && (
+                <div className="modal-overlay">
+                    <div className="modal-content" style={{ maxWidth: '800px', width: '95%', maxHeight: '90vh', overflowY: 'auto' }}>
+                        <div className="flex-between mb-4">
+                            <h2 className="mb-0" style={{ fontSize: '1.5rem', fontWeight: 800 }}>
+                                {isEditingEvent ? "Edit" : "Create"} {isExternalEventForm ? "External Event" : "Event"}
+                            </h2>
+                            <button className="btn btn-sm btn-secondary" onClick={() => setShowEventFormModal(false)}>&times;</button>
+                        </div>
+
+                        <form onSubmit={handleSaveEvent}>
+                            <div className="form-group mb-3">
+                                <label className="form-label">Event Name *</label>
+                                <input 
+                                    type="text" 
+                                    className="form-control" 
+                                    value={eventForm.name} 
+                                    onChange={(e) => setEventForm({ ...eventForm, name: e.target.value })} 
+                                    required 
+                                    placeholder="e.g. Blood Donation Drive 2026"
+                                />
+                            </div>
+
+                            <div className="form-group mb-3">
+                                <label className="form-label">Description *</label>
+                                <textarea 
+                                    className="form-control" 
+                                    rows="3" 
+                                    value={eventForm.description} 
+                                    onChange={(e) => setEventForm({ ...eventForm, description: e.target.value })} 
+                                    required
+                                    placeholder="Briefly describe the objectives and details of the event..."
+                                ></textarea>
+                            </div>
+
+                            <div className="grid-cols-2 gap-3 mb-3">
+                                <div className="form-group">
+                                    <label className="form-label">Category *</label>
+                                    <select 
+                                        className="form-control" 
+                                        value={eventForm.category} 
+                                        onChange={(e) => setEventForm({ ...eventForm, category: e.target.value })}
+                                    >
+                                        {standardCategories.map((cat, i) => (
+                                            <option key={i} value={cat}>{cat}</option>
+                                        ))}
+                                        <option value="Other">Other</option>
+                                    </select>
+                                </div>
+                                <div className="form-group">
+                                    <label className="form-label">Event Level *</label>
+                                    <select 
+                                        className="form-control" 
+                                        value={eventForm.level} 
+                                        onChange={(e) => setEventForm({ ...eventForm, level: e.target.value })}
+                                    >
+                                        <option value="College">College Level</option>
+                                        <option value="District">District Level</option>
+                                        <option value="University">University Level</option>
+                                        <option value="State">State Level</option>
+                                        <option value="National">National Level</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            {eventForm.category === "Other" && (
+                                <div className="form-group mb-3">
+                                    <label className="form-label">Enter Category Name *</label>
+                                    <input 
+                                        type="text" 
+                                        className="form-control" 
+                                        value={eventForm.otherCategory} 
+                                        onChange={(e) => setEventForm({ ...eventForm, otherCategory: e.target.value })} 
+                                        required 
+                                    />
+                                </div>
+                            )}
+
+                            <div className="form-group mb-3">
+                                <label className="d-flex align-items-center cursor-pointer" style={{ textTransform: 'none' }}>
+                                    <input 
+                                        type="checkbox" 
+                                        checked={eventForm.singleDay} 
+                                        onChange={(e) => setEventForm({ ...eventForm, singleDay: e.target.checked })} 
+                                        className="form-check-input me-2" 
+                                    />
+                                    <span>Is this a single day event?</span>
+                                </label>
+                            </div>
+
+                            {eventForm.singleDay ? (
+                                <div className="form-group mb-3">
+                                    <label className="form-label">Event Date *</label>
+                                    <input 
+                                        type="date" 
+                                        className="form-control" 
+                                        value={eventForm.date} 
+                                        onChange={(e) => setEventForm({ ...eventForm, date: e.target.value })} 
+                                        required 
+                                    />
+                                </div>
+                            ) : (
+                                <div className="grid-cols-2 gap-3 mb-3">
+                                    <div className="form-group">
+                                        <label className="form-label">Start Date *</label>
+                                        <input 
+                                            type="date" 
+                                            className="form-control" 
+                                            value={eventForm.dateFrom} 
+                                            onChange={(e) => setEventForm({ ...eventForm, dateFrom: e.target.value })} 
+                                            required 
+                                        />
+                                    </div>
+                                    <div className="form-group">
+                                        <label className="form-label">End Date *</label>
+                                        <input 
+                                            type="date" 
+                                            className="form-control" 
+                                            value={eventForm.dateTo} 
+                                            onChange={(e) => setEventForm({ ...eventForm, dateTo: e.target.value })} 
+                                            required 
+                                        />
+                                    </div>
+                                </div>
+                            )}
+
+                            <div className="grid-cols-2 gap-3 mb-3">
+                                <div className="form-group">
+                                    <label className="form-label">Start Time</label>
+                                    <input 
+                                        type="time" 
+                                        className="form-control" 
+                                        value={eventForm.timeFrom} 
+                                        onChange={(e) => setEventForm({ ...eventForm, timeFrom: e.target.value })} 
+                                    />
+                                </div>
+                                <div className="form-group">
+                                    <label className="form-label">End Time</label>
+                                    <input 
+                                        type="time" 
+                                        className="form-control" 
+                                        value={eventForm.timeTo} 
+                                        onChange={(e) => setEventForm({ ...eventForm, timeTo: e.target.value })} 
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="form-group mb-3">
+                                <label className="form-label">Venue *</label>
+                                <input 
+                                    type="text" 
+                                    className="form-control" 
+                                    value={eventForm.venue} 
+                                    onChange={(e) => setEventForm({ ...eventForm, venue: e.target.value })} 
+                                    required 
+                                    placeholder="e.g. College Seminar Hall"
+                                />
+                            </div>
+
+                            <div className="grid-cols-2 gap-3 mb-3">
+                                <div className="form-group">
+                                    <label className="form-label">Resource Person / Guest</label>
+                                    <input 
+                                        type="text" 
+                                        className="form-control" 
+                                        value={eventForm.resourcePerson} 
+                                        onChange={(e) => setEventForm({ ...eventForm, resourcePerson: e.target.value })} 
+                                        placeholder="e.g. Dr. John Doe"
+                                    />
+                                </div>
+                                <div className="form-group">
+                                    <label className="form-label">Sponsorship Details</label>
+                                    <input 
+                                        type="text" 
+                                        className="form-control" 
+                                        value={eventForm.sponsorship} 
+                                        onChange={(e) => setEventForm({ ...eventForm, sponsorship: e.target.value })} 
+                                        placeholder="e.g. Rotary Club / Self Funded"
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="grid-cols-2 gap-3 mb-3">
+                                <div className="form-group">
+                                    <label className="form-label">Register in MY Bharat Portal?</label>
+                                    <select 
+                                        className="form-control" 
+                                        value={eventForm.registeredMeriBharath} 
+                                        onChange={(e) => setEventForm({ ...eventForm, registeredMeriBharath: e.target.value })}
+                                    >
+                                        <option value="No">No</option>
+                                        <option value="Yes">Yes</option>
+                                    </select>
+                                </div>
+                                {eventForm.registeredMeriBharath === "Yes" && (
+                                    <div className="form-group">
+                                        <label className="form-label">MY Bharat Event URL</label>
+                                        <input 
+                                            type="text" 
+                                            className="form-control" 
+                                            value={eventForm.meriBharathUrl} 
+                                            onChange={(e) => setEventForm({ ...eventForm, meriBharathUrl: e.target.value })} 
+                                            placeholder="https://mybharat.gov.in/..."
+                                        />
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* Volunteer Selection checklist ONLY FOR EXTERNAL EVENTS */}
+                            {isExternalEventForm && (
+                                <div className="form-group mb-4" style={{ background: 'var(--bg-2)', padding: '15px', borderRadius: '8px', border: '1px solid var(--border)' }}>
+                                    <label className="fw-bold mb-2" style={{ fontSize: '0.8rem', color: 'var(--txt-1)' }}>Select Participating Volunteers *</label>
+                                    <input 
+                                        type="text" 
+                                        className="form-control mb-3" 
+                                        placeholder="Search volunteers by name or register number..." 
+                                        value={volunteerSearch} 
+                                        onChange={(e) => setVolunteerSearch(e.target.value)} 
+                                    />
+                                    <div style={{ maxHeight: '180px', overflowY: 'auto', border: '1px solid var(--border)', borderRadius: '6px', background: 'var(--card)', padding: '10px' }}>
+                                        {unit?.members?.filter(m => 
+                                            m.name?.toLowerCase().includes(volunteerSearch.toLowerCase()) || 
+                                            m.regNo?.toLowerCase().includes(volunteerSearch.toLowerCase())
+                                        ).map(m => {
+                                            const isChecked = eventForm.attendees?.includes(m._id);
+                                            return (
+                                                <label key={m._id} className="d-flex align-items-center mb-2 cursor-pointer text-sm" style={{ textTransform: 'none' }}>
+                                                    <input 
+                                                        type="checkbox" 
+                                                        checked={isChecked} 
+                                                        onChange={() => {
+                                                            const updated = isChecked
+                                                                ? eventForm.attendees.filter(id => id !== m._id)
+                                                                : [...(eventForm.attendees || []), m._id];
+                                                            setEventForm(prev => ({ ...prev, attendees: updated }));
+                                                        }} 
+                                                        className="form-check-input me-2" 
+                                                    />
+                                                    <span>{m.name} ({m.regNo}) - {m.dept}</span>
+                                                </label>
+                                            );
+                                        })}
+                                    </div>
+                                    <small className="text-muted d-block mt-2">
+                                        Selected: {eventForm.attendees?.length || 0} volunteer(s)
+                                    </small>
+                                </div>
+                            )}
+
+                            {/* Collaborations - ONLY FOR NON-EXTERNAL EVENTS */}
+                            {!isExternalEventForm && (
+                                <div className="form-group mb-4" style={{ background: 'var(--bg-2)', padding: '15px', borderRadius: '8px', border: '1px solid var(--border)' }}>
+                                    <label className="fw-bold mb-2" style={{ fontSize: '0.8rem', color: 'var(--txt-1)' }}>Co-Organizing Units (Collaborations)</label>
+                                    <div className="d-flex gap-2 mb-3">
+                                        <select 
+                                            className="form-control" 
+                                            value={selectedCollaborator} 
+                                            onChange={(e) => setSelectedCollaborator(e.target.value)}
+                                        >
+                                            <option value="">Select College Unit</option>
+                                            {availableUnits.map((u, i) => (
+                                                <option key={i} value={u.unitNumber}>Unit {u.unitNumber} ({u.name})</option>
+                                            ))}
+                                        </select>
+                                        <button 
+                                            type="button" 
+                                            className="btn btn-outline-primary"
+                                            onClick={() => {
+                                                if (selectedCollaborator && !collaborators.includes(selectedCollaborator)) {
+                                                    setCollaborators([...collaborators, selectedCollaborator]);
+                                                    setSelectedCollaborator("");
+                                                }
+                                            }}
+                                        >
+                                            Add
+                                        </button>
+                                    </div>
+                                    {collaborators.length > 0 && (
+                                        <div className="d-flex flex-wrap gap-2">
+                                            {collaborators.map((c, idx) => (
+                                                <span key={idx} className="badge badge-indigo d-flex align-items-center gap-1" style={{ textTransform: 'none' }}>
+                                                    Unit {c}
+                                                    <span 
+                                                        style={{ cursor: 'pointer', fontWeight: 'bold' }} 
+                                                        onClick={() => setCollaborators(collaborators.filter(item => item !== c))}
+                                                    >
+                                                        ✕
+                                                    </span>
+                                                </span>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+
+                            {/* Images and Brochure Upload */}
+                            <div className="grid-cols-2 gap-3 mb-4">
+                                <div className="form-group">
+                                    <label className="form-label">Upload Event Photos (Max 250KB each)</label>
+                                    <div className="d-flex gap-2">
+                                        <input 
+                                            type="file" 
+                                            className="form-control" 
+                                            accept="image/*" 
+                                            multiple 
+                                            onChange={handleEventFileChange} 
+                                        />
+                                        <button 
+                                            type="button" 
+                                            className="btn btn-secondary btn-sm"
+                                            disabled={uploading || selectedFiles.length === 0}
+                                            onClick={handleUploadEventImages}
+                                        >
+                                            {uploading ? "..." : "Upload"}
+                                        </button>
+                                    </div>
+                                    {eventForm.images && eventForm.images.length > 0 && (
+                                        <small className="text-success d-block mt-1">✓ {eventForm.images.length} photos uploaded</small>
+                                    )}
+                                </div>
+
+                                <div className="form-group">
+                                    <label className="form-label">Upload Circular / Brochure (PDF)</label>
+                                    <div className="d-flex gap-2">
+                                        <input 
+                                            type="file" 
+                                            className="form-control" 
+                                            accept="application/pdf" 
+                                            onChange={(e) => setBrochureFile(e.target.files[0])} 
+                                        />
+                                        <button 
+                                            type="button" 
+                                            className="btn btn-secondary btn-sm"
+                                            disabled={uploadingBrochure || !brochureFile}
+                                            onClick={handleUploadEventBrochure}
+                                        >
+                                            {uploadingBrochure ? "..." : "Upload"}
+                                        </button>
+                                    </div>
+                                    {eventForm.brochure && (
+                                        <small className="text-success d-block mt-1">✓ Circular / Brochure uploaded</small>
+                                    )}
+                                </div>
+                            </div>
+
+                            <div className="flex-between pt-4" style={{ borderTop: '1px solid var(--border)' }}>
+                                <button type="button" className="btn btn-secondary" onClick={() => setShowEventFormModal(false)}>Cancel</button>
+                                <button type="submit" className="btn btn-primary">
+                                    {isEditingEvent ? "Update Event" : "Create Event"}
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
+
+            {/* Event Report Form Modal */}
+            {showReportModal && reportingEvent && (
+                <div className="modal-overlay">
+                    <div className="modal-content" style={{ maxWidth: '800px', width: '95%', maxHeight: '90vh', overflowY: 'auto' }}>
+                        <div className="flex-between mb-4">
+                            <h2 className="mb-0" style={{ fontSize: '1.5rem', fontWeight: 800 }}>Event Report: {reportingEvent.name}</h2>
+                            <button className="btn btn-sm btn-secondary" onClick={() => setShowReportModal(false)}>&times;</button>
+                        </div>
+
+                        <form onSubmit={handleReportSubmit}>
+                            <div className="form-group mb-4 p-3" style={{ background: 'var(--bg-2)', borderRadius: '8px' }}>
+                                <label className="d-flex align-items-center cursor-pointer" style={{ textTransform: 'none' }}>
+                                    <input
+                                        type="checkbox"
+                                        name="conductedOnDate"
+                                        checked={reportForm.conductedOnDate}
+                                        onChange={handleReportInputChange}
+                                        className="form-check-input me-2"
+                                    />
+                                    <span>Was the event conducted on the scheduled date?</span>
+                                </label>
+                            </div>
+
+                            <div className="grid-cols-2 gap-3 mb-3">
+                                <div className="form-group">
+                                    <label className="form-label">Total Participants *</label>
+                                    <input
+                                        type="number"
+                                        name="participantsCount"
+                                        className="form-control"
+                                        value={reportForm.participantsCount}
+                                        onChange={handleReportInputChange}
+                                        required
+                                        placeholder="e.g. 50"
+                                    />
+                                </div>
+                                <div className="form-group">
+                                    <label className="form-label">Colleges Participated *</label>
+                                    <input
+                                        type="number"
+                                        name="collegesCount"
+                                        className="form-control"
+                                        value={reportForm.collegesCount}
+                                        onChange={handleReportInputChange}
+                                        required
+                                        placeholder="e.g. 1"
+                                    />
+                                </div>
+                            </div>
+
+                            {/* Tree Plantation specific field */}
+                            {reportingEvent.category === 'Tree Plantation' && (
+                                <div className="form-group mb-3 p-3" style={{ background: 'rgba(22,163,74,0.07)', border: '1px solid rgba(22,163,74,0.2)', borderRadius: '8px' }}>
+                                    <label className="form-label" style={{ color: 'var(--success-600)', fontWeight: 700 }}>
+                                        🌱 Number of Trees Planted *
+                                    </label>
+                                    <input
+                                        type="number"
+                                        name="treesPlanted"
+                                        className="form-control"
+                                        value={reportForm.treesPlanted}
+                                        onChange={handleReportInputChange}
+                                        required
+                                        min="1"
+                                        placeholder="e.g. 100"
+                                    />
+                                </div>
+                            )}
+
+                            {/* Blood Donation specific field */}
+                            {reportingEvent.category === 'Blood Donation' && (
+                                <div className="form-group mb-3 p-3" style={{ background: 'rgba(220,38,38,0.06)', border: '1px solid rgba(220,38,38,0.2)', borderRadius: '8px' }}>
+                                    <label className="form-label" style={{ color: 'var(--danger-600)', fontWeight: 700 }}>
+                                        🩸 Units of Blood Donated *
+                                    </label>
+                                    <input
+                                        type="number"
+                                        name="bloodUnitsCollected"
+                                        className="form-control"
+                                        value={reportForm.bloodUnitsCollected}
+                                        onChange={handleReportInputChange}
+                                        required
+                                        min="1"
+                                        placeholder="e.g. 25"
+                                    />
+                                </div>
+                            )}
+
+                            {/* Beneficiaries count — for health camps, anti-drug, voter, road safety, hosted meetings */}
+                            {['Health & Hygiene Awareness', 'Road Safety Awareness', 'Digital Literacy Workshop', 'Disaster Management Training'].includes(reportingEvent.category) && (
+                                <div className="form-group mb-3 p-3" style={{ background: 'rgba(99,102,241,0.06)', border: '1px solid rgba(99,102,241,0.2)', borderRadius: '8px' }}>
+                                    <label className="form-label" style={{ color: 'var(--primary-color)', fontWeight: 700 }}>
+                                        👥 Number of Beneficiaries
+                                    </label>
+                                    <input
+                                        type="number"
+                                        name="beneficiariesCount"
+                                        className="form-control"
+                                        value={reportForm.beneficiariesCount}
+                                        onChange={handleReportInputChange}
+                                        min="0"
+                                        placeholder="e.g. 200"
+                                    />
+                                </div>
+                            )}
+
+                            {/* Rally Distance — for Cleanliness Rally / Road Safety */}
+                            {['Cleanliness Rally', 'Road Safety Awareness'].includes(reportingEvent.category) && (
+                                <div className="form-group mb-3 p-3" style={{ background: 'rgba(245,158,11,0.06)', border: '1px solid rgba(245,158,11,0.2)', borderRadius: '8px' }}>
+                                    <label className="form-label" style={{ color: 'var(--warning-600)', fontWeight: 700 }}>
+                                        📍 Rally Distance (km)
+                                    </label>
+                                    <input
+                                        type="number"
+                                        name="rallyDistance"
+                                        className="form-control"
+                                        value={reportForm.rallyDistance}
+                                        onChange={handleReportInputChange}
+                                        min="0"
+                                        step="0.1"
+                                        placeholder="e.g. 3.5"
+                                    />
+                                </div>
+                            )}
+
+                            {/* Guests Dynamic list */}
+                            <div className="form-group mb-3 p-3" style={{ background: 'var(--bg-2)', borderRadius: '8px' }}>
+                                <div className="flex-between mb-2">
+                                    <label className="mb-0 fw-bold">Guest(s) / Resource Person(s)</label>
+                                    <button
+                                        type="button"
+                                        className="btn btn-sm btn-outline-primary"
+                                        onClick={() => setReportForm(prev => ({ ...prev, guests: [...prev.guests, ""] }))}
+                                    >
+                                        + Add Guest
+                                    </button>
+                                </div>
+                                {reportForm.guests?.map((guest, idx) => (
+                                    <div key={idx} className="d-flex gap-2 mb-2">
+                                        <input
+                                            type="text"
+                                            className="form-control"
+                                            value={guest}
+                                            placeholder={`Guest/Resource Person #${idx + 1}`}
+                                            onChange={(e) => {
+                                                const updatedGuests = [...reportForm.guests];
+                                                updatedGuests[idx] = e.target.value;
+                                                setReportForm(prev => ({ ...prev, guests: updatedGuests }));
+                                            }}
+                                            required
+                                        />
+                                        {reportForm.guests.length > 1 && (
+                                            <button
+                                                type="button"
+                                                className="btn btn-danger btn-sm"
+                                                onClick={() => {
+                                                    const updatedGuests = reportForm.guests.filter((_, i) => i !== idx);
+                                                    setReportForm(prev => ({ ...prev, guests: updatedGuests }));
+                                                }}
+                                            >
+                                                ✕
+                                            </button>
+                                        )}
+                                    </div>
+                                ))}
+                            </div>
+
+                            <div className="form-group mb-3">
+                                <label className="form-label">Outcome of the Event *</label>
+                                <textarea
+                                    name="outcome"
+                                    className="form-control"
+                                    rows="3"
+                                    value={reportForm.outcome}
+                                    onChange={handleReportInputChange}
+                                    required
+                                    placeholder="Describe the impact/outcome for students and community..."
+                                ></textarea>
+                            </div>
+
+                            <div className="form-group mb-4">
+                                <label className="form-label">Upload Report Photos ( Newspaper cuttings, certificate or invitation ) *</label>
+                                <div style={{ background: 'rgba(245,158,11,0.08)', border: '1px solid rgba(245,158,11,0.25)', color: 'var(--warning-700)', padding: '0.75rem', borderRadius: '6px', fontSize: '0.8rem', marginBottom: '0.75rem' }}>
+                                    ⚠️ <strong>Required:</strong> Please upload at least one photo showing <strong>Newspaper cuttings</strong>, <strong>invitation</strong>, or <strong>certificate</strong>. (Max: 5 photos in total)
+                                </div>
+                                <input
+                                    type="file"
+                                    accept="image/*"
+                                    multiple
+                                    className="form-control"
+                                    onChange={handleReportFileChange}
+                                />
+                                <small className="text-muted d-block mt-1">Select up to 5 best photos of the event.</small>
+                                {(reportForm.reportPhotos && reportForm.reportPhotos.length > 0) && (
+                                    <small className="text-success d-block mt-1">✓ {reportForm.reportPhotos.length} photos already attached</small>
+                                )}
+                            </div>
+
+                            <div className="flex-between pt-4" style={{ borderTop: '1px solid var(--border)' }}>
+                                <button type="button" className="btn btn-secondary" onClick={() => setShowReportModal(false)} disabled={isSubmittingReport}>Cancel</button>
+                                <button type="submit" className="btn btn-primary" disabled={isSubmittingReport}>
+                                    {isSubmittingReport ? "Submitting..." : "Submit Report"}
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
+
             {showEditPoModal && unit?.head && (
                 <ProgramOfficerModal
                     isOpen={showEditPoModal}
