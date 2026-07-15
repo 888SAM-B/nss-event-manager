@@ -200,10 +200,9 @@ const getUnitPeriodicalReportPrefill = async (req, res) => {
             const act = mapEventToActivity(evt);
             const reportData = evt.report || {};
             
-            // Prefer volunteersParticipated (set in event report form), fall back to participantsCount
-            const volunteers = (reportData.volunteersParticipated !== undefined && reportData.volunteersParticipated !== null && reportData.volunteersParticipated !== '')
-                ? Number(reportData.volunteersParticipated)
-                : Number(reportData.participantsCount) || 0;
+            // volunteersParticipated is set = participantsCount on every report submit (no separate UI field)
+            // Use participantsCount as primary source; volunteersParticipated as fallback for old records
+            const volunteers = Number(reportData.participantsCount) || Number(reportData.volunteersParticipated) || 0;
             const beneficiaries = Number(reportData.beneficiariesCount) || 0;
             
             switch(act) {
