@@ -91,7 +91,6 @@ const UnitDashboard = () => {
     const [reportForm, setReportForm] = useState({
         conductedOnDate: false,
         participantsCount: 0,
-        volunteersParticipated: 0,
         beneficiariesCount: "",
         collegesCount: 0,
         outcome: "",
@@ -830,7 +829,6 @@ const UnitDashboard = () => {
         setReportForm({
             conductedOnDate: event.report?.conductedOnDate ?? true,
             participantsCount: event.report?.participantsCount || "",
-            volunteersParticipated: event.report?.volunteersParticipated ?? event.report?.participantsCount ?? "",
             beneficiariesCount: event.report?.beneficiariesCount || "",
             collegesCount: event.report?.collegesCount || "",
             outcome: event.report?.outcome || "",
@@ -894,7 +892,8 @@ const UnitDashboard = () => {
             const finalReportData = {
                 conductedOnDate: reportForm.conductedOnDate,
                 participantsCount: Number(reportForm.participantsCount),
-                volunteersParticipated: Number(reportForm.volunteersParticipated) || Number(reportForm.participantsCount) || 0,
+                // volunteersParticipated always equals participantsCount — no separate UI field
+                volunteersParticipated: Number(reportForm.participantsCount) || 0,
                 collegesCount: reportForm.collegesCount,
                 outcome: reportForm.outcome,
                 guests: reportForm.guests.filter(g => g.trim() !== ""),
