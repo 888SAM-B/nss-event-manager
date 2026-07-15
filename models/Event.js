@@ -22,7 +22,7 @@ const eventSchema = new mongoose.Schema({
     unitId: { type: mongoose.Schema.Types.ObjectId, ref: 'Unit' }, // Primary Organizing Unit
     coOrganizers: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Unit' }], // Co-Organizing Units (V2)
     attendees: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Member' }], // Primary Unit Attendees (or legacy combined)
-    
+
     // Collaborators list for request flow
     collaborators: [{
         unitId: { type: mongoose.Schema.Types.ObjectId, ref: 'Unit' },
@@ -35,15 +35,16 @@ const eventSchema = new mongoose.Schema({
         participantsCount: Number,
         collegesCount: Number,
         outcome: String,
-        reportFile: String, // PDF URL / relative path
-        reportPhotos: Array, // Array of Image URLs / relative paths
-        guests: [String], // Guest / Resource person names
-        submittedAt: { type: Date, default: Date.now },
-        organizingUnits: [String], // Names of units involved
+        reportFile: String,          // PDF URL / relative path
+        reportPhotos: Array,         // Array of Image URLs / relative paths
+        guests: [String],            // Guest / Resource person names
+        submittedAt: { type: Date },
+        organizingUnits: [String],   // Names of units involved
         volunteersParticipated: Number,
-        beneficiaries: String,
+        beneficiariesCount: Number,  // No. of beneficiaries (numeric, used in prefill)
         treesPlanted: Number,        // For 'Tree Plantation' category events
-        bloodUnitsCollected: Number  // For 'Blood Donation' category events
+        bloodUnitsCollected: Number, // For 'Blood Donation' category events
+        rallyDistance: Number        // For 'Rallies' / 'Cleanliness Rally' category events (km)
     }
 });
 

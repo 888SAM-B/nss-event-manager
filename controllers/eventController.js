@@ -159,6 +159,7 @@ const getEvents = async (req, res) => {
 
         let unitEvents = [];
         let collegeEvents = [];
+        let externalEvents = [];
 
         if (unitCode && unitCode !== 'null' && unitCode !== 'undefined' && unitCode !== 'COLLEGE') {
             const unit = await Unit.findOne({ unitNumber: unitCode, collegeId: college._id });
@@ -168,25 +169,33 @@ const getEvents = async (req, res) => {
                     $or: [
                         { unitId: unit._id },
                         { coOrganizers: unit._id }
-                    ]
+                    ],
+                    isExternal: { $ne: true }
                 }).populate('attendees unitId coOrganizers');
 
                 // College Events: Other events in the college
                 collegeEvents = await Event.find({
                     collegeId: college._id,
                     unitId: { $ne: unit._id },
-                    coOrganizers: { $ne: unit._id }
+                    coOrganizers: { $ne: unit._id },
+                    isExternal: { $ne: true }
+                }).populate('attendees unitId coOrganizers');
+
+                // External Events
+                externalEvents = await Event.find({
+                    unitId: unit._id,
+                    isExternal: true
                 }).populate('attendees unitId coOrganizers');
             } else {
-                collegeEvents = await Event.find({ collegeId: college._id }).populate('attendees unitId coOrganizers');
+                collegeEvents = await Event.find({ collegeId: college._id, isExternal: { $ne: true } }).populate('attendees unitId coOrganizers');
             }
         } else {
-            collegeEvents = await Event.find({ collegeId: college._id }).populate('attendees unitId coOrganizers');
+            collegeEvents = await Event.find({ collegeId: college._id, isExternal: { $ne: true } }).populate('attendees unitId coOrganizers');
         }
 
-        const otherEvents = await Event.find({ collegeId: { $ne: college._id } }).populate('attendees unitId coOrganizers');
+        const otherEvents = await Event.find({ collegeId: { $ne: college._id }, isExternal: { $ne: true } }).populate('attendees unitId coOrganizers');
 
-        res.json({ success: true, unitEvents, collegeEvents, otherEvents });
+        res.json({ success: true, unitEvents, collegeEvents, otherEvents, externalEvents });
     } catch (error) {
         console.error("Error in getEvents:", error);
         res.status(500).json({ success: false, message: "Server error" });
@@ -324,7 +333,7 @@ const updateEvent = async (req, res) => {
         const updatableFields = [
             'name', 'description', 'category', 'singleDay', 'date', 'dateFrom', 'dateTo',
             'timeFrom', 'timeTo', 'venue', 'resourcePerson', 'level', 'sponsorship',
-            'registeredMeriBharath', 'meriBharathUrl', 'images', 'brochure'
+            'registeredMeriBharath', 'meriBharathUrl', 'images', 'brochure', 'attendees', 'isExternal'
         ];
 
         updatableFields.forEach(field => {

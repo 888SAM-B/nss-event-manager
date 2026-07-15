@@ -111,19 +111,24 @@ const getUnitPeriodicalReportPrefill = async (req, res) => {
         if (!unitObj) return res.status(404).json({ success: false, message: "Unit not found" });
 
         const events = await Event.find({
-            $or: [
-                { unitId: unitObj._id },
-                { coOrganizers: unitObj._id }
-            ],
-            $or: [
+            $and: [
                 {
-                    singleDay: true,
-                    date: { $gte: fromDate, $lte: toDate }
+                    unitId: unitObj._id,
+                    isExternal: { $ne: true },
+                    'report.submittedAt': { $exists: true, $ne: null }
                 },
                 {
-                    singleDay: false,
-                    dateFrom: { $lte: toDate },
-                    dateTo: { $gte: fromDate }
+                    $or: [
+                        {
+                            singleDay: true,
+                            date: { $gte: fromDate, $lte: toDate }
+                        },
+                        {
+                            singleDay: false,
+                            dateFrom: { $lte: toDate },
+                            dateTo: { $gte: fromDate }
+                        }
+                    ]
                 }
             ]
         });
@@ -185,12 +190,21 @@ const getUnitPeriodicalReportPrefill = async (req, res) => {
             any_other: { programmes: 0, colleges: 0, volunteers: 0, beneficiaries: 0, remarks: "" }
         };
 
+        console.log(`[PREFILL DEBUG] unitCode=${unitCode} collegeCode=${collegeCode} from=${fromDate} to=${toDate}`);
+        console.log(`[PREFILL DEBUG] unitObj._id=${unitObj._id} found ${events.length} events`);
+        events.forEach(evt => {
+            console.log(`  -> Event: "${evt.name}" | category="${evt.category}" | singleDay=${evt.singleDay} | date=${evt.date || ''} | dateFrom=${evt.dateFrom || ''} | dateTo=${evt.dateTo || ''} | submittedAt=${evt.report?.submittedAt} | treesPlanted=${evt.report?.treesPlanted} | bloodUnits=${evt.report?.bloodUnitsCollected} | volunteers=${evt.report?.volunteersParticipated}`);
+        });
+
         events.forEach(evt => {
             const act = mapEventToActivity(evt);
             const reportData = evt.report || {};
             
-            const volunteers = Number(reportData.volunteersParticipated) || Number(reportData.participantsCount) || 0;
-            const beneficiaries = Number(reportData.beneficiaries) || 0;
+            // Prefer volunteersParticipated (set in event report form), fall back to participantsCount
+            const volunteers = (reportData.volunteersParticipated !== undefined && reportData.volunteersParticipated !== null && reportData.volunteersParticipated !== '')
+                ? Number(reportData.volunteersParticipated)
+                : Number(reportData.participantsCount) || 0;
+            const beneficiaries = Number(reportData.beneficiariesCount) || 0;
             
             switch(act) {
                 case 'blood_donation':
@@ -245,7 +259,10 @@ const getUnitPeriodicalReportPrefill = async (req, res) => {
                     if (!activities.rallies.date) {
                         activities.rallies.date = evt.singleDay ? evt.date : evt.dateFrom;
                     }
-                    if (activities.rallies.distance === 0) {
+                    // Use explicit rallyDistance field, fall back to regex on description
+                    if (reportData.rallyDistance) {
+                        activities.rallies.distance += Number(reportData.rallyDistance);
+                    } else if (activities.rallies.distance === 0) {
                         const descMatch = (evt.description + ' ' + (reportData.outcome || '')).match(/(\d+(\.\d+)?)\s*km/i);
                         if (descMatch) {
                             activities.rallies.distance = parseFloat(descMatch[1]);
