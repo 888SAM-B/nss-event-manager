@@ -135,6 +135,100 @@ const CollegeDashboard = () => {
     const [activeTab, setActiveTab] = useState("overview");
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
+    // Events tab state
+    const [collegeEvents, setCollegeEvents] = useState([]);
+    const [externalEvents, setExternalEvents] = useState([]);
+    const [loadingEvents, setLoadingEvents] = useState(false);
+    const [eventsTab, setEventsTab] = useState('college');
+    const [eventsFetched, setEventsFetched] = useState(false);
+    const [selectedEvent, setSelectedEvent] = useState(null);
+    const [showEventDetailModal, setShowEventDetailModal] = useState(false);
+
+    const fetchCollegeEvents = async (code) => {
+        if (!code) return;
+        setLoadingEvents(true);
+        try {
+            const token = localStorage.getItem("nsstoken") || localStorage.getItem("adminToken");
+            const res = await axios.get(`${import.meta.env.VITE_API_URL}/getEvents/${code}/COLLEGE`, {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+            if (res.data.success) {
+                setCollegeEvents(res.data.collegeEvents || []);
+                setExternalEvents(res.data.externalEvents || []);
+                setEventsFetched(true);
+            }
+        } catch (err) {
+            console.error('Error fetching college events:', err);
+            toast.error('Failed to load events');
+        } finally {
+            setLoadingEvents(false);
+        }
+    };
+
+    const getEventStatus = (event) => {
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        let start, end;
+        if (event.singleDay) {
+            start = new Date(event.date); end = new Date(event.date);
+        } else {
+            start = new Date(event.dateFrom); end = new Date(event.dateTo);
+        }
+        start.setHours(0, 0, 0, 0); end.setHours(0, 0, 0, 0);
+        if (event.report?.submittedAt) return { label: 'Report Submitted', color: '#10b981', bg: 'rgba(16,185,129,0.12)' };
+        if (today > end) return { label: 'Completed', color: '#f59e0b', bg: 'rgba(245,158,11,0.12)' };
+        if (today < start) return { label: 'Upcoming', color: '#6366f1', bg: 'rgba(99,102,241,0.12)' };
+        return { label: 'Ongoing', color: '#3b82f6', bg: 'rgba(59,130,246,0.12)' };
+    };
+
+    const renderCollegeEventCard = (event) => {
+        const status = getEventStatus(event);
+        const dateStr = event.singleDay
+            ? new Date(event.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+            : `${new Date(event.dateFrom).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} – ${new Date(event.dateTo).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`;
+        return (
+            <div key={event._id} className="card p-5 d-flex flex-column justify-content-between" style={{ height: '340px', background: 'var(--card)', overflow: 'hidden' }}>
+                <div>
+                    <div className="flex-between mb-2">
+                        <span className="badge" style={{ color: status.color, background: status.bg, fontSize: '0.7rem', padding: '0.2rem 0.5rem', borderRadius: '4px' }}>
+                            {status.label}
+                        </span>
+                        <span style={{ fontSize: '0.75rem', color: 'var(--txt-3)', fontWeight: 600 }}>{event.eventCode}</span>
+                    </div>
+                    <span className="badge badge-secondary mb-2" style={{ fontSize: '0.65rem' }}>{event.category}</span>
+                    <h4 style={{ fontSize: '1.05rem', fontWeight: 700, margin: '0 0 6px', color: 'var(--txt-1)', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden', height: '2.6em', lineHeight: '1.3', wordBreak: 'break-word' }}>
+                        {event.name}
+                    </h4>
+                    <p className="text-sm text-muted mb-3" style={{ display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden', height: '2.8em', lineHeight: '1.4', margin: 0, wordBreak: 'break-word' }}>
+                        {event.description}
+                    </p>
+                </div>
+                <div>
+                    <div style={{ fontSize: '0.8rem', color: 'var(--txt-2)', borderTop: '1px solid var(--border)', paddingTop: '8px', marginBottom: '10px' }}>
+                        <div className="d-flex align-items-center gap-1 mb-1" style={{ fontSize: '0.75rem', color: 'var(--txt-3)' }}>
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2" /><line x1="16" y1="2" x2="16" y2="6" /><line x1="8" y1="2" x2="8" y2="6" /><line x1="3" y1="10" x2="21" y2="10" /></svg>
+                            <span>{dateStr}</span>
+                        </div>
+                        <div className="d-flex align-items-center gap-1" style={{ fontSize: '0.75rem', color: 'var(--txt-3)' }}>
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" /><circle cx="12" cy="10" r="3" /></svg>
+                            <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{event.venue}</span>
+                        </div>
+                    </div>
+                    <div className="d-flex gap-2">
+                        <button className="btn btn-secondary btn-sm flex-grow-1" onClick={() => { setSelectedEvent(event); setShowEventDetailModal(true); }}>
+                            Details
+                        </button>
+                        {event.unitId && (
+                            <span style={{ fontSize: '0.7rem', color: 'var(--txt-3)', alignSelf: 'center', whiteSpace: 'nowrap' }}>
+                                by {event.unitId?.unitNumber || 'Unknown'}
+                            </span>
+                        )}
+                    </div>
+                </div>
+            </div>
+        );
+    };
+
     const handleAddMember = () => {
         setNewMembers([...newMembers, {
             name: "",
@@ -585,6 +679,10 @@ const CollegeDashboard = () => {
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" /><circle cx="12" cy="10" r="3" /></svg>
                         Adopted Villages
                     </button>
+                    <button className={`sidebar-item ${activeTab === 'events' ? 'active' : ''}`} onClick={() => { setActiveTab('events'); setIsSidebarOpen(false); if (!eventsFetched) fetchCollegeEvents(insCode); }}>
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2" /><line x1="16" y1="2" x2="16" y2="6" /><line x1="8" y1="2" x2="8" y2="6" /><line x1="3" y1="10" x2="21" y2="10" /></svg>
+                        Events
+                    </button>
                 </div>
 
                 <div className="sidebar-footer">
@@ -616,9 +714,7 @@ const CollegeDashboard = () => {
                                 </div>
                             </div>
                             <div className="d-flex gap-2">
-                                <button className="btn btn-secondary" onClick={() => navigate('/explore-events', { state: { collegeCode: insCode, unitCode: 'COLLEGE', fromRole: 'college' } })}>
-                                    Explore Events
-                                </button>
+
                                 {isAdminViewing && (
                                     <button className="btn btn-secondary" onClick={() => navigate('/admin-dashboard')}>
                                         ← Admin
@@ -1062,7 +1158,105 @@ const CollegeDashboard = () => {
                         )}
                     </div>
                 )}
+
+                {activeTab === "events" && (
+                    <div>
+                        {/* Header */}
+                        <div className="flex-between mb-6" style={{ flexWrap: 'wrap', gap: '1rem' }}>
+                            <div>
+                                <h1 style={{ fontSize: '1.75rem', fontWeight: 800, margin: 0, color: 'var(--txt-1)' }}>College Events</h1>
+                                <p style={{ margin: 0, color: 'var(--txt-3)', fontSize: '0.9rem' }}>All events conducted by units in this college</p>
+                            </div>
+                            <button className="btn btn-secondary" onClick={() => fetchCollegeEvents(insCode)}>
+                                ↻ Refresh
+                            </button>
+                        </div>
+
+                        {/* Tab Filter */}
+                        <div className="d-flex gap-2 mb-6" style={{ borderBottom: '1px solid var(--border)', paddingBottom: '1rem', overflowX: 'auto' }}>
+                            <button className={`btn btn-sm ${eventsTab === 'college' ? 'btn-primary' : 'btn-secondary'}`} onClick={() => setEventsTab('college')}>
+                                College Events ({collegeEvents.length})
+                            </button>
+                            <button className={`btn btn-sm ${eventsTab === 'external' ? 'btn-primary' : 'btn-secondary'}`} onClick={() => setEventsTab('external')}>
+                                External Events ({externalEvents.length})
+                            </button>
+                        </div>
+
+                        {loadingEvents ? (
+                            <div className="text-center py-10">
+                                <div style={{ fontSize: '1rem', color: 'var(--txt-3)' }}>Loading events...</div>
+                            </div>
+                        ) : (
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+                                {eventsTab === 'college' && (
+                                    <div>
+                                        <h3 className="text-lg mb-4" style={{ fontWeight: 700 }}>College Events</h3>
+                                        {collegeEvents.length === 0 ? (
+                                            <div className="card p-6 text-center text-muted" style={{ background: 'var(--card)' }}>No college events found.</div>
+                                        ) : (
+                                            <div className="grid-cols-3 gap-4">
+                                                {collegeEvents.map(event => renderCollegeEventCard(event))}
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
+                                {eventsTab === 'external' && (
+                                    <div>
+                                        <h3 className="text-lg mb-4" style={{ fontWeight: 700 }}>External Events</h3>
+                                        {externalEvents.length === 0 ? (
+                                            <div className="card p-6 text-center text-muted" style={{ background: 'var(--card)' }}>No external events found.</div>
+                                        ) : (
+                                            <div className="grid-cols-3 gap-4">
+                                                {externalEvents.map(event => renderCollegeEventCard(event))}
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
+                            </div>
+                        )}
+                    </div>
+                )}
             </main>
+
+            {/* Event Detail Modal */}
+            {showEventDetailModal && selectedEvent && (
+                <div className="modal-overlay" onClick={() => setShowEventDetailModal(false)}>
+                    <div className="modal-content" style={{ maxWidth: '600px' }} onClick={e => e.stopPropagation()}>
+                        <div className="flex-between mb-4">
+                            <h2 className="mb-0" style={{ fontSize: '1.25rem', fontWeight: 700 }}>{selectedEvent.name}</h2>
+                            <button className="btn btn-sm btn-secondary" onClick={() => setShowEventDetailModal(false)}>&times;</button>
+                        </div>
+                        <div className="d-flex gap-2 mb-3" style={{ flexWrap: 'wrap' }}>
+                            <span className="badge badge-secondary">{selectedEvent.category}</span>
+                            <span className="badge" style={{ background: 'rgba(99,102,241,0.12)', color: 'var(--primary-color)' }}>{selectedEvent.level}</span>
+                            {selectedEvent.eventCode && <span style={{ fontSize: '0.75rem', color: 'var(--txt-3)', alignSelf: 'center' }}>{selectedEvent.eventCode}</span>}
+                        </div>
+                        <p style={{ color: 'var(--txt-2)', lineHeight: 1.6 }}>{selectedEvent.description}</p>
+                        <div className="grid-cols-2 gap-3 mt-3" style={{ fontSize: '0.85rem' }}>
+                            <div><span style={{ color: 'var(--txt-3)' }}>Date:</span> <strong>{selectedEvent.singleDay ? selectedEvent.date : `${selectedEvent.dateFrom} – ${selectedEvent.dateTo}`}</strong></div>
+                            <div><span style={{ color: 'var(--txt-3)' }}>Venue:</span> <strong>{selectedEvent.venue}</strong></div>
+                            <div><span style={{ color: 'var(--txt-3)' }}>Organising Unit:</span> <strong>{selectedEvent.unitId?.unitNumber || '—'}</strong></div>
+                            <div><span style={{ color: 'var(--txt-3)' }}>Sponsorship:</span> <strong>{selectedEvent.sponsorship || '—'}</strong></div>
+                            {selectedEvent.report?.submittedAt && (
+                                <>
+                                    <div><span style={{ color: 'var(--txt-3)' }}>Participants:</span> <strong>{selectedEvent.report.participantsCount}</strong></div>
+                                    <div><span style={{ color: 'var(--txt-3)' }}>Outcome:</span> <strong>{selectedEvent.report.outcome || '—'}</strong></div>
+                                </>
+                            )}
+                        </div>
+                        {selectedEvent.images?.length > 0 && (
+                            <div className="mt-4">
+                                <div style={{ fontSize: '0.8rem', color: 'var(--txt-3)', marginBottom: '0.5rem' }}>Event Images</div>
+                                <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                                    {selectedEvent.images.map((img, i) => (
+                                        <img key={i} src={img} alt="event" style={{ width: 80, height: 60, objectFit: 'cover', borderRadius: 6 }} />
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                </div>
+            )}
 
             {/* Modals & Overlays */}
             {showUnitModal && (

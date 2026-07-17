@@ -864,7 +864,7 @@ const Home = () => {
                                     <h3 style={{ fontSize: "1.25rem", fontWeight: 800, margin: 0, color: "var(--txt-1)" }}>NSS Song</h3>
                                 </div>
                                 <p style={{ fontSize: "0.925rem", color: "var(--txt-2)", lineHeight: "1.65", margin: 0, textAlign: "justify" }}>
-                                    During Silver Jubilee Year the NSS theme song has been composed. All NSS volunteers are requested to learn the theme song and sing the song during NSS programmes and celebrations. The theme song cassette is available and the theme song is given in the end of the Manual.
+                                    During Silver Jubilee Year the NSS theme song has been composed. All NSS volunteers are requested to learn the theme song and sing the song during NSS programmes and celebrations.
                                 </p>
                             </div>
                         </div>
