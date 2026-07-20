@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
+import EventsCalendar from './EventsCalendar';
 
 const Field = ({ label, value }) => (
     <div>
@@ -15,6 +16,13 @@ const AdminAllEvents = ({ subview = false }) => {
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
     const [filterCategory, setFilterCategory] = useState('all');
+    const [fromDate, setFromDate] = useState('');
+    const [toDate, setToDate] = useState('');
+    const [dateFilterType, setDateFilterType] = useState('all'); // 'all' | 'specific-month' | 'specific' | 'range'
+    const [specificDate, setSpecificDate] = useState('');
+    const [filterMonth, setFilterMonth] = useState(String(new Date().getMonth() + 1).padStart(2, '0'));
+    const [filterYear, setFilterYear] = useState(String(new Date().getFullYear()));
+    const [viewMode, setViewMode] = useState('list');
     const [selectedEvent, setSelectedEvent] = useState(null);
     const [currentPage, setCurrentPage] = useState(1);
     const itemsPerPage = 50;
@@ -39,10 +47,29 @@ const AdminAllEvents = ({ subview = false }) => {
     const filteredEvents = events.filter(event => {
         const matchesSearch = event.name.toLowerCase().includes(searchTerm.toLowerCase()) || event.eventCode?.toLowerCase().includes(searchTerm.toLowerCase()) || event.collegeId?.insName?.toLowerCase().includes(searchTerm.toLowerCase());
         const matchesCategory = filterCategory === 'all' || event.category === filterCategory;
-        return matchesSearch && matchesCategory;
+        const eventDate = event.singleDay ? event.date : event.dateFrom;
+        if (!eventDate) return matchesSearch && matchesCategory;
+
+        let matchesDate = true;
+        if (dateFilterType === 'specific-month') {
+            matchesDate = eventDate.substring(0, 7) === `${filterYear}-${filterMonth}`;
+        } else if (dateFilterType === 'specific') {
+            if (specificDate) {
+                if (event.singleDay) {
+                    matchesDate = event.date === specificDate;
+                } else {
+                    matchesDate = specificDate >= event.dateFrom && specificDate <= event.dateTo;
+                }
+            }
+        } else if (dateFilterType === 'range') {
+            matchesDate = (!fromDate && !toDate)
+                || (fromDate && toDate ? eventDate >= fromDate && eventDate <= toDate
+                    : fromDate ? eventDate >= fromDate : eventDate <= toDate);
+        }
+        return matchesSearch && matchesCategory && matchesDate;
     });
 
-    useEffect(() => { setCurrentPage(1); }, [searchTerm, filterCategory]);
+    useEffect(() => { setCurrentPage(1); }, [searchTerm, filterCategory, dateFilterType, specificDate, fromDate, toDate]);
 
     const totalPages = Math.ceil(filteredEvents.length / itemsPerPage);
     const paginatedEvents = filteredEvents.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
@@ -83,12 +110,112 @@ const AdminAllEvents = ({ subview = false }) => {
                         {categories.map(cat => <option key={cat} value={cat}>{cat === 'all' ? 'All Categories' : cat}</option>)}
                     </select>
                 </div>
+                {/* Date Filter Dropdown */}
+                <div style={{ display: 'flex', alignItems: 'flex-end', gap: '0.4rem', flex: '0 1 auto', flexWrap: 'nowrap' }}>
+                    <div style={{ minWidth: 0 }}>
+                        <label style={{ display: 'block', fontSize: '0.7rem', fontWeight: 600, color: 'var(--txt-3)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '0.35rem' }}>Date Filter</label>
+                        <select
+                            className="form-input"
+                            style={{ fontSize: '0.8125rem', padding: '0.45rem 0.75rem', minWidth: 120 }}
+                            value={dateFilterType}
+                            onChange={e => {
+                                setDateFilterType(e.target.value);
+                                setSpecificDate('');
+                                setFromDate('');
+                                setToDate('');
+                            }}
+                        >
+                            <option value="all">All Time</option>
+                            <option value="specific-month">Specific Month</option>
+                            <option value="specific">Specific Date</option>
+                            <option value="range">Date Range</option>
+                        </select>
+                    </div>
+
+                    {dateFilterType === 'specific-month' && (
+                        <>
+                            <div style={{ minWidth: 0 }}>
+                                <label style={{ display: 'block', fontSize: '0.7rem', fontWeight: 600, color: 'var(--txt-3)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '0.35rem' }}>Month</label>
+                                <select
+                                    className="form-input"
+                                    style={{ fontSize: '0.8125rem', padding: '0.45rem 0.75rem', minWidth: 80 }}
+                                    value={filterMonth}
+                                    onChange={e => setFilterMonth(e.target.value)}
+                                >
+                                    {['01', '02', '03', '04', '05', '06', '07', '08', '09', '10', '11', '12'].map(m => {
+                                        const label = new Date(2000, Number(m) - 1).toLocaleDateString('en-US', { month: 'short' });
+                                        return <option key={m} value={m}>{label}</option>;
+                                    })}
+                                </select>
+                            </div>
+                            <div style={{ minWidth: 0 }}>
+                                <label style={{ display: 'block', fontSize: '0.7rem', fontWeight: 600, color: 'var(--txt-3)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '0.35rem' }}>Year</label>
+                                <input
+                                    type="number"
+                                    className="form-input"
+                                    placeholder="Year"
+                                    style={{ fontSize: '0.8125rem', padding: '0.45rem 0.75rem', minWidth: 85, maxWidth: 100 }}
+                                    value={filterYear}
+                                    onChange={e => setFilterYear(e.target.value)}
+                                    min="1900"
+                                    max="2100"
+                                />
+                            </div>
+                        </>
+                    )}
+
+                    {dateFilterType === 'specific' && (
+                        <div style={{ minWidth: 0 }}>
+                            <label style={{ display: 'block', fontSize: '0.7rem', fontWeight: 600, color: 'var(--txt-3)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '0.35rem' }}>Select Date</label>
+                            <input type="date" className="form-input" style={{ fontSize: '0.8125rem', padding: '0.45rem 0.5rem', minWidth: 130 }} value={specificDate} onChange={e => setSpecificDate(e.target.value)} />
+                        </div>
+                    )}
+
+                    {dateFilterType === 'range' && (
+                        <>
+                            <div style={{ minWidth: 0 }}>
+                                <label style={{ display: 'block', fontSize: '0.7rem', fontWeight: 600, color: 'var(--txt-3)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '0.35rem' }}>From</label>
+                                <input type="date" className="form-input" style={{ fontSize: '0.8125rem', padding: '0.45rem 0.5rem', minWidth: 130 }} value={fromDate} onChange={e => setFromDate(e.target.value)} />
+                            </div>
+                            <span style={{ color: 'var(--txt-3)', paddingBottom: '0.45rem', fontSize: '0.9rem' }}>–</span>
+                            <div style={{ minWidth: 0 }}>
+                                <label style={{ display: 'block', fontSize: '0.7rem', fontWeight: 600, color: 'var(--txt-3)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '0.35rem' }}>To</label>
+                                <input type="date" className="form-input" style={{ fontSize: '0.8125rem', padding: '0.45rem 0.5rem', minWidth: 130 }} value={toDate} onChange={e => setToDate(e.target.value)} />
+                            </div>
+                        </>
+                    )}
+
+                    {dateFilterType !== 'all' && (
+                        <button style={{ fontSize: '0.75rem', padding: '0.45rem 0.5rem', cursor: 'pointer', background: 'var(--bg-2)', border: '1px solid var(--border)', borderRadius: '0.375rem', color: 'var(--txt-2)' }} onClick={() => { setDateFilterType('all'); setSpecificDate(''); setFromDate(''); setToDate(''); }}>✕</button>
+                    )}
+                </div>
+                {/* View Toggle */}
+                <div style={{ display: 'flex', alignItems: 'flex-end', gap: '0.35rem', marginLeft: 'auto' }}>
+                    <button
+                        onClick={() => setViewMode('list')}
+                        title="List view"
+                        style={{ padding: '0.45rem 0.6rem', borderRadius: '0.375rem', border: '1px solid var(--border)', background: viewMode === 'list' ? 'var(--brand-600)' : 'var(--card)', color: viewMode === 'list' ? '#fff' : 'var(--txt-2)', cursor: 'pointer', fontSize: '0.85rem' }}
+                    >☰</button>
+                    <button
+                        onClick={() => setViewMode('calendar')}
+                        title="Calendar view"
+                        style={{ padding: '0.45rem 0.6rem', borderRadius: '0.375rem', border: '1px solid var(--border)', background: viewMode === 'calendar' ? 'var(--brand-600)' : 'var(--card)', color: viewMode === 'calendar' ? '#fff' : 'var(--txt-2)', cursor: 'pointer', fontSize: '0.85rem' }}
+                    >📅</button>
+                </div>
                 <div style={{ fontSize: '0.75rem', color: 'var(--txt-3)', whiteSpace: 'nowrap', paddingBottom: '0.1rem' }}>
-                    <span style={{ fontWeight: 700, color: 'var(--txt-1)' }}>{filteredEvents.length}</span> of {events.length}
+                    <span style={{ fontWeight: 700, color: 'var(--txt-1)' }}>{viewMode === 'list' ? filteredEvents.length : events.length}</span> of {events.length}
                 </div>
             </div>
 
-            {/* Table */}
+            {/* Calendar View */}
+            {viewMode === 'calendar' && (
+                <div style={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: '0.5rem', padding: '1.5rem' }}>
+                    <EventsCalendar events={events} />
+                </div>
+            )}
+
+            {/* Table View */}
+            {viewMode === 'list' && (
             <div style={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: '0.5rem', overflow: 'hidden' }}>
                 {filteredEvents.length === 0 ? (
                     <div style={{ padding: '3rem', textAlign: 'center', color: 'var(--txt-3)', fontSize: '0.875rem' }}>No events found matching your criteria.</div>
@@ -150,6 +277,7 @@ const AdminAllEvents = ({ subview = false }) => {
                     </div>
                 )}
             </div>
+            )}
 
             {/* Event Details Modal */}
             {selectedEvent && (

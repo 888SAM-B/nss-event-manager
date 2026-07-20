@@ -10,6 +10,8 @@ const AdminAllStudents = ({ subview = false }) => {
     const [searchTerm, setSearchTerm] = useState("");
     const [collegeFilter, setCollegeFilter] = useState("");
     const [communityFilter, setCommunityFilter] = useState("");
+    const [batchFilter, setBatchFilter] = useState("");
+    const [bloodGroupFilter, setBloodGroupFilter] = useState("");
     const [selectedStudent, setSelectedStudent] = useState(null);
     const [showEnrolmentModal, setShowEnrolmentModal] = useState(false);
     const [currentPage, setCurrentPage] = useState(1);
@@ -36,10 +38,12 @@ const AdminAllStudents = ({ subview = false }) => {
         const regNoMatch = s.regNo.toLowerCase().includes(searchTerm.toLowerCase());
         const collegeMatch = collegeFilter === "" || s.collegeId?.insName.toLowerCase().includes(collegeFilter.toLowerCase()) || s.collegeId?.code === collegeFilter;
         const communityMatch = communityFilter === "" || s.community === communityFilter;
-        return (nameMatch || regNoMatch) && collegeMatch && communityMatch;
+        const batchMatch = batchFilter === "" || String(s.batchFrom) === batchFilter || String(s.batchTo) === batchFilter;
+        const bloodGroupMatch = bloodGroupFilter === "" || s.bloodGroup === bloodGroupFilter;
+        return (nameMatch || regNoMatch) && collegeMatch && communityMatch && batchMatch && bloodGroupMatch;
     }).sort((a, b) => (a.collegeId?.insName || "").localeCompare(b.collegeId?.insName || ""));
 
-    useEffect(() => { setCurrentPage(1); }, [searchTerm, collegeFilter, communityFilter]);
+    useEffect(() => { setCurrentPage(1); }, [searchTerm, collegeFilter, communityFilter, batchFilter, bloodGroupFilter]);
 
     const totalPages = Math.ceil(filteredStudents.length / itemsPerPage);
     const paginatedStudents = filteredStudents.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
@@ -66,7 +70,11 @@ const AdminAllStudents = ({ subview = false }) => {
                     <label style={{ display: 'block', fontSize: '0.7rem', fontWeight: 600, color: 'var(--txt-3)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '0.35rem' }}>College</label>
                     <input className="form-input" style={{ fontSize: '0.8125rem', padding: '0.45rem 0.75rem' }} placeholder="College name or code..." value={collegeFilter} onChange={e => setCollegeFilter(e.target.value)} />
                 </div>
-                <div style={{ flex: '0 1 160px', minWidth: 0 }}>
+                <div style={{ flex: '0 1 120px', minWidth: 0 }}>
+                    <label style={{ display: 'block', fontSize: '0.7rem', fontWeight: 600, color: 'var(--txt-3)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '0.35rem' }}>Batch</label>
+                    <input className="form-input" style={{ fontSize: '0.8125rem', padding: '0.45rem 0.75rem' }} placeholder="e.g. 2022" value={batchFilter} onChange={e => setBatchFilter(e.target.value)} />
+                </div>
+                <div style={{ flex: '0 1 140px', minWidth: 0 }}>
                     <label style={{ display: 'block', fontSize: '0.7rem', fontWeight: 600, color: 'var(--txt-3)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '0.35rem' }}>Community</label>
                     <select className="form-input" style={{ fontSize: '0.8125rem', padding: '0.45rem 0.75rem' }} value={communityFilter} onChange={e => setCommunityFilter(e.target.value)}>
                         <option value="">All</option>
@@ -78,7 +86,36 @@ const AdminAllStudents = ({ subview = false }) => {
                         <option value="ST">ST</option>
                     </select>
                 </div>
-                <div style={{ fontSize: '0.75rem', color: 'var(--txt-3)', whiteSpace: 'nowrap', paddingBottom: '0.1rem' }}>
+                <div style={{ flex: '0 1 140px', minWidth: 0 }}>
+                    <label style={{ display: 'block', fontSize: '0.7rem', fontWeight: 600, color: 'var(--txt-3)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '0.35rem' }}>Blood Group</label>
+                    <select className="form-input" style={{ fontSize: '0.8125rem', padding: '0.45rem 0.75rem' }} value={bloodGroupFilter} onChange={e => setBloodGroupFilter(e.target.value)}>
+                        <option value="">All</option>
+                        <option value="A+">A+</option>
+                        <option value="A-">A-</option>
+                        <option value="B+">B+</option>
+                        <option value="B-">B-</option>
+                        <option value="O+">O+</option>
+                        <option value="O-">O-</option>
+                        <option value="AB+">AB+</option>
+                        <option value="AB-">AB-</option>
+                    </select>
+                </div>
+                {(searchTerm || collegeFilter || communityFilter || batchFilter || bloodGroupFilter) && (
+                    <button
+                        className="btn btn-secondary"
+                        style={{ height: '34px', fontSize: '0.75rem', padding: '0 0.75rem', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                        onClick={() => {
+                            setSearchTerm("");
+                            setCollegeFilter("");
+                            setCommunityFilter("");
+                            setBatchFilter("");
+                            setBloodGroupFilter("");
+                        }}
+                    >
+                        ✕ Clear
+                    </button>
+                )}
+                <div style={{ fontSize: '0.75rem', color: 'var(--txt-3)', whiteSpace: 'nowrap', paddingBottom: '0.1rem', marginLeft: 'auto' }}>
                     <span style={{ fontWeight: 700, color: 'var(--txt-1)' }}>{filteredStudents.length}</span> of {students.length}
                 </div>
             </div>

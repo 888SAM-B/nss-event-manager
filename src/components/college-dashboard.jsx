@@ -8,6 +8,7 @@ import toast from 'react-hot-toast';
 import ThemeToggle from "./ThemeToggle";
 import ProgramOfficerModal from "./ProgramOfficerModal";
 import VolunteerEnrolmentModal from "./VolunteerEnrolmentModal";
+import EventsCalendar from "./EventsCalendar";
 
 const CollegeDashboard = () => {
     const username = localStorage.getItem("nss_username");
@@ -124,6 +125,7 @@ const CollegeDashboard = () => {
     const [assignTargetUnit, setAssignTargetUnit] = useState("");
     const [isAssigning, setIsAssigning] = useState(false);
     const [memberCommunityFilter, setMemberCommunityFilter] = useState("");
+    const [memberBloodGroupFilter, setMemberBloodGroupFilter] = useState("");
     const [currentMemberPage, setCurrentMemberPage] = useState(1);
     const membersPerPage = 50;
 
@@ -143,6 +145,12 @@ const CollegeDashboard = () => {
     const [eventsFetched, setEventsFetched] = useState(false);
     const [selectedEvent, setSelectedEvent] = useState(null);
     const [showEventDetailModal, setShowEventDetailModal] = useState(false);
+    const [fromDate, setFromDate] = useState('');
+    const [toDate, setToDate] = useState('');
+    const [dateFilterType, setDateFilterType] = useState('all'); // 'all' | 'specific-month' | 'specific' | 'range'
+    const [specificDate, setSpecificDate] = useState('');
+    const [filterMonth, setFilterMonth] = useState(String(new Date().getMonth() + 1).padStart(2, '0'));
+    const [filterYear, setFilterYear] = useState(String(new Date().getFullYear()));
 
     const fetchCollegeEvents = async (code) => {
         if (!code) return;
@@ -571,13 +579,14 @@ const CollegeDashboard = () => {
         const matchesUnit = filterUnit === "" || m.unitId?.unitNumber === filterUnit;
         const matchesBatch = filterBatch === "" || m.batchFrom === filterBatch || m.batchTo === filterBatch;
         const matchesCommunity = memberCommunityFilter === "" || m.community === memberCommunityFilter;
-        return matchesSearch && matchesUnit && matchesBatch && matchesCommunity;
+        const matchesBloodGroup = memberBloodGroupFilter === "" || m.bloodGroup === memberBloodGroupFilter;
+        return matchesSearch && matchesUnit && matchesBatch && matchesCommunity && matchesBloodGroup;
     });
 
     // Reset member page when filters change
     useEffect(() => {
         setCurrentMemberPage(1);
-    }, [memberSearch, filterUnit, filterBatch, memberCommunityFilter]);
+    }, [memberSearch, filterUnit, filterBatch, memberCommunityFilter, memberBloodGroupFilter]);
 
     // Fetch members when student tab is active
     useEffect(() => {
@@ -963,8 +972,8 @@ const CollegeDashboard = () => {
                         </div>
 
                         <div className="card mb-6">
-                            <div className="grid-cols-4 gap-3 mb-4">
-                                <div className="form-group">
+                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '0.75rem', marginBottom: '1rem', alignItems: 'flex-end' }}>
+                                <div className="form-group" style={{ marginBottom: 0 }}>
                                     <label className="text-xs">Search (Name/RegNo)</label>
                                     <input
                                         className="form-input"
@@ -973,7 +982,7 @@ const CollegeDashboard = () => {
                                         onChange={(e) => setMemberSearch(e.target.value)}
                                     />
                                 </div>
-                                <div className="form-group">
+                                <div className="form-group" style={{ marginBottom: 0 }}>
                                     <label className="text-xs">Filter by Unit</label>
                                     <select className="form-input" value={filterUnit} onChange={(e) => setFilterUnit(e.target.value)}>
                                         <option value="">All Units</option>
@@ -982,7 +991,7 @@ const CollegeDashboard = () => {
                                         ))}
                                     </select>
                                 </div>
-                                <div className="form-group">
+                                <div className="form-group" style={{ marginBottom: 0 }}>
                                     <label className="text-xs">Filter by Batch (Year)</label>
                                     <input
                                         className="form-input"
@@ -991,7 +1000,7 @@ const CollegeDashboard = () => {
                                         onChange={(e) => setFilterBatch(e.target.value)}
                                     />
                                 </div>
-                                <div className="form-group">
+                                <div className="form-group" style={{ marginBottom: 0 }}>
                                     <label className="text-xs">Filter by Community</label>
                                     <select
                                         className="form-input"
@@ -1007,6 +1016,39 @@ const CollegeDashboard = () => {
                                         <option value="ST">ST</option>
                                     </select>
                                 </div>
+                                <div className="form-group" style={{ marginBottom: 0 }}>
+                                    <label className="text-xs">Filter by Blood Group</label>
+                                    <select
+                                        className="form-input"
+                                        value={memberBloodGroupFilter}
+                                        onChange={(e) => setMemberBloodGroupFilter(e.target.value)}
+                                    >
+                                        <option value="">All Blood Groups</option>
+                                        <option value="A+">A+</option>
+                                        <option value="A-">A-</option>
+                                        <option value="B+">B+</option>
+                                        <option value="B-">B-</option>
+                                        <option value="O+">O+</option>
+                                        <option value="O-">O-</option>
+                                        <option value="AB+">AB+</option>
+                                        <option value="AB-">AB-</option>
+                                    </select>
+                                </div>
+                                {(memberSearch || filterUnit || filterBatch || memberCommunityFilter || memberBloodGroupFilter) && (
+                                    <button
+                                        className="btn btn-secondary"
+                                        style={{ height: '38px', padding: '0 0.75rem', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                                        onClick={() => {
+                                            setMemberSearch("");
+                                            setFilterUnit("");
+                                            setFilterBatch("");
+                                            setMemberCommunityFilter("");
+                                            setMemberBloodGroupFilter("");
+                                        }}
+                                    >
+                                        ✕ Clear
+                                    </button>
+                                )}
                             </div>
 
                             <div style={{ overflowX: 'auto' }}>
@@ -1172,48 +1214,169 @@ const CollegeDashboard = () => {
                             </button>
                         </div>
 
-                        {/* Tab Filter */}
-                        <div className="d-flex gap-2 mb-6" style={{ borderBottom: '1px solid var(--border)', paddingBottom: '1rem', overflowX: 'auto' }}>
-                            <button className={`btn btn-sm ${eventsTab === 'college' ? 'btn-primary' : 'btn-secondary'}`} onClick={() => setEventsTab('college')}>
+                        {/* Tab Filter + Date Range Filter */}
+                        <div className="d-flex gap-2 mb-6" style={{ borderBottom: '1px solid var(--border)', paddingTop: '0.5rem', paddingBottom: '1rem', overflowX: 'auto', flexWrap: 'wrap', alignItems: 'center' }}>
+                            <button className={`btn btn-sm ${eventsTab === 'college' ? 'btn-primary' : 'btn-secondary'}`} onClick={() => { setEventsTab('college'); setDateFilterType('all'); setSpecificDate(''); setFromDate(''); setToDate(''); }}>
                                 College Events ({collegeEvents.length})
                             </button>
-                            <button className={`btn btn-sm ${eventsTab === 'external' ? 'btn-primary' : 'btn-secondary'}`} onClick={() => setEventsTab('external')}>
+                            <button className={`btn btn-sm ${eventsTab === 'external' ? 'btn-primary' : 'btn-secondary'}`} onClick={() => { setEventsTab('external'); setDateFilterType('all'); setSpecificDate(''); setFromDate(''); setToDate(''); }}>
                                 External Events ({externalEvents.length})
                             </button>
+                            <button className={`btn btn-sm ${eventsTab === 'calendar' ? 'btn-primary' : 'btn-secondary'}`} onClick={() => { setEventsTab('calendar'); setDateFilterType('all'); setSpecificDate(''); setFromDate(''); setToDate(''); }}>
+                                📅 Calendar
+                            </button>
+
+                            {/* Date Filter Dropdown — hidden in Calendar view */}
+                            {eventsTab !== 'calendar' && (
+                                <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '0.5rem', flexShrink: 0, flexWrap: 'nowrap' }}>
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ color: 'var(--txt-3)' }}><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                                    <select
+                                        className="form-input"
+                                        style={{ fontSize: '0.8rem', padding: '0.3rem 0.5rem', borderRadius: '6px', height: 34, minWidth: 120 }}
+                                        value={dateFilterType}
+                                        onChange={e => {
+                                            setDateFilterType(e.target.value);
+                                            setSpecificDate('');
+                                            setFromDate('');
+                                            setToDate('');
+                                        }}
+                                    >
+                                        <option value="all">All Time</option>
+                                        <option value="specific-month">Specific Month</option>
+                                        <option value="specific">Specific Date</option>
+                                        <option value="range">Date Range</option>
+                                    </select>
+
+                                    {dateFilterType === 'specific-month' && (
+                                        <>
+                                            <select
+                                                className="form-input"
+                                                style={{ fontSize: '0.8rem', padding: '0.3rem 0.5rem', borderRadius: '6px', height: 34, minWidth: 80 }}
+                                                value={filterMonth}
+                                                onChange={e => setFilterMonth(e.target.value)}
+                                            >
+                                                {['01', '02', '03', '04', '05', '06', '07', '08', '09', '10', '11', '12'].map(m => {
+                                                    const label = new Date(2000, Number(m) - 1).toLocaleDateString('en-US', { month: 'short' });
+                                                    return <option key={m} value={m}>{label}</option>;
+                                                })}
+                                            </select>
+                                            <input
+                                                type="number"
+                                                className="form-input"
+                                                placeholder="Year"
+                                                style={{ fontSize: '0.8rem', padding: '0.3rem 0.5rem', borderRadius: '6px', height: 34, minWidth: 85, maxWidth: 100 }}
+                                                value={filterYear}
+                                                onChange={e => setFilterYear(e.target.value)}
+                                                min="1900"
+                                                max="2100"
+                                            />
+                                        </>
+                                    )}
+
+                                    {dateFilterType === 'specific' && (
+                                        <input
+                                            type="date"
+                                            className="form-input"
+                                            style={{ fontSize: '0.8rem', padding: '0.3rem 0.5rem', borderRadius: '6px', height: 34, minWidth: 130 }}
+                                            value={specificDate}
+                                            onChange={e => setSpecificDate(e.target.value)}
+                                            title="Specific date"
+                                        />
+                                    )}
+
+                                    {dateFilterType === 'range' && (
+                                        <>
+                                            <input
+                                                type="date"
+                                                className="form-input"
+                                                style={{ fontSize: '0.8rem', padding: '0.3rem 0.5rem', borderRadius: '6px', height: 34, minWidth: 130 }}
+                                                value={fromDate}
+                                                onChange={e => setFromDate(e.target.value)}
+                                                title="From date"
+                                            />
+                                            <span style={{ color: 'var(--txt-3)', fontSize: '0.8rem' }}>–</span>
+                                            <input
+                                                type="date"
+                                                className="form-input"
+                                                style={{ fontSize: '0.8rem', padding: '0.3rem 0.5rem', borderRadius: '6px', height: 34, minWidth: 130 }}
+                                                value={toDate}
+                                                onChange={e => setToDate(e.target.value)}
+                                                title="To date"
+                                            />
+                                        </>
+                                    )}
+
+                                    {dateFilterType !== 'all' && (
+                                        <button className="btn btn-sm btn-secondary" style={{ padding: '0.25rem 0.5rem', fontSize: '0.75rem', height: 34 }} onClick={() => { setDateFilterType('all'); setSpecificDate(''); setFromDate(''); setToDate(''); }}>✕</button>
+                                    )}
+                                </div>
+                            )}
                         </div>
 
                         {loadingEvents ? (
                             <div className="text-center py-10">
                                 <div style={{ fontSize: '1rem', color: 'var(--txt-3)' }}>Loading events...</div>
                             </div>
-                        ) : (
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
-                                {eventsTab === 'college' && (
-                                    <div>
-                                        <h3 className="text-lg mb-4" style={{ fontWeight: 700 }}>College Events</h3>
-                                        {collegeEvents.length === 0 ? (
-                                            <div className="card p-6 text-center text-muted" style={{ background: 'var(--card)' }}>No college events found.</div>
-                                        ) : (
-                                            <div className="grid-cols-3 gap-4">
-                                                {collegeEvents.map(event => renderCollegeEventCard(event))}
-                                            </div>
-                                        )}
-                                    </div>
-                                )}
-                                {eventsTab === 'external' && (
-                                    <div>
-                                        <h3 className="text-lg mb-4" style={{ fontWeight: 700 }}>External Events</h3>
-                                        {externalEvents.length === 0 ? (
-                                            <div className="card p-6 text-center text-muted" style={{ background: 'var(--card)' }}>No external events found.</div>
-                                        ) : (
-                                            <div className="grid-cols-3 gap-4">
-                                                {externalEvents.map(event => renderCollegeEventCard(event))}
-                                            </div>
-                                        )}
-                                    </div>
-                                )}
+                        ) : eventsTab === 'calendar' ? (
+                            <div className="card p-5" style={{ background: 'var(--card)' }}>
+                                <EventsCalendar events={collegeEvents} />
                             </div>
-                        )}
+                        ) : (() => {
+                            const matchRange = (ev) => {
+                                const d = ev.singleDay ? ev.date : ev.dateFrom;
+                                if (!d) return true;
+                                if (dateFilterType === 'all') return true;
+                                if (dateFilterType === 'specific-month') {
+                                    return d.substring(0, 7) === `${filterYear}-${filterMonth}`;
+                                }
+                                if (dateFilterType === 'specific') {
+                                    if (!specificDate) return true;
+                                    if (ev.singleDay) {
+                                        return ev.date === specificDate;
+                                    } else {
+                                        return specificDate >= ev.dateFrom && specificDate <= ev.dateTo;
+                                    }
+                                }
+                                if (dateFilterType === 'range') {
+                                    if (!fromDate && !toDate) return true;
+                                    if (fromDate && toDate) return d >= fromDate && d <= toDate;
+                                    if (fromDate) return d >= fromDate;
+                                    return d <= toDate;
+                                }
+                                return true;
+                            };
+                            const filteredCollege = collegeEvents.filter(matchRange);
+                            const filteredExternal = externalEvents.filter(matchRange);
+                            const hasFilter = dateFilterType !== 'all';
+                            return (
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+                                    {eventsTab === 'college' && (
+                                        <div>
+                                            <h3 className="text-lg mb-4" style={{ fontWeight: 700 }}>College Events <span style={{ fontSize: '0.85rem', color: 'var(--txt-3)', fontWeight: 500 }}>({filteredCollege.length})</span></h3>
+                                            {filteredCollege.length === 0 ? (
+                                                <div className="card p-6 text-center text-muted" style={{ background: 'var(--card)' }}>No college events{hasFilter ? ' matching the selected date filter' : ''}.</div>
+                                            ) : (
+                                                <div className="grid-cols-3 gap-4">
+                                                    {filteredCollege.map(event => renderCollegeEventCard(event))}
+                                                </div>
+                                            )}
+                                        </div>
+                                    )}
+                                    {eventsTab === 'external' && (
+                                        <div>
+                                            <h3 className="text-lg mb-4" style={{ fontWeight: 700 }}>External Events <span style={{ fontSize: '0.85rem', color: 'var(--txt-3)', fontWeight: 500 }}>({filteredExternal.length})</span></h3>
+                                            {filteredExternal.length === 0 ? (
+                                                <div className="card p-6 text-center text-muted" style={{ background: 'var(--card)' }}>No external events{hasFilter ? ' in this date range' : ''}.</div>
+                                            ) : (
+                                                <div className="grid-cols-3 gap-4">
+                                                    {filteredExternal.map(event => renderCollegeEventCard(event))}
+                                                </div>
+                                            )}
+                                        </div>
+                                    )}
+                                </div>
+                            );
+                        })()}
                     </div>
                 )}
             </main>

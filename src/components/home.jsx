@@ -1017,7 +1017,8 @@ const Home = () => {
                             position: "absolute",
                             top: "1.5rem",
                             right: "1.5rem",
-                            background: "rgba(255, 255, 255, 0.1)",
+                            // background: "rgba(255, 255, 255, 0.1)",
+                            background: "transparent",
                             border: "none",
                             color: "#fff",
                             fontSize: "2rem",
@@ -1049,7 +1050,7 @@ const Home = () => {
                         style={{ color: "#fff", maxWidth: "600px", textAlign: "center", padding: "1rem 2rem", background: "rgba(255, 255, 255, 0.05)", borderRadius: "8px", border: "1px solid rgba(255, 255, 255, 0.1)" }}
                         onClick={e => e.stopPropagation()}
                     >
-                        <p style={{ margin: 0, fontSize: "1rem", lineHeight: "1.6" }}>{selectedImage.description}</p>
+                        <p style={{ margin: 0, fontSize: "1rem", lineHeight: "1.6", color: "#fff" }}>{selectedImage.description}</p>
                     </div>
                 </div>
             )}
