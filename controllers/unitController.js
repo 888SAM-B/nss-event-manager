@@ -5,11 +5,11 @@ const Member = require('../models/Member');
 const ProgramOfficer = require('../models/ProgramOfficer');
 const { verifyOwnership } = require('../middlewares/auth');
 
-// Create a new NSS Unit (V2: uses College Code + Passkey verification & auto unit number generation)
+// Create a new NSS Unit (uses College Code verification & auto unit number generation)
 const addUnit = async (req, res) => {
-    const { collegeCode, collegePasskey, name, password, createdDate, officerData } = req.body;
+    const { collegeCode, name, password, createdDate, officerData } = req.body;
 
-    if (!collegeCode || !collegePasskey || !name || !password) {
+    if (!collegeCode || !name || !password) {
         return res.status(400).json({ success: false, message: "Missing required fields" });
     }
 
@@ -21,12 +21,6 @@ const addUnit = async (req, res) => {
         const college = await User.findOne({ code: collegeCode });
         if (!college) {
             return res.status(404).json({ success: false, message: "College not found" });
-        }
-
-        // Validate College Passkey
-        const isPasskeyMatch = await bcrypt.compare(collegePasskey, college.passkey);
-        if (!isPasskeyMatch) {
-            return res.status(401).json({ success: false, message: "Invalid College Passkey" });
         }
 
         // Maximum units check (max 6)

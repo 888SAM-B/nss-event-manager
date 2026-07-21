@@ -99,19 +99,13 @@ const registerCollege = async (req, res) => {
             return res.status(400).json({ success: false, message: "This college is already registered" });
         }
 
-        // Generate cryptographically secure passkey
-        const rawSuffix = crypto.randomBytes(4).toString('hex').slice(0, 6).toUpperCase();
-        const plainPasskey = `NSS-PU26-${rawSuffix}`;
-
-        // Hashing passkey and password
+        // Hashing password
         const salt = await bcrypt.genSalt(10);
         const hashedPassword = await bcrypt.hash(password, salt);
-        const hashedPasskey = await bcrypt.hash(plainPasskey, salt);
 
         // Update college fields
         college.userName = collegeDetails.email; // Use college email as login username
         college.password = hashedPassword;
-        college.passkey = hashedPasskey;
         college.isRegistered = true;
 
         college.principalDetails = principalDetails;
@@ -145,24 +139,19 @@ const registerCollege = async (req, res) => {
         try {
             await sendEmailViaBrevo({
                 to: collegeDetails.email,
-                subject: `NSS Portal V2 - Registration Complete & Passkey`,
+                subject: `NSS Portal V2 - Registration Complete`,
                 html: `
                     <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
                         <h2 style="color: #1e3a8a;">NSS College Registration Successful</h2>
                         <p>Dear Principal & NSS Coordinator,</p>
                         <p>Your college <strong>${college.insName}</strong> (Code: ${code}) has completed V2 registration.</p>
-                        <p>Below are your credentials and secure passkey for creating/joining NSS Units:</p>
+                        <p>Below are your login credentials:</p>
                         <table style="border-collapse: collapse; width: 100%; margin-top: 15px; margin-bottom: 15px;">
                             <tr>
                                 <td style="padding: 8px; border: 1px solid #ddd; font-weight: bold;">Login Username:</td>
                                 <td style="padding: 8px; border: 1px solid #ddd;">${collegeDetails.email}</td>
                             </tr>
-                            <tr>
-                                <td style="padding: 8px; border: 1px solid #ddd; font-weight: bold;">NSS Secure Passkey:</td>
-                                <td style="padding: 8px; border: 1px solid #ddd; color: #b91c1c; font-size: 1.1em; font-weight: bold;">${plainPasskey}</td>
-                            </tr>
                         </table>
-                        <p style="color: #ef4444; font-weight: bold;">IMPORTANT: Never share this passkey. You will need this passkey whenever you create a new NSS Unit or assign unit-level access.</p>
                         <br/>
                         <p>Best regards,</p>
                         <p>NSS Cell, Periyar University</p>
@@ -175,8 +164,7 @@ const registerCollege = async (req, res) => {
 
         res.json({
             success: true,
-            message: "College registered successfully",
-            passkey: plainPasskey
+            message: "College registered successfully"
         });
     } catch (error) {
         console.error("Error registering college:", error);
@@ -184,64 +172,9 @@ const registerCollege = async (req, res) => {
     }
 };
 
-// Admin regenerates college passkey
+// Admin regenerates college passkey (Deprecated - passkey authentication disabled)
 const regeneratePasskey = async (req, res) => {
-    if (req.user.role !== 'admin') {
-        return res.status(403).json({ success: false, message: "Forbidden: Admin access required" });
-    }
-
-    const { code } = req.body;
-    if (!code) {
-        return res.status(400).json({ success: false, message: "College code is required" });
-    }
-
-    try {
-        const college = await User.findOne({ code });
-        if (!college) {
-            return res.status(404).json({ success: false, message: "College not found" });
-        }
-
-        // Generate new passkey
-        const rawSuffix = crypto.randomBytes(4).toString('hex').slice(0, 6).toUpperCase();
-        const plainPasskey = `NSS-PU26-${rawSuffix}`;
-
-        const salt = await bcrypt.genSalt(10);
-        const hashedPasskey = await bcrypt.hash(plainPasskey, salt);
-
-        college.passkey = hashedPasskey;
-        await college.save();
-
-        // Send Email via Brevo
-        try {
-            await sendEmailViaBrevo({
-                to: college.collegeDetails?.email || college.userName,
-                subject: `NSS Portal V2 - Regulated Passkey Regenerated`,
-                html: `
-                    <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
-                        <h2 style="color: #1e3a8a;">NSS Secure Passkey Regenerated</h2>
-                        <p>Dear Principal & NSS Coordinator,</p>
-                        <p>An administrator has regenerated the NSS secure passkey for your institution <strong>${college.insName}</strong>.</p>
-                        <p>The previous passkey is now immediately **invalidated**.</p>
-                        <p>Your new secure passkey is: <strong style="color: #b91c1c; font-size: 1.2em;">${plainPasskey}</strong></p>
-                        <br/>
-                        <p>Best regards,</p>
-                        <p>NSS Cell, Periyar University</p>
-                    </div>
-                `
-            });
-        } catch (emailError) {
-            console.error("Failed to send passkey regeneration email:", emailError.message);
-        }
-
-        res.json({
-            success: true,
-            message: "Passkey regenerated and emailed successfully",
-            passkey: plainPasskey
-        });
-    } catch (error) {
-        console.error("Error regenerating passkey:", error);
-        res.status(500).json({ success: false, message: "Internal Server Error" });
-    }
+    res.json({ success: true, message: "Passkeys are no longer used in the system." });
 };
 
 // Get College Dashboard details
