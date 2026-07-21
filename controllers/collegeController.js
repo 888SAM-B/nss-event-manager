@@ -124,7 +124,19 @@ const registerCollege = async (req, res) => {
         college.location = collegeLocation.address;
 
         if (college.collegeType === 'Funded' && bankDetails) {
-            college.bankDetails = bankDetails;
+            const rawAccountNo = bankDetails.accountNo || bankDetails.accountNumber || "";
+            const rawBankName = bankDetails.bankName || bankDetails.bank || "";
+            const rawBranch = bankDetails.branch || "";
+            const rawIfsc = bankDetails.ifsc || "";
+            const rawAccountHolder = bankDetails.accountHolder || "";
+
+            college.bankDetails = {
+                accountNumber: rawAccountNo ? await bcrypt.hash(rawAccountNo, salt) : "",
+                bank: rawBankName ? await bcrypt.hash(rawBankName, salt) : "",
+                branch: rawBranch ? await bcrypt.hash(rawBranch, salt) : "",
+                ifsc: rawIfsc ? await bcrypt.hash(rawIfsc, salt) : "",
+                accountHolder: rawAccountHolder ? await bcrypt.hash(rawAccountHolder, salt) : ""
+            };
         }
 
         await college.save();
