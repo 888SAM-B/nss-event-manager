@@ -9,6 +9,8 @@ import ThemeToggle from "./ThemeToggle";
 import ProgramOfficerModal from "./ProgramOfficerModal";
 import VolunteerEnrolmentModal from "./VolunteerEnrolmentModal";
 import EventsCalendar from "./EventsCalendar";
+import CircularBellNotification from "./CircularBellNotification";
+import UserCircularsView from "./UserCircularsView";
 
 const CollegeDashboard = () => {
     const username = localStorage.getItem("nss_username");
@@ -644,6 +646,7 @@ const CollegeDashboard = () => {
                     <span className="sidebar-brand-name" style={{ fontSize: '0.9rem' }}>{insName || 'College Portal'}</span>
                 </div>
                 <div className="d-flex align-items-center gap-2">
+                    <CircularBellNotification />
                     <ThemeToggle />
                     <button className="mobile-toggle-btn" onClick={() => setIsSidebarOpen(!isSidebarOpen)}>
                         {isSidebarOpen ? (
@@ -671,6 +674,10 @@ const CollegeDashboard = () => {
                     <button className={`sidebar-item ${activeTab === 'overview' ? 'active' : ''}`} onClick={() => { setActiveTab('overview'); setIsSidebarOpen(false); }}>
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="7" height="9" /><rect x="14" y="3" width="7" height="5" /><rect x="14" y="12" width="7" height="9" /><rect x="3" y="16" width="7" height="5" /></svg>
                         Overview
+                    </button>
+                    <button className={`sidebar-item ${activeTab === 'circulars' ? 'active' : ''}`} onClick={() => { setActiveTab('circulars'); setIsSidebarOpen(false); }}>
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" /><path d="M13.73 21a2 2 0 0 1-3.46 0" /></svg>
+                        Circulars & Notices
                     </button>
                     <button className={`sidebar-item ${activeTab === 'units' ? 'active' : ''}`} onClick={() => { setActiveTab('units'); setIsSidebarOpen(false); }}>
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2" /><path d="M12 2L2 7l10 5 10-5-10-5z" /></svg>
@@ -722,8 +729,8 @@ const CollegeDashboard = () => {
                                     <span style={{ fontSize: '0.75rem', color: 'var(--txt-3)' }}>NSS Organization Dashboard</span>
                                 </div>
                             </div>
-                            <div className="d-flex gap-2">
-
+                            <div className="d-flex align-items-center gap-3">
+                                <CircularBellNotification onBellClick={() => setActiveTab('circulars')} />
                                 {isAdminViewing && (
                                     <button className="btn btn-secondary" onClick={() => navigate('/admin-dashboard')}>
                                         ← Admin
@@ -1378,6 +1385,10 @@ const CollegeDashboard = () => {
                             );
                         })()}
                     </div>
+                )}
+
+                {activeTab === "circulars" && (
+                    <UserCircularsView userRole="college" />
                 )}
             </main>
 

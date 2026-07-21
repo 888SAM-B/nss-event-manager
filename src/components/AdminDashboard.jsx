@@ -12,6 +12,8 @@ import AdminAllStudents from './AdminAllStudents';
 import AdminAllNodalOfficers from './AdminAllNodalOfficers';
 import AdminReportGenerator from './AdminReportGenerator';
 import AdminManageUnits from './AdminManageUnits';
+import AdminCircularsManager from './AdminCircularsManager';
+import CircularBellNotification from './CircularBellNotification';
 
 ChartJS.register(ArcElement, Tooltip, Legend, CategoryScale, LinearScale, BarElement, Title);
 
@@ -789,6 +791,7 @@ const AdminDashboard = () => {
                     <span className="sidebar-brand-name">{userRole === 'admin' ? 'NSS Admin' : `${userDistrict} Nodal`}</span>
                 </div>
                 <div className="d-flex align-items-center gap-2">
+                    <CircularBellNotification onBellClick={() => setActiveTab('circulars')} />
                     <ThemeToggle />
                     <button className="mobile-toggle-btn" onClick={() => setIsSidebarOpen(!isSidebarOpen)}>
                         {isSidebarOpen ? (
@@ -816,6 +819,10 @@ const AdminDashboard = () => {
                     <button className={`sidebar-item ${activeTab === 'overview' ? 'active' : ''}`} onClick={() => { setActiveTab('overview'); setIsSidebarOpen(false); }}>
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="7" height="9" /><rect x="14" y="3" width="7" height="5" /><rect x="14" y="12" width="7" height="9" /><rect x="3" y="16" width="7" height="5" /></svg>
                         Overview
+                    </button>
+                    <button className={`sidebar-item ${activeTab === 'circulars' ? 'active' : ''}`} onClick={() => { setActiveTab('circulars'); setIsSidebarOpen(false); }}>
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" /><path d="M13.73 21a2 2 0 0 1-3.46 0" /></svg>
+                        Circulars & Notices
                     </button>
                     <button className={`sidebar-item ${activeTab === 'colleges' ? 'active' : ''}`} onClick={() => { setActiveTab('colleges'); setIsSidebarOpen(false); }}>
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 10v6M2 10l10-5 10 5-10 5z" /><path d="M6 12v5c0 2 2 3 6 3s6-1 6-3v-5" /></svg>
@@ -881,9 +888,12 @@ const AdminDashboard = () => {
                                 <h1 style={{ fontSize: '1.75rem', fontWeight: 800, margin: 0, color: 'var(--txt-1)' }}>Dashboard Overview</h1>
                                 <p style={{ margin: 0, color: 'var(--txt-3)', fontSize: '0.9rem' }}>Welcome back, {userRole === 'admin' ? 'System Administrator' : `${userName} (${userDistrict} District Nodal)`}</p>
                             </div>
-                            {userRole === 'admin' && (
-                                <button className="btn btn-primary" onClick={handleAddOrg}>+ Register College</button>
-                            )}
+                            <div className="d-flex align-items-center gap-3">
+                                <CircularBellNotification onBellClick={() => setActiveTab('circulars')} />
+                                {userRole === 'admin' && (
+                                    <button className="btn btn-primary" onClick={handleAddOrg}>+ Register College</button>
+                                )}
+                            </div>
                         </div>
 
                         {/* Stats Row */}
@@ -1439,6 +1449,10 @@ const AdminDashboard = () => {
                             </div>
                         </div>
                     </div>
+                )}
+
+                {activeTab === "circulars" && (
+                    <AdminCircularsManager userRole={userRole} userDistrict={userDistrict} userName={userName} />
                 )}
 
                 {activeTab === "reports" && (
