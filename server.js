@@ -41,6 +41,7 @@ const unitRoutes = require('./routes/unitRoutes');
 const eventRoutes = require('./routes/eventRoutes');
 const programOfficerRoutes = require('./routes/programOfficerRoutes');
 const reportRoutes = require('./routes/reportRoutes');
+const circularRoutes = require('./routes/circularRoutes');
 
 // Mount routes
 app.use(authRoutes);
@@ -49,6 +50,7 @@ app.use(unitRoutes);
 app.use(eventRoutes);
 app.use(programOfficerRoutes);
 app.use(reportRoutes);
+app.use(circularRoutes);
 app.use(require('./routes/adminRoutes')); // admin, nodal & gallery routes
 
 const PORT = process.env.PORT || 5000;
