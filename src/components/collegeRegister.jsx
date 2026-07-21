@@ -384,7 +384,7 @@ const CollegeRegister = () => {
                     </form>
                 )}
 
-                {/* STEP 3: Passkey Display & Next Steps */}
+                {/* STEP 3: Success Display & Next Steps */}
                 {step === 3 && registrationSuccess && (
                     <div style={{ display: "flex", flexDirection: "column", gap: "1.5rem", textAlign: "center" }}>
                         <div style={{
@@ -403,22 +403,15 @@ const CollegeRegister = () => {
                         <div>
                             <h3 style={{ fontSize: "1.25rem", fontWeight: 800, margin: "0 0 0.5rem" }}>Registration Successful!</h3>
                             <p style={{ color: "var(--txt-3)", fontSize: "0.9rem", margin: 0 }}>
-                                Your profile details have been registered. Below is your secure NSS passkey.
+                                Your profile details have been registered. You can now log in to the NSS Portal.
                             </p>
                         </div>
 
-                        {/* Passkey display */}
-                        <div style={{ background: "rgba(239, 68, 68, 0.05)", border: "1px dashed #ef4444", padding: "1.25rem", borderRadius: "8px", margin: "0.5rem 0" }}>
-                            <div style={{ fontSize: "0.75rem", fontWeight: 700, color: "#ef4444", textTransform: "uppercase", marginBottom: "0.25rem" }}>Your Secure NSS Passkey</div>
-                            <div style={{ fontSize: "1.6rem", fontWeight: 900, color: "#b91c1c", letterSpacing: "1px" }}>{generatedPasskey}</div>
-                        </div>
-
                         <div style={{ background: "var(--bg-2)", padding: "1rem", borderRadius: "8px", border: "1px solid var(--border)", fontSize: "0.85rem", textAlign: "left", color: "var(--txt-2)", lineHeight: "1.5" }}>
-                            <strong>Important Security Instructions:</strong>
+                            <strong>Next Steps:</strong>
                             <ul style={{ margin: "0.5rem 0 0", paddingLeft: "1.25rem" }}>
-                                <li>This passkey has been sent to your email.</li>
-                                <li>You will need this passkey to register new NSS Units or change unit status.</li>
-                                <li>Do not share this passkey under any circumstances.</li>
+                                <li>Use your registered email and password to log in.</li>
+                                <li>You will be able to create units, manage Programme Officers, and submit periodical reports.</li>
                             </ul>
                         </div>
 

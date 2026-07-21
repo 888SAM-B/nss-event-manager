@@ -906,7 +906,7 @@ const AdminReportGenerator = () => {
                                                                 <td style={{ padding: '6px', border: '1px solid #ddd' }}>{rep.unitId?.unitNumber}</td>
                                                             </tr>
                                                             <tr>
-                                                                <td style={{ padding: '6px', fontWeight: 'bold', border: '1px solid #ddd' }}>Program Officer:</td>
+                                                                <td style={{ padding: '6px', fontWeight: 'bold', border: '1px solid #ddd' }}>Programme Officer:</td>
                                                                 <td style={{ padding: '6px', border: '1px solid #ddd' }}>{rep.poDetails?.name}</td>
                                                             </tr>
                                                             <tr>
@@ -1058,7 +1058,7 @@ const AdminReportGenerator = () => {
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '50px', fontSize: '12px', color: '#000' }}>
                     <div style={{ textAlign: 'center', width: '250px', color: '#000' }}>
                         <div style={{ borderTop: '1px solid #000', paddingTop: '5px', color: '#000' }}>
-                            NSS Program Coordinator Signature
+                            NSS Programme Coordinator Signature
                         </div>
                     </div>
                     <div style={{ textAlign: 'center', width: '250px', color: '#000' }}>
@@ -1242,7 +1242,7 @@ const AdminReportGenerator = () => {
                                         <td style={{ padding: '8px', border: '1px solid #ddd', color: '#000' }}>{activePreviewReport.unitId?.unitNumber}</td>
                                     </tr>
                                     <tr>
-                                        <td style={{ padding: '8px', fontWeight: 'bold', border: '1px solid #ddd', color: '#000' }}>Program Officer:</td>
+                                        <td style={{ padding: '8px', fontWeight: 'bold', border: '1px solid #ddd', color: '#000' }}>Programme Officer:</td>
                                         <td style={{ padding: '8px', border: '1px solid #ddd', color: '#000' }}>{activePreviewReport.poDetails?.name}</td>
                                     </tr>
                                     <tr>

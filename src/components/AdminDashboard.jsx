@@ -754,23 +754,6 @@ const AdminDashboard = () => {
         }
     };
 
-    const handleRegeneratePasskey = async (college) => {
-        if (!window.confirm(`Are you sure you want to regenerate the secure passkey for ${college.insName}? The old passkey will be immediately invalidated, and the new one will be emailed.`)) {
-            return;
-        }
-        try {
-            const token = localStorage.getItem("adminToken");
-            const res = await axios.post(`${import.meta.env.VITE_API_URL}/admin/regenerate-passkey`, { code: college.code }, {
-                headers: { Authorization: `Bearer ${token}` }
-            });
-            if (res.data.success) {
-                toast.success(`Passkey regenerated successfully: ${res.data.passkey}`);
-            }
-        } catch (err) {
-            console.error(err);
-            toast.error(err.response?.data?.message || "Failed to regenerate passkey");
-        }
-    };
 
     const upcomingCount = stats.allEvents?.filter(e => {
         const d = new Date(e.singleDay ? e.date : e.dateFrom);
@@ -834,7 +817,7 @@ const AdminDashboard = () => {
                     </button>
                     <button className={`sidebar-item ${activeTab === 'officers' ? 'active' : ''}`} onClick={() => { setActiveTab('officers'); setIsSidebarOpen(false); }}>
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M22 21v-2a4 4 0 0 0-3-3.87" /><path d="M16 3.13a4 4 0 0 1 0 7.75" /></svg>
-                        Program Officers
+                        Programme Officers
                     </button>
                     <button className={`sidebar-item ${activeTab === 'students' ? 'active' : ''}`} onClick={() => { setActiveTab('students'); setIsSidebarOpen(false); }}>
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M23 21v-2a4 4 0 0 0-3-3.87" /><path d="M16 3.13a4 4 0 0 1 0 7.75" /></svg>
@@ -1069,7 +1052,7 @@ const AdminDashboard = () => {
                                         handler: () => setActiveTab('events'),
                                     },
                                     {
-                                        label: 'Program Officers',
+                                        label: 'Programme Officers',
                                         icon: <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M22 21v-2a4 4 0 0 0-3-3.87" /><path d="M16 3.13a4 4 0 0 1 0 7.75" /></svg>,
                                         handler: () => setActiveTab('officers'),
                                     },
@@ -1148,14 +1131,6 @@ const AdminDashboard = () => {
                                                 </td>
                                                 {userRole === 'admin' ? (
                                                     <td style={{ padding: '0.625rem 0.875rem', textAlign: 'right', display: 'flex', justifyContent: 'flex-end', gap: '0.5rem', alignItems: 'center' }}>
-                                                        {college.isRegistered && (
-                                                            <button 
-                                                                style={{ fontSize: '0.72rem', fontWeight: 600, padding: '0.3rem 0.625rem', borderRadius: '4px', border: '1px solid var(--border)', background: 'var(--card)', color: 'var(--txt-1)', cursor: 'pointer' }}
-                                                                onClick={e => { e.stopPropagation(); handleRegeneratePasskey(college); }}
-                                                            >
-                                                                Regenerate Passkey
-                                                            </button>
-                                                        )}
                                                         <button style={{ fontSize: '0.72rem', fontWeight: 600, padding: '0.3rem 0.625rem', borderRadius: '4px', border: '1px solid var(--danger-400)', background: 'var(--danger-50)', color: 'var(--danger-600)', cursor: 'pointer' }}
                                                             onClick={e => { e.stopPropagation(); setCollegeToDelete(college); }}
                                                         >Remove</button>
@@ -1186,8 +1161,8 @@ const AdminDashboard = () => {
                 {activeTab === "officers" && (
                     <div>
                         <div className="mb-4">
-                            <h2 style={{ fontSize: '1.5rem', fontWeight: 800, margin: 0 }}>Program Officers List</h2>
-                            <p style={{ margin: 0, color: 'var(--txt-3)', fontSize: '0.9rem' }}>View registered Program Officers across all colleges</p>
+                            <h2 style={{ fontSize: '1.5rem', fontWeight: 800, margin: 0 }}>Programme Officers List</h2>
+                            <p style={{ margin: 0, color: 'var(--txt-3)', fontSize: '0.9rem' }}>View registered Programme Officers across all colleges</p>
                         </div>
                         <AdminAllOfficers subview={true} />
                     </div>

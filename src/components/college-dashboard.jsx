@@ -274,12 +274,8 @@ const CollegeDashboard = () => {
             toast.error("Please enter a unit password.");
             return;
         }
-        if (!collegePasskey.trim()) {
-            toast.error("Please enter the College Passkey for authorization.");
-            return;
-        }
         if (!poName.trim() || !poDesignation.trim() || !poDepartment.trim() || !poEmail.trim() || !poMobile.trim()) {
-            toast.error("Please fill in all mandatory Program Officer details (Name, Designation, Department, Email, Mobile).");
+            toast.error("Please fill in all mandatory Programme Officer details (Name, Designation, Department, Email, Mobile).");
             return;
         }
         const assignedName = `Unit ${units.length + 1}`;
@@ -287,7 +283,6 @@ const CollegeDashboard = () => {
 
         const payload = {
             collegeCode: insCode,
-            collegePasskey,
             name: assignedName,
             password: newUnitPassword,
             members: newMembers,
@@ -525,7 +520,7 @@ const CollegeDashboard = () => {
     };
 
     const handleDeleteOfficer = async (officerId) => {
-        if (!confirm("Are you sure you want to remove this Program Officer?")) return;
+        if (!confirm("Are you sure you want to remove this Programme Officer?")) return;
         try {
             const res = await axios.delete(`${import.meta.env.VITE_API_URL}/program-officer/${officerId}`, {
                 headers: { Authorization: `Bearer ${localStorage.getItem("nsstoken")}` }
@@ -685,7 +680,7 @@ const CollegeDashboard = () => {
                     </button>
                     <button className={`sidebar-item ${activeTab === 'officers' ? 'active' : ''}`} onClick={() => { setActiveTab('officers'); setIsSidebarOpen(false); }}>
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M22 21v-2a4 4 0 0 0-3-3.87" /><path d="M16 3.13a4 4 0 0 1 0 7.75" /></svg>
-                        Program Officers
+                        Programme Officers
                     </button>
                     <button className={`sidebar-item ${activeTab === 'students' ? 'active' : ''}`} onClick={() => { setActiveTab('students'); setIsSidebarOpen(false); }}>
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M23 21v-2a4 4 0 0 0-3-3.87" /><path d="M16 3.13a4 4 0 0 1 0 7.75" /></svg>
@@ -756,7 +751,7 @@ const CollegeDashboard = () => {
                                     <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M22 21v-2a4 4 0 0 0-3-3.87" /><path d="M16 3.13a4 4 0 0 1 0 7.75" /></svg>
                                 </div>
                                 <div>
-                                    <div style={{ fontSize: '0.8rem', color: 'var(--txt-3)', fontWeight: 500 }}>Program Officers</div>
+                                    <div style={{ fontSize: '0.8rem', color: 'var(--txt-3)', fontWeight: 500 }}>Programme Officers</div>
                                     <div style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--txt-1)' }}>{programOfficers.length}</div>
                                 </div>
                             </div>
@@ -873,8 +868,8 @@ const CollegeDashboard = () => {
                     <div>
                         <div className="flex-between mb-6" style={{ flexWrap: 'wrap', gap: '1rem' }}>
                             <div>
-                                <h1 style={{ fontSize: '1.75rem', fontWeight: 800, margin: 0, color: 'var(--txt-1)' }}>Program Officers</h1>
-                                <p style={{ margin: 0, color: 'var(--txt-3)', fontSize: '0.9rem' }}>Registered Program Officers for college units</p>
+                                <h1 style={{ fontSize: '1.75rem', fontWeight: 800, margin: 0, color: 'var(--txt-1)' }}>Programme Officers</h1>
+                                <p style={{ margin: 0, color: 'var(--txt-3)', fontSize: '0.9rem' }}>Registered Programme Officers for college units</p>
                             </div>
                             <button
                                 className="btn btn-success"
@@ -884,7 +879,7 @@ const CollegeDashboard = () => {
                                     setShowOfficerModal(true);
                                 }}
                             >
-                                + Register Program Officer
+                                + Register Programme Officer
                             </button>
                         </div>
 
@@ -1452,15 +1447,11 @@ const CollegeDashboard = () => {
                                 <label className="form-label">Unit Password</label>
                                 <input className="form-input" type="password" placeholder="Set password" value={newUnitPassword} onChange={(e) => setNewUnitPassword(e.target.value)} />
                             </div>
-                            <div className="form-group">
-                                <label className="form-label">College Passkey</label>
-                                <input className="form-input" type="password" placeholder="Enter passkey" value={collegePasskey} onChange={(e) => setCollegePasskey(e.target.value)} />
-                            </div>
                         </div>
 
                         {/* Program Officer details */}
                         <div className="mb-6" style={{ borderTop: '1px solid var(--border)', paddingTop: '1.5rem' }}>
-                            <h3 className="mb-3 text-lg" style={{ color: 'var(--txt-1)', fontWeight: 700 }}>Program Officer Details (Unit Head)</h3>
+                            <h3 className="mb-3 text-lg" style={{ color: 'var(--txt-1)', fontWeight: 700 }}>Programme Officer Details (Unit Head)</h3>
 
                             <div className="grid-cols-2 mb-3" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
                                 <div className="form-group">

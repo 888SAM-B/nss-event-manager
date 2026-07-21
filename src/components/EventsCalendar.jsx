@@ -7,7 +7,7 @@ export const getCategoryColor = (category) => {
         'Tree Plantation': '#10b981',
         'Cleanliness Drive': '#f59e0b',
         'Cleanliness Rally': '#f59e0b',
-        'Awareness Program': '#3b82f6',
+        'Awareness Programme': '#3b82f6',
         'Conference': '#8b5cf6',
         'Seminar': '#6366f1',
         'Workshop': '#ec4899',

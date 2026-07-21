@@ -37,7 +37,7 @@ const AdminAllOfficers = ({ subview = false }) => {
     if (loading) return (
         <div style={{ padding: '3rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.75rem', color: 'var(--txt-3)', fontSize: '0.875rem' }}>
             <div style={{ width: 20, height: 20, border: '2px solid var(--border)', borderTop: '2px solid var(--brand-600)', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
-            Loading program officers...
+            Loading programme officers...
         </div>
     );
 
@@ -74,7 +74,7 @@ const AdminAllOfficers = ({ subview = false }) => {
                         </thead>
                         <tbody>
                             {filteredOfficers.length === 0 ? (
-                                <tr><td colSpan="7" style={{ padding: '2.5rem', textAlign: 'center', color: 'var(--txt-3)', fontSize: '0.875rem' }}>No program officers found matching the criteria.</td></tr>
+                                <tr><td colSpan="7" style={{ padding: '2.5rem', textAlign: 'center', color: 'var(--txt-3)', fontSize: '0.875rem' }}>No programme officers found matching the criteria.</td></tr>
                             ) : filteredOfficers.map((officer, i) => (
                                 <tr key={officer._id} style={{ borderBottom: '1px solid var(--border)', background: i % 2 === 0 ? 'transparent' : 'var(--bg)' }}
                                     onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-2)'}

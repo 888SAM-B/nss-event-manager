@@ -602,7 +602,7 @@ const Home = () => {
                         {/* Right column: Content */}
                         <div style={{ fontSize: "1.05rem", color: "var(--txt-2)", lineHeight: "1.8", display: "flex", flexDirection: "column", gap: "1.25rem", textAlign: "justify" }}>
                             <p style={{ fontWeight: 600, fontSize: "1.2rem", color: "var(--primary-color)", lineHeight: "1.6", margin: 0 }}>
-                                The National Service Scheme is a noble public service program conducted by the Ministry of Youth Affairs and Sports, Government of India.
+                                The National Service Scheme is a noble public service programme conducted by the Ministry of Youth Affairs and Sports, Government of India.
                             </p>
                             <p style={{ margin: 0 }}>
                                 Launched in the centenary year of Mahatma Gandhi (1969), the primary objective of NSS is to develop student personality and character through voluntary community service. It acts as a bridge connecting student youth with the rural and suburban communities.

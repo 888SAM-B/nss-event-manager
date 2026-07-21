@@ -193,7 +193,7 @@ const AdminManageUnits = () => {
                                         <th>Unit Number</th>
                                         <th>College Name</th>
                                         <th>District</th>
-                                        <th>Program Officer</th>
+                                        <th>Programme Officer</th>
                                         <th className="text-center">Volunteers</th>
                                         <th className="text-center">Events</th>
                                         <th className="text-center">Actions</th>
@@ -362,7 +362,7 @@ const AdminManageUnits = () => {
                                     
                                     {/* PO & Unit details */}
                                     <div className="card p-6" style={{ background: 'var(--card-bg)' }}>
-                                        <h4 className="mb-4 text-primary-400" style={{ fontSize: '1.1rem', borderBottom: '1px solid var(--border)', paddingBottom: '0.5rem' }}>Program Officer Information</h4>
+                                        <h4 className="mb-4 text-primary-400" style={{ fontSize: '1.1rem', borderBottom: '1px solid var(--border)', paddingBottom: '0.5rem' }}>Programme Officer Information</h4>
                                         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.875rem' }}>
                                             <div style={{ display: 'grid', gridTemplateColumns: '120px 1fr' }}>
                                                 <span style={{ fontWeight: 600, color: 'var(--txt-3)' }}>Name:</span>
