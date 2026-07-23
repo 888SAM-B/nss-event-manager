@@ -9,7 +9,7 @@ const addOrganization = async (req, res) => {
         return res.status(403).json({ success: false, message: "Forbidden: Admin access required" });
     }
 
-    const { insName, code, collegeType } = req.body;
+    const { insName, code, collegeType, email } = req.body;
     
     if (!insName || !code || !collegeType) {
         return res.status(400).json({ success: false, message: "Missing required fields: insName, code, or collegeType" });
@@ -21,14 +21,19 @@ const addOrganization = async (req, res) => {
             return res.status(400).json({ success: false, message: "College code already exists" });
         }
 
+        const collegeEmail = email ? email.trim() : `temp_${code}@nss.org`;
+
         const newCollege = new User({
             insName,
             code,
             collegeType,
+            email: collegeEmail,
             isRegistered: false,
-            // placeholders
-            userName: `temp_${code}@nss.org`,
-            password: `temp_${code}`
+            userName: collegeEmail,
+            password: `temp_${code}`,
+            collegeDetails: {
+                email: collegeEmail
+            }
         });
 
         await newCollege.save();
@@ -43,8 +48,16 @@ const addOrganization = async (req, res) => {
     }
 };
 
-// Validate college code for self-registration
-const validateCollegeCode = async (req, res) => {
+// Helper function to mask email for UI feedback
+const maskEmail = (email) => {
+    if (!email || !email.includes('@')) return email || "";
+    const [name, domain] = email.split('@');
+    const maskedName = name.length > 2 ? name.substring(0, 2) + '****' : name + '****';
+    return `${maskedName}@${domain}`;
+};
+
+// Validate college code & Send OTP for self-registration
+const sendCollegeOtp = async (req, res) => {
     const { code } = req.body;
     if (!code) {
         return res.status(400).json({ success: false, message: "College code is required" });
@@ -64,16 +77,92 @@ const validateCollegeCode = async (req, res) => {
             });
         }
 
+        const targetEmail = college.email || college.collegeDetails?.email || college.userName;
+        if (!targetEmail || targetEmail.startsWith('temp_')) {
+            return res.status(400).json({
+                success: false,
+                message: "No college email registered by admin. Please contact administrator to initialize your college email."
+            });
+        }
+
+        // Generate 6-digit OTP
+        const otp = String(Math.floor(100000 + Math.random() * 900000));
+        college.otp = otp;
+        college.otpExpiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes expiry
+        await college.save();
+
+        // Send OTP email via Brevo
+        try {
+            await sendEmailViaBrevo({
+                to: targetEmail,
+                subject: `NSS Portal - Registration Verification OTP`,
+                html: `
+                    <div style="font-family: Arial, sans-serif; padding: 20px; line-height: 1.6; color: #333;">
+                        <h2 style="color: #1e3a8a;">NSS College Registration OTP</h2>
+                        <p>Dear Principal / NSS Coordinator of <strong>${college.insName}</strong>,</p>
+                        <p>Your One-Time Password (OTP) for completing NSS Portal registration is:</p>
+                        <div style="background: #f1f5f9; padding: 15px; text-align: center; border-radius: 8px; margin: 20px 0;">
+                            <h1 style="color: #2563eb; letter-spacing: 6px; margin: 0; font-size: 32px;">${otp}</h1>
+                        </div>
+                        <p>This OTP is valid for <strong>10 minutes</strong>. Please enter this code on the registration page to proceed.</p>
+                        <br/>
+                        <p>Best regards,<br/>NSS Cell, Periyar University</p>
+                    </div>
+                `
+            });
+        } catch (emailErr) {
+            console.error("Error sending OTP email:", emailErr);
+        }
+
         res.json({
             success: true,
+            message: `OTP sent to college email (${maskEmail(targetEmail)})`,
+            emailMasked: maskEmail(targetEmail),
             insName: college.insName,
             collegeType: college.collegeType
         });
     } catch (error) {
-        console.error("Error validating college code:", error);
+        console.error("Error sending college OTP:", error);
         res.status(500).json({ success: false, message: "Internal Server Error" });
     }
 };
+
+// Verify OTP for college sign up
+const verifyCollegeOtp = async (req, res) => {
+    const { code, otp } = req.body;
+    if (!code || !otp) {
+        return res.status(400).json({ success: false, message: "College code and OTP are required" });
+    }
+
+    try {
+        const college = await User.findOne({ code });
+        if (!college) {
+            return res.status(404).json({ success: false, message: "College not found" });
+        }
+
+        if (!college.otp || college.otp !== String(otp).trim()) {
+            return res.status(400).json({ success: false, message: "Invalid OTP code entered." });
+        }
+
+        if (college.otpExpiresAt && new Date() > new Date(college.otpExpiresAt)) {
+            return res.status(400).json({ success: false, message: "OTP has expired. Please request a new OTP." });
+        }
+
+        res.json({
+            success: true,
+            message: "OTP verified successfully!",
+            insName: college.insName,
+            collegeType: college.collegeType,
+            email: college.email || college.collegeDetails?.email || ""
+        });
+    } catch (error) {
+        console.error("Error verifying OTP:", error);
+        res.status(500).json({ success: false, message: "Internal Server Error" });
+    }
+};
+
+// Validate college code for self-registration (kept for compatibility)
+const validateCollegeCode = sendCollegeOtp;
 
 // Complete college self-registration
 const registerCollege = async (req, res) => {
@@ -363,6 +452,8 @@ const bulkAddOrganizations = async (req, res) => {
 module.exports = {
     addOrganization,
     validateCollegeCode,
+    sendCollegeOtp,
+    verifyCollegeOtp,
     registerCollege,
     regeneratePasskey,
     getCollegeDashboard,

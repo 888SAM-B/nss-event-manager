@@ -8,6 +8,7 @@ const unitSchema = new mongoose.Schema({
     password: String,
     members: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Member' }],
     unitNumber: String,
+    unitType: { type: String, enum: ['Funded', 'Self-Financing', 'Self-Financed'], default: 'Funded' },
     createdDate: String,
     events: { type: Array, default: [] },
     collegeId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' }

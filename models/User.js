@@ -5,9 +5,12 @@ const insLoginScheme = new mongoose.Schema({
     password: { type: String, default: "" }, // Hashed password
     insName: { type: String, required: true },
     code: { type: String, required: true, unique: true },
-    collegeType: { type: String, enum: ['Funded', 'Self-Financed', 'Self-Financing'], default: 'Self-Financed' },
+    collegeType: { type: String, enum: ['Funded', 'Self-Financed', 'Self-Financing', 'Funded & Self-Financing', 'Funded + Self-Financing'], default: 'Self-Financing' },
     isRegistered: { type: Boolean, default: false },
     passkey: { type: String, default: "" }, // Hashed passkey
+    email: { type: String, default: "" }, // College Email initialized by admin
+    otp: { type: String, default: "" }, // OTP for registration verification
+    otpExpiresAt: { type: Date },
 
     // Legacy fields for backward compatibility
     location: { type: String, default: "" },

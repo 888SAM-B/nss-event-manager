@@ -44,7 +44,7 @@ const addEvent = async (req, res) => {
 
         const eventCount = await Event.countDocuments({ unitId: unit._id });
         const eventNumber = eventCount + 1;
-        const eventCode = `NSSEVT${eventData.unitCode}${String(eventNumber).padStart(3, '0')}`;
+        const eventCode = `NSSEVT-${eventData.unitCode}-${String(eventNumber).padStart(3, '0')}`;
 
         const newEvent = new Event({
             ...eventData,

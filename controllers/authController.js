@@ -62,7 +62,11 @@ const loginUnit = async (req, res) => {
         if (!user) {
             return res.status(401).json({ success: false, message: "Invalid college code" });
         }
-        const unit = await Unit.findOne({ unitNumber: unitCode, collegeId: user._id });
+        const cleanUnitCode = unitCode ? unitCode.trim() : "";
+        const unit = await Unit.findOne({
+            unitNumber: { $regex: new RegExp(`^${cleanUnitCode.replace(/[-[\]{}()*+?.,\\^$|#\s]/g, '\\$&')}$`, 'i') },
+            collegeId: user._id
+        });
         if (!unit) {
             return res.status(401).json({ success: false, message: "Invalid unit code" });
         }
@@ -73,11 +77,11 @@ const loginUnit = async (req, res) => {
         }
 
         const token = jwt.sign(
-            { unitNumber: unitCode, role: 'unit' },
+            { unitNumber: unit.unitNumber, role: 'unit' },
             process.env.JWT_SECRET,
             { expiresIn: "1d" }
         );
-        res.json({ success: true, token });
+        res.json({ success: true, token, unitNumber: unit.unitNumber });
     } catch (err) {
         console.error(err);
         res.status(500).json({ success: false, message: "Server error" });

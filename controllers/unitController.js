@@ -7,7 +7,7 @@ const { verifyOwnership } = require('../middlewares/auth');
 
 // Create a new NSS Unit (uses College Code verification & auto unit number generation)
 const addUnit = async (req, res) => {
-    const { collegeCode, name, password, createdDate, officerData } = req.body;
+    const { collegeCode, name, password, createdDate, unitType, category, officerData } = req.body;
 
     if (!collegeCode || !name || !password) {
         return res.status(400).json({ success: false, message: "Missing required fields" });
@@ -28,9 +28,9 @@ const addUnit = async (req, res) => {
             return res.status(400).json({ success: false, message: "Maximum 6 units allowed for this college" });
         }
 
-        // Generate unit number: NSS + CollegeCode + Sequence (e.g. NSS5071)
-        const sequence = college.units.length + 1;
-        const unitNumber = `NSS${collegeCode}${sequence}`;
+        // Generate unit number: NSS-CollegeCode-Sequence (e.g. NSS-5071-01)
+        const sequence = String(college.units.length + 1).padStart(2, '0');
+        const unitNumber = `NSS-${collegeCode}-${sequence}`;
 
         // Hash password
         const salt = await bcrypt.genSalt(10);
@@ -41,6 +41,7 @@ const addUnit = async (req, res) => {
             password: hashedPassword,
             members: [],
             unitNumber,
+            unitType: unitType || category || 'Funded',
             createdDate: createdDate || new Date().toISOString().split('T')[0],
             collegeId: college._id
         });

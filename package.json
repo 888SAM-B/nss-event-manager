@@ -1,6 +1,8 @@
 {
   "scripts": {
-    "start": "nodemon server.js"
+    "start": "nodemon server.js",
+    "clear-data": "node clearDataExceptAdmin.js",
+    "update-codes": "node updateCodesFormat.js"
   },
   "dependencies": {
     "bcryptjs": "^3.0.3",

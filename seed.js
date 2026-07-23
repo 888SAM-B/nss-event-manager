@@ -151,8 +151,8 @@ async function seedDatabase() {
 
             for (let u = 0; u < numUnits; u++) {
                 const poIndex = unitCounter;
-                const collegeSequence = u + 1;
-                const unitNumber = `NSS${college.code}${collegeSequence}`;
+                const collegeSequence = String(u + 1).padStart(2, '0');
+                const unitNumber = `NSS-${college.code}-${collegeSequence}`;
                 
                 // Create Program Officer
                 const po = await ProgramOfficer.create({
@@ -234,6 +234,7 @@ async function seedDatabase() {
         console.log("Seeding 25 Events...");
         
         const categories = [
+            "Special Camp",
             "Blood Donation", 
             "Tree Plantation", 
             "Cleanliness Rally", 
@@ -281,7 +282,7 @@ async function seedDatabase() {
             const venue = venues[e % venues.length];
             
             // Generate distinct Event Code
-            const eventCode = `NSSEVTNSS${1011000 + e}`;
+            const eventCode = `NSSEVT-${unit.unitNumber}-${String(e).padStart(3, '0')}`;
 
             let eventObj = {
                 name: `Sample ${category} Event ${e}`,
