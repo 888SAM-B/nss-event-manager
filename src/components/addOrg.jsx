@@ -26,7 +26,8 @@ const AddOrg = () => {
         const data = {
             insName: formData.get("insName"),
             code: formData.get("code"),
-            collegeType: formData.get("collegeType")
+            collegeType: formData.get("collegeType"),
+            email: formData.get("email")
         };
 
         const token = localStorage.getItem("adminToken");
@@ -203,6 +204,18 @@ const AddOrg = () => {
                             />
                         </div>
 
+                        <div className="form-group mb-3" style={{ marginBottom: '1rem' }}>
+                            <label className="form-label" style={{ fontWeight: 600, fontSize: '0.75rem', textTransform: 'uppercase', marginBottom: '0.5rem', display: 'block' }}>College Mail ID <span style={{ color: 'red' }}>*</span></label>
+                            <input
+                                type="email"
+                                name="email"
+                                className="form-input"
+                                placeholder="e.g. principal@college.edu / nss@college.edu"
+                                required
+                                style={{ width: '100%', padding: '0.65rem 0.85rem', borderRadius: '8px', border: '1px solid var(--border)', outline: 'none' }}
+                            />
+                        </div>
+
                         <div className="grid-cols-2" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
                             <div className="form-group">
                                 <label className="form-label" style={{ fontWeight: 600, fontSize: '0.75rem', textTransform: 'uppercase', marginBottom: '0.5rem', display: 'block' }}>College Code</label>
@@ -225,6 +238,7 @@ const AddOrg = () => {
                                 >
                                     <option value="Funded">Funded</option>
                                     <option value="Self-Financing">Self-Financing</option>
+                                    <option value="Funded & Self-Financing">Funded & Self-Financing</option>
                                 </select>
                             </div>
                         </div>

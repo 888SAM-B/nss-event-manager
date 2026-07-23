@@ -11,6 +11,10 @@ const CollegeRegister = () => {
     const [collegeCode, setCollegeCode] = useState("");
     const [collegeInfo, setCollegeInfo] = useState({ insName: "", collegeType: "" });
 
+    // OTP Verification State
+    const [otpInput, setOtpInput] = useState("");
+    const [maskedEmail, setMaskedEmail] = useState("");
+
     // Step 2 Form State
     const [password, setPassword] = useState("");
     const [confirmPassword, setConfirmPassword] = useState("");
@@ -47,18 +51,47 @@ const CollegeRegister = () => {
 
         setIsLoading(true);
         try {
-            const res = await axios.post(`${import.meta.env.VITE_API_URL}/validate-college-code`, { code: collegeCode });
+            const res = await axios.post(`${import.meta.env.VITE_API_URL}/send-college-otp`, { code: collegeCode });
             if (res.data.success) {
                 setCollegeInfo({
                     insName: res.data.insName,
                     collegeType: res.data.collegeType
                 });
-                toast.success("College Code Validated!");
-                setStep(2);
+                setMaskedEmail(res.data.emailMasked);
+                toast.success(`OTP sent to college email: ${res.data.emailMasked}`);
+                setStep(1.5);
             }
         } catch (error) {
             console.error("Validation error:", error);
             const msg = error.response?.data?.message || "Invalid College Code or Connection Error";
+            toast.error(msg);
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    const handleVerifyOtp = async (e) => {
+        e.preventDefault();
+        if (!otpInput.trim() || otpInput.length < 6) {
+            return toast.error("Please enter 6-digit OTP");
+        }
+
+        setIsLoading(true);
+        try {
+            const res = await axios.post(`${import.meta.env.VITE_API_URL}/verify-college-otp`, {
+                code: collegeCode,
+                otp: otpInput
+            });
+            if (res.data.success) {
+                toast.success("OTP Verified Successfully!");
+                if (res.data.email) {
+                    setCollegeEmail(res.data.email);
+                }
+                setStep(2);
+            }
+        } catch (error) {
+            console.error("OTP Verification Error:", error);
+            const msg = error.response?.data?.message || "OTP verification failed";
             toast.error(msg);
         } finally {
             setIsLoading(false);
@@ -97,7 +130,7 @@ const CollegeRegister = () => {
             }
         };
 
-        if (collegeInfo.collegeType === "Funded") {
+        if (collegeInfo.collegeType && collegeInfo.collegeType.toLowerCase().includes("funded")) {
             data.bankDetails = {
                 accountNo,
                 bankName,
@@ -170,8 +203,56 @@ const CollegeRegister = () => {
                             disabled={isLoading}
                             style={{ background: "#2563eb", border: "none", color: "#fff", padding: "0.75rem", borderRadius: "8px", fontWeight: 600 }}
                         >
-                            {isLoading ? "Validating..." : "Validate & Continue"}
+                            {isLoading ? "Sending OTP..." : "Send Verification OTP"}
                         </button>
+                    </form>
+                )}
+
+                {/* STEP 1.5: OTP Verification */}
+                {step === 1.5 && (
+                    <form onSubmit={handleVerifyOtp} style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
+                        <div style={{ background: "var(--bg-2)", padding: "1rem", borderRadius: "8px", border: "1px solid var(--border)", textAlign: "center" }}>
+                            <div style={{ fontSize: "0.8rem", fontWeight: 700, color: "var(--txt-3)", textTransform: "uppercase" }}>Institution Recognized</div>
+                            <div style={{ fontSize: "1.1rem", fontWeight: 800, color: "#2563eb", marginTop: "0.25rem" }}>{collegeInfo.insName}</div>
+                            <div style={{ fontSize: "0.85rem", color: "var(--txt-2)", marginTop: "0.5rem" }}>
+                                An OTP email has been sent to: <strong style={{ color: "#2563eb" }}>{maskedEmail}</strong>
+                            </div>
+                        </div>
+
+                        <div className="form-group">
+                            <label className="form-label" style={{ fontWeight: 600, fontSize: "0.75rem", textTransform: "uppercase", marginBottom: "0.5rem", display: "block" }}>
+                                Enter 6-Digit OTP Code
+                            </label>
+                            <input
+                                type="text"
+                                maxLength={6}
+                                className="form-input"
+                                placeholder="e.g. 123456"
+                                value={otpInput}
+                                onChange={(e) => setOtpInput(e.target.value.replace(/[^0-9]/g, ''))}
+                                required
+                                style={{ width: "100%", padding: "0.75rem", borderRadius: "8px", border: "1px solid var(--border)", outline: "none", letterSpacing: "4px", fontSize: "1.2rem", textAlign: "center" }}
+                            />
+                        </div>
+
+                        <div style={{ display: "flex", gap: "0.75rem" }}>
+                            <button
+                                type="button"
+                                className="btn btn-secondary"
+                                onClick={() => setStep(1)}
+                                style={{ flex: 1, padding: "0.75rem", borderRadius: "8px", fontWeight: 600 }}
+                            >
+                                Back
+                            </button>
+                            <button
+                                type="submit"
+                                className="btn btn-primary"
+                                disabled={isLoading}
+                                style={{ flex: 2, background: "#2563eb", border: "none", color: "#fff", padding: "0.75rem", borderRadius: "8px", fontWeight: 600 }}
+                            >
+                                {isLoading ? "Verifying..." : "Verify OTP & Continue"}
+                            </button>
+                        </div>
                     </form>
                 )}
 
@@ -336,8 +417,8 @@ const CollegeRegister = () => {
                             </div>
                         </div>
 
-                        {/* Bank Details (Funded Only) */}
-                        {collegeInfo.collegeType === "Funded" && (
+                        {/* Bank Details (Funded / Funded & Self-Financing Only) */}
+                        {collegeInfo.collegeType && collegeInfo.collegeType.toLowerCase().includes("funded") && (
                             <div>
                                 <h3 style={{ fontSize: "1rem", fontWeight: 700, marginBottom: "0.75rem", color: "var(--brand-500)", borderBottom: "1px solid var(--border)", paddingBottom: "0.25rem" }}>5. Bank Details (NSS Funded Account)</h3>
                                 <div style={{ display: "grid", gridTemplateColumns: "1.2fr 1fr 1fr 1fr", gap: "1rem" }}>

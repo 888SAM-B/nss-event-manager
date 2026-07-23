@@ -22,7 +22,7 @@ const AddEvent = () => {
     const eventToEdit = location.state?.eventToEdit;
 
     const standardCategories = [
-        "Blood Donation", "Tree Plantation", "Cleanliness Drive", "Awareness Programme",
+        "Special Camp", "Blood Donation", "Tree Plantation", "Cleanliness Drive", "Awareness Programme",
         "Conference", "Seminar", "Workshop", "Sports", "Cultural", "Health",
         "Environmental", "Social", "Exhibition", "Health care", "Creation of Assets"
     ];
@@ -331,6 +331,7 @@ const AddEvent = () => {
                                 required
                             >
                                 <option value="">Select Category</option>
+                                <option value="Special Camp">Special Camp</option>
                                 <option value="Blood Donation">Blood Donation</option>
                                 <option value="Tree Plantation">Tree Plantation</option>
                                 <option value="Cleanliness Drive">Cleanliness Drive</option>

@@ -25,6 +25,8 @@ const CollegeDashboard = () => {
     const [newUnitPassword, setNewUnitPassword] = useState("");
     const [newUnitContact, setNewUnitContact] = useState("");
     const [newUnitMail, setNewUnitMail] = useState("");
+    const [newUnitType, setNewUnitType] = useState("Funded");
+    const [newUnitCreationDate, setNewUnitCreationDate] = useState(new Date().toISOString().split('T')[0]);
     const [collegePasskey, setCollegePasskey] = useState("");
 
     // Program Officer states for Unit Creation
@@ -279,13 +281,14 @@ const CollegeDashboard = () => {
             return;
         }
         const assignedName = `Unit ${units.length + 1}`;
-        const createdDate = new Date().toISOString().split('T')[0];
+        const createdDate = newUnitCreationDate || new Date().toISOString().split('T')[0];
 
         const payload = {
             collegeCode: insCode,
             name: assignedName,
             password: newUnitPassword,
             members: newMembers,
+            unitType: newUnitType,
             createdDate,
             officerData: {
                 name: poName,
@@ -1436,7 +1439,7 @@ const CollegeDashboard = () => {
                             <button className="btn btn-sm btn-secondary" onClick={() => setShowUnitModal(false)}>&times;</button>
                         </div>
 
-                        <div className="grid-cols-3 mb-4" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '1rem' }}>
+                        <div className="grid-cols-4 mb-4" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: '1rem' }}>
                             <div className="form-group">
                                 <label className="form-label">Unit Name</label>
                                 <div className="form-input" style={{ background: 'var(--bg-tertiary)', cursor: 'not-allowed', opacity: 0.8, display: 'flex', alignItems: 'center', height: '38px' }}>
@@ -1444,8 +1447,19 @@ const CollegeDashboard = () => {
                                 </div>
                             </div>
                             <div className="form-group">
-                                <label className="form-label">Unit Password</label>
+                                <label className="form-label">Unit Password <span style={{ color: 'red' }}>*</span></label>
                                 <input className="form-input" type="password" placeholder="Set password" value={newUnitPassword} onChange={(e) => setNewUnitPassword(e.target.value)} />
+                            </div>
+                            <div className="form-group">
+                                <label className="form-label">Type of Unit <span style={{ color: 'red' }}>*</span></label>
+                                <select className="form-input" value={newUnitType} onChange={(e) => setNewUnitType(e.target.value)} style={{ height: '38px' }}>
+                                    <option value="Funded">Funded</option>
+                                    <option value="Self-Financing">Self-Financing</option>
+                                </select>
+                            </div>
+                            <div className="form-group">
+                                <label className="form-label">Date of Unit Creation</label>
+                                <input className="form-input" type="date" value={newUnitCreationDate} onChange={(e) => setNewUnitCreationDate(e.target.value)} style={{ height: '38px' }} />
                             </div>
                         </div>
 

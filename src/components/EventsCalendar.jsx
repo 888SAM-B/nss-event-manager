@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 
 export const getCategoryColor = (category) => {
     const colors = {
+        'Special Camp': '#8b5cf6',
         'Blood Donation': '#ef4444',
         'Tree Plantation': '#10b981',
         'Cleanliness Drive': '#f59e0b',

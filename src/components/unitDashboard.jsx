@@ -620,7 +620,7 @@ const UnitDashboard = () => {
     const CLOUDINARY_PDF_UPLOAD_PRESET = import.meta.env.VITE_PDF_UPLOAD_PRESET;
 
     const standardCategories = [
-        "Blood Donation", "Tree Plantation", "Cleanliness Drive", "Awareness Programme",
+        "Special Camp", "Blood Donation", "Tree Plantation", "Cleanliness Drive", "Awareness Programme",
         "Conference", "Seminar", "Workshop", "Sports", "Cultural", "Health",
         "Environmental", "Social", "Exhibition", "Health care", "Creation of Assets"
     ];
