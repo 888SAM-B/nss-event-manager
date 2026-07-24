@@ -24,16 +24,8 @@ async function seedDatabase() {
         await mongoose.connect(MONGODB_URL);
         console.log("Connected successfully!");
 
-        // 1. Clear Existing Data
-        console.log("Clearing all existing data from collections...");
-        await User.deleteMany({});
-        await Unit.deleteMany({});
-        await ProgramOfficer.deleteMany({});
-        await Member.deleteMany({});
-        await Event.deleteMany({});
-        await NodalOfficer.deleteMany({});
-        await AdminHead.deleteMany({});
-        console.log("Cleanup finished.");
+        // 1. Database Cleanup Skipped (Preserving existing data)
+        console.log("Preserving existing data in database...");
 
         // 2. Generate Hashed Passwords
         console.log("Generating password hashes...");
@@ -43,32 +35,41 @@ async function seedDatabase() {
 
         // 3. Seed Nodal Officer
         console.log("Seeding Nodal Officers...");
-        const nodal1 = await NodalOfficer.create({
-            name: "Sample Nodal Officer One",
-            email: "nodal1@example.com",
-            mobile: "9876543210",
-            password: hashedPassword,
-            district: "Sample District North"
-        });
-        const nodal2 = await NodalOfficer.create({
-            name: "Sample Nodal Officer Two",
-            email: "nodal2@example.com",
-            mobile: "9876543211",
-            password: hashedPassword,
-            district: "Sample District South"
-        });
+        let nodal1 = await NodalOfficer.findOne({ email: "nodal1@example.com" });
+        if (!nodal1) {
+            nodal1 = await NodalOfficer.create({
+                name: "Sample Nodal Officer One",
+                email: "nodal1@example.com",
+                mobile: "9876543210",
+                password: hashedPassword,
+                district: "Sample District North"
+            });
+        }
+        let nodal2 = await NodalOfficer.findOne({ email: "nodal2@example.com" });
+        if (!nodal2) {
+            nodal2 = await NodalOfficer.create({
+                name: "Sample Nodal Officer Two",
+                email: "nodal2@example.com",
+                mobile: "9876543211",
+                password: hashedPassword,
+                district: "Sample District South"
+            });
+        }
 
         // 4. Seed Admin Head
         console.log("Seeding Admin Head...");
-        await AdminHead.create({
-            position: "State NSS Officer",
-            photo: "https://via.placeholder.com/150",
-            name: "Sample Admin Head",
-            designation: "State Liaison Officer",
-            qualification: "Ph.D.",
-            rowOrder: 1,
-            displayOrder: 1
-        });
+        let adminHead = await AdminHead.findOne({ position: "State NSS Officer" });
+        if (!adminHead) {
+            await AdminHead.create({
+                position: "State NSS Officer",
+                photo: "https://via.placeholder.com/150",
+                name: "Sample Admin Head",
+                designation: "State Liaison Officer",
+                qualification: "Ph.D.",
+                rowOrder: 1,
+                displayOrder: 1
+            });
+        }
 
         // 5. Seed 5 Colleges
         console.log("Seeding 5 Colleges...");
@@ -84,54 +85,57 @@ async function seedDatabase() {
         for (let i = 0; i < 5; i++) {
             const colIndex = i + 1;
             const code = `COLL00${colIndex}`;
-            const college = await User.create({
-                userName: `college${colIndex}@example.com`,
-                password: hashedPassword,
-                insName: collegeNames[i],
-                code: code,
-                collegeType: i % 2 === 0 ? "Funded" : "Self-Financed",
-                isRegistered: true,
-                passkey: hashedPasskey,
-                location: `Sample Town ${String.fromCharCode(65 + i)}`,
-                district: i < 3 ? "Sample District North" : "Sample District South",
-                universityName: "Sample University",
-                principalDetails: {
-                    name: `Sample Principal ${colIndex}`,
-                    email: `principal${colIndex}@example.com`,
-                    mobile: `987654301${i}`
-                },
-                collegeDetails: {
-                    email: `info${colIndex}@example.com`,
-                    phone: `044-123456${i}`,
-                    website: `www.college${colIndex}.edu`
-                },
-                collegeLocation: {
-                    address: `${colIndex}0${colIndex}, Main Street, Sample Town ${String.fromCharCode(65 + i)}`,
+            let college = await User.findOne({ code: code });
+            if (!college) {
+                college = await User.create({
+                    userName: `college${colIndex}@example.com`,
+                    password: hashedPassword,
+                    insName: collegeNames[i],
+                    code: code,
+                    collegeType: i % 2 === 0 ? "Funded" : "Self-Financed",
+                    isRegistered: true,
+                    passkey: hashedPasskey,
+                    location: `Sample Town ${String.fromCharCode(65 + i)}`,
                     district: i < 3 ? "Sample District North" : "Sample District South",
-                    taluk: `Sample Taluk ${colIndex}`,
-                    pincode: `60000${colIndex}`
-                },
-                adoptingVillages: [
-                    {
-                        name: `Sample Adopted Village ${colIndex}A`,
-                        address: "Village Street 1",
-                        block: "Sample Block",
-                        taluk: `Sample Taluk ${colIndex}`,
-                        district: i < 3 ? "Sample District North" : "Sample District South",
-                        pincode: `60010${colIndex}`,
-                        distance: 4 + i
+                    universityName: "Sample University",
+                    principalDetails: {
+                        name: `Sample Principal ${colIndex}`,
+                        email: `principal${colIndex}@example.com`,
+                        mobile: `987654301${i}`
                     },
-                    {
-                        name: `Sample Adopted Village ${colIndex}B`,
-                        address: "Village Street 2",
-                        block: "Sample Block",
-                        taluk: `Sample Taluk ${colIndex}`,
+                    collegeDetails: {
+                        email: `info${colIndex}@example.com`,
+                        phone: `044-123456${i}`,
+                        website: `www.college${colIndex}.edu`
+                    },
+                    collegeLocation: {
+                        address: `${colIndex}0${colIndex}, Main Street, Sample Town ${String.fromCharCode(65 + i)}`,
                         district: i < 3 ? "Sample District North" : "Sample District South",
-                        pincode: `60020${colIndex}`,
-                        distance: 10 + i
-                    }
-                ]
-            });
+                        taluk: `Sample Taluk ${colIndex}`,
+                        pincode: `60000${colIndex}`
+                    },
+                    adoptingVillages: [
+                        {
+                            name: `Sample Adopted Village ${colIndex}A`,
+                            address: "Village Street 1",
+                            block: "Sample Block",
+                            taluk: `Sample Taluk ${colIndex}`,
+                            district: i < 3 ? "Sample District North" : "Sample District South",
+                            pincode: `60010${colIndex}`,
+                            distance: 4 + i
+                        },
+                        {
+                            name: `Sample Adopted Village ${colIndex}B`,
+                            address: "Village Street 2",
+                            block: "Sample Block",
+                            taluk: `Sample Taluk ${colIndex}`,
+                            district: i < 3 ? "Sample District North" : "Sample District South",
+                            pincode: `60020${colIndex}`,
+                            distance: 10 + i
+                        }
+                    ]
+                });
+            }
             colleges.push(college);
         }
 
@@ -154,39 +158,47 @@ async function seedDatabase() {
                 const collegeSequence = String(u + 1).padStart(2, '0');
                 const unitNumber = `NSS-${college.code}-${collegeSequence}`;
                 
-                // Create Program Officer
-                const po = await ProgramOfficer.create({
-                    name: `Sample Program Officer ${poIndex}`,
-                    designation: poIndex % 2 === 0 ? "Associate Professor" : "Assistant Professor",
-                    department: poIndex % 3 === 0 ? "Computer Science" : (poIndex % 3 === 1 ? "Information Technology" : "Mechanical Eng"),
-                    unit: unitNumber,
-                    college: college.insName,
-                    email: `po${poIndex}@example.com`,
-                    mobile: `98765431${poIndex < 10 ? '0' + poIndex : poIndex}`,
-                    gender: poIndex % 2 === 0 ? "Male" : "Female",
-                    collegeId: college._id,
-                    officerID: `PO-UNIT-${poIndex}`
-                });
+                // Create Program Officer if not exists
+                let po = await ProgramOfficer.findOne({ email: `po${poIndex}@example.com` });
+                if (!po) {
+                    po = await ProgramOfficer.create({
+                        name: `Sample Program Officer ${poIndex}`,
+                        designation: poIndex % 2 === 0 ? "Associate Professor" : "Assistant Professor",
+                        department: poIndex % 3 === 0 ? "Computer Science" : (poIndex % 3 === 1 ? "Information Technology" : "Mechanical Eng"),
+                        unit: unitNumber,
+                        college: college.insName,
+                        email: `po${poIndex}@example.com`,
+                        mobile: `98765431${poIndex < 10 ? '0' + poIndex : poIndex}`,
+                        gender: poIndex % 2 === 0 ? "Male" : "Female",
+                        collegeId: college._id,
+                        officerID: `PO-UNIT-${poIndex}`
+                    });
+                }
                 programOfficers.push(po);
 
-                // Create Unit
-                const unit = await Unit.create({
-                    name: `Sample NSS Unit ${poIndex}`,
-                    head: po._id,
-                    contact: po.mobile,
-                    mail: po.email,
-                    password: hashedPassword,
-                    unitNumber: unitNumber,
-                    createdDate: "2021-01-15",
-                    collegeId: college._id
-                });
+                // Create Unit if not exists
+                let unit = await Unit.findOne({ unitNumber: unitNumber });
+                if (!unit) {
+                    unit = await Unit.create({
+                        name: `Sample NSS Unit ${poIndex}`,
+                        head: po._id,
+                        contact: po.mobile,
+                        mail: po.email,
+                        password: hashedPassword,
+                        unitNumber: unitNumber,
+                        createdDate: "2021-01-15",
+                        collegeId: college._id
+                    });
+                }
                 units.push(unit);
                 collegeUnitIds.push(unit._id);
                 unitCounter++;
             }
 
-            college.units = collegeUnitIds;
-            await college.save();
+            if (!college.units || college.units.length === 0) {
+                college.units = collegeUnitIds;
+                await college.save();
+            }
         }
 
         // 7. Seed 40+ Volunteers (Distributed among units)
@@ -202,27 +214,34 @@ async function seedDatabase() {
             const unit = units[unitIdx];
             const college = colleges.find(col => col._id.toString() === unit.collegeId.toString());
 
-            const volunteer = await Member.create({
-                name: `Sample Volunteer ${v}`,
-                regNo: `REG${1000 + v}`,
-                dept: "Engineering Department",
-                course: "B.Tech",
-                community: communities[v % communities.length],
-                contact: `98765440${v < 10 ? '0' + v : v}`,
-                bloodGroup: bloodGroups[v % bloodGroups.length],
-                dob: "2006-05-15",
-                batchFrom: "2024",
-                batchTo: "2027",
-                unitId: unit._id,
-                collegeId: college._id,
-                sex: genderOptions[v % genderOptions.length],
-                aadhaar: `1234567890${10 + v}`,
-                enrolmentDate: "2024-07-20",
-                isEnrolled: true
-            });
+            const regNo = `REG${1000 + v}`;
+            let volunteer = await Member.findOne({ regNo: regNo });
+            if (!volunteer) {
+                volunteer = await Member.create({
+                    name: `Sample Volunteer ${v}`,
+                    regNo: regNo,
+                    dept: "Engineering Department",
+                    course: "B.Tech",
+                    community: communities[v % communities.length],
+                    contact: `98765440${v < 10 ? '0' + v : v}`,
+                    bloodGroup: bloodGroups[v % bloodGroups.length],
+                    dob: "2006-05-15",
+                    batchFrom: "2024",
+                    batchTo: "2027",
+                    unitId: unit._id,
+                    collegeId: college._id,
+                    sex: genderOptions[v % genderOptions.length],
+                    aadhaar: `1234567890${10 + v}`,
+                    enrolmentDate: "2024-07-20",
+                    isEnrolled: true
+                });
+
+                if (!unit.members.includes(volunteer._id)) {
+                    unit.members.push(volunteer._id);
+                }
+            }
 
             volunteers.push(volunteer);
-            unit.members.push(volunteer._id);
         }
 
         // Save updated units with volunteer ids
@@ -284,94 +303,97 @@ async function seedDatabase() {
             // Generate distinct Event Code
             const eventCode = `NSSEVT-${unit.unitNumber}-${String(e).padStart(3, '0')}`;
 
-            let eventObj = {
-                name: `Sample ${category} Event ${e}`,
-                description: `A sample event focused on ${category.toLowerCase()} activities to engage volunteers and benefit local community residents.`,
-                category: category,
-                venue: venue,
-                resourcePerson: `Dr. Sample Speaker ${e}`,
-                level: e % 5 === 0 ? "National" : (e % 4 === 0 ? "State" : "College"),
-                sponsorship: e % 3 === 0 ? "Self-Funded" : "University Funded",
-                registeredMeriBharath: e % 2 === 0 ? "Yes" : "No",
-                meriBharathUrl: e % 2 === 0 ? `https://meribharath.gov.in/sample-${e}` : "",
-                images: [],
-                eventCode: eventCode,
-                unitId: unit._id,
-                collegeId: college._id,
-                isExternal: isExternal
-            };
-
-            // Completed vs Upcoming
-            const isCompleted = e <= 16 && e !== 13; // 15 completed events, 5 upcoming, 5 external
-
-            // Set Dates — ALL completed events fall within Apr–Jul 2026 (NSS annual year)
-            if (isCompleted) {
-                if (e % 3 === 0) {
-                    // Multi-day event in the past
-                    const mdIdx = Math.floor((e / 3) - 1) % multiDayPastEvents.length;
-                    const md = multiDayPastEvents[mdIdx];
-                    eventObj.singleDay = false;
-                    eventObj.dateFrom = md.dateFrom;
-                    eventObj.dateTo = md.dateTo;
-                    eventObj.timeFrom = "09:00";
-                    eventObj.timeTo = "16:00";
-                } else {
-                    // Single day in the past
-                    eventObj.singleDay = true;
-                    eventObj.date = dates[e % dates.length].date;
-                    eventObj.timeFrom = "10:00";
-                    eventObj.timeTo = "13:00";
-                }
-            } else {
-                if (e % 3 === 0) {
-                    // Multi-day event in the future
-                    eventObj.singleDay = false;
-                    eventObj.dateFrom = `2026-08-1${e % 9}`;
-                    eventObj.dateTo = `2026-08-2${e % 9}`;
-                    eventObj.timeFrom = "09:00";
-                    eventObj.timeTo = "16:00";
-                } else {
-                    // Single day in the future
-                    eventObj.singleDay = true;
-                    eventObj.date = `2026-08-${10 + (e % 10)}`;
-                    eventObj.timeFrom = "10:00";
-                    eventObj.timeTo = "13:00";
-                }
-            }
-
-            // Assign attendees (especially for external events)
-            const unitVolunteers = volunteers.filter(vol => vol.unitId.toString() === unit._id.toString());
-            if (isExternal) {
-                // Select 2 volunteers to participate in the external event
-                eventObj.attendees = [unitVolunteers[0]?._id, unitVolunteers[1]?._id].filter(Boolean);
-            }
-            
-            if (isCompleted && !isExternal) {
-                // Add Report details
-                eventObj.report = {
-                    conductedOnDate: true,
-                    participantsCount: 20 + (e * 2),
-                    collegesCount: 1,
-                    outcome: `Successfully completed the ${category.toLowerCase()} campaign with high volunteer enthusiasm.`,
-                    guests: [`Dr. Sample Speaker ${e}`, "Principal of the College"],
-                    volunteersParticipated: 10 + (e % 5),
-                    beneficiaries: "General Public and Students",
-                    submittedAt: new Date(),
-                    organizingUnits: [unit.name]
+            let existingEvent = await Event.findOne({ eventCode: eventCode });
+            if (!existingEvent) {
+                let eventObj = {
+                    name: `Sample ${category} Event ${e}`,
+                    description: `A sample event focused on ${category.toLowerCase()} activities to engage volunteers and benefit local community residents.`,
+                    category: category,
+                    venue: venue,
+                    resourcePerson: `Dr. Sample Speaker ${e}`,
+                    level: e % 5 === 0 ? "National" : (e % 4 === 0 ? "State" : "College"),
+                    sponsorship: e % 3 === 0 ? "Self-Funded" : "University Funded",
+                    registeredMeriBharath: e % 2 === 0 ? "Yes" : "No",
+                    meriBharathUrl: e % 2 === 0 ? `https://meribharath.gov.in/sample-${e}` : "",
+                    images: [],
+                    eventCode: eventCode,
+                    unitId: unit._id,
+                    collegeId: college._id,
+                    isExternal: isExternal
                 };
 
-                // Add category specific metrics
-                if (category === "Tree Plantation") {
-                    eventObj.report.treesPlanted = 15 + e;
-                } else if (category === "Blood Donation") {
-                    eventObj.report.bloodUnitsCollected = 20 + e;
-                }
-            }
+                // Completed vs Upcoming
+                const isCompleted = e <= 16 && e !== 13; // 15 completed events, 5 upcoming, 5 external
 
-            await Event.create(eventObj);
+                // Set Dates — ALL completed events fall within Apr–Jul 2026 (NSS annual year)
+                if (isCompleted) {
+                    if (e % 3 === 0) {
+                        // Multi-day event in the past
+                        const mdIdx = Math.floor((e / 3) - 1) % multiDayPastEvents.length;
+                        const md = multiDayPastEvents[mdIdx];
+                        eventObj.singleDay = false;
+                        eventObj.dateFrom = md.dateFrom;
+                        eventObj.dateTo = md.dateTo;
+                        eventObj.timeFrom = "09:00";
+                        eventObj.timeTo = "16:00";
+                    } else {
+                        // Single day in the past
+                        eventObj.singleDay = true;
+                        eventObj.date = dates[e % dates.length].date;
+                        eventObj.timeFrom = "10:00";
+                        eventObj.timeTo = "13:00";
+                    }
+                } else {
+                    if (e % 3 === 0) {
+                        // Multi-day event in the future
+                        eventObj.singleDay = false;
+                        eventObj.dateFrom = `2026-08-1${e % 9}`;
+                        eventObj.dateTo = `2026-08-2${e % 9}`;
+                        eventObj.timeFrom = "09:00";
+                        eventObj.timeTo = "16:00";
+                    } else {
+                        // Single day in the future
+                        eventObj.singleDay = true;
+                        eventObj.date = `2026-08-${10 + (e % 10)}`;
+                        eventObj.timeFrom = "10:00";
+                        eventObj.timeTo = "13:00";
+                    }
+                }
+
+                // Assign attendees (especially for external events)
+                const unitVolunteers = volunteers.filter(vol => vol.unitId.toString() === unit._id.toString());
+                if (isExternal) {
+                    // Select 2 volunteers to participate in the external event
+                    eventObj.attendees = [unitVolunteers[0]?._id, unitVolunteers[1]?._id].filter(Boolean);
+                }
+                
+                if (isCompleted && !isExternal) {
+                    // Add Report details
+                    eventObj.report = {
+                        conductedOnDate: true,
+                        participantsCount: 20 + (e * 2),
+                        collegesCount: 1,
+                        outcome: `Successfully completed the ${category.toLowerCase()} campaign with high volunteer enthusiasm.`,
+                        guests: [`Dr. Sample Speaker ${e}`, "Principal of the College"],
+                        volunteersParticipated: 10 + (e % 5),
+                        beneficiaries: "General Public and Students",
+                        submittedAt: new Date(),
+                        organizingUnits: [unit.name]
+                    };
+
+                    // Add category specific metrics
+                    if (category === "Tree Plantation") {
+                        eventObj.report.treesPlanted = 15 + e;
+                    } else if (category === "Blood Donation") {
+                        eventObj.report.bloodUnitsCollected = 20 + e;
+                    }
+                }
+
+                await Event.create(eventObj);
+            }
         }
 
-        console.log("Database seeded successfully with a large sample dataset!");
+        console.log("Database seeded safely without deleting existing data!");
     } catch (error) {
         console.error("An error occurred during database seeding:", error);
     } finally {
