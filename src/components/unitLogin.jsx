@@ -55,7 +55,7 @@ const UnitLogin = () => {
                             margin: '0 auto 1rem',
                             color: '#16a34a',
                         }}>
-                            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c0 2 2 3 6 3s6-1 6-3v-5"/></svg>
+                            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 10v6M2 10l10-5 10 5-10 5z" /><path d="M6 12v5c0 2 2 3 6 3s6-1 6-3v-5" /></svg>
                         </div>
                         <span className="badge badge-success" style={{ marginBottom: '0.75rem', letterSpacing: '0.08em' }}>
                             NSS UNIT
@@ -84,7 +84,7 @@ const UnitLogin = () => {
                             <label className="form-label">Unit Code</label>
                             <input
                                 className="form-input"
-                                placeholder="e.g. PUNSS..."
+                                placeholder="e.g. NSS-XXX-XX"
                                 value={unitCode}
                                 onChange={(e) => setUnitCode(e.target.value)}
                                 required
@@ -128,7 +128,7 @@ const UnitLogin = () => {
                             {loading
                                 ? <span className="flex-center" style={{ gap: '0.5rem' }}>
                                     <span className="loading" />Signing in...
-                                  </span>
+                                </span>
                                 : 'Sign In'
                             }
                         </button>
