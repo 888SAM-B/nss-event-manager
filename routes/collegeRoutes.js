@@ -23,7 +23,8 @@ router.post('/register-college', registerCollege);
 router.post('/admin/regenerate-passkey', verifyToken, regeneratePasskey);
 router.get('/college-dashboard', verifyToken, getCollegeDashboard);
 router.post('/add-village', verifyToken, addAdoptedVillage);
-router.delete('/delete-village', verifyToken, deleteAdoptedVillage);
+// BUG-04: Changed from DELETE to POST — body not reliably available on DELETE requests in Express 5
+router.post('/delete-village', verifyToken, deleteAdoptedVillage);
 
 module.exports = router;
 

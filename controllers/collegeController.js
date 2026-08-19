@@ -148,6 +148,13 @@ const verifyCollegeOtp = async (req, res) => {
             return res.status(400).json({ success: false, message: "OTP has expired. Please request a new OTP." });
         }
 
+        // BUG-08: Clear OTP immediately after successful verification (prevent reuse within expiry window)
+        college.otp = "";
+        college.otpExpiresAt = null;
+        // BUG-07: Mark OTP as verified so registerCollege can confirm the flow was completed
+        college.otpVerified = true;
+        await college.save();
+
         res.json({
             success: true,
             message: "OTP verified successfully!",
@@ -188,6 +195,11 @@ const registerCollege = async (req, res) => {
             return res.status(400).json({ success: false, message: "This college is already registered" });
         }
 
+        // BUG-07: Ensure OTP verification was actually completed before allowing registration
+        if (!college.otpVerified) {
+            return res.status(403).json({ success: false, message: "OTP verification is required before completing registration. Please verify your OTP first." });
+        }
+
         // Hashing password
         const salt = await bcrypt.genSalt(10);
         const hashedPassword = await bcrypt.hash(password, salt);
@@ -196,6 +208,7 @@ const registerCollege = async (req, res) => {
         college.userName = collegeDetails.email; // Use college email as login username
         college.password = hashedPassword;
         college.isRegistered = true;
+        college.otpVerified = false; // BUG-07: Reset otpVerified flag after registration completes
 
         college.principalDetails = principalDetails;
         college.collegeDetails = collegeDetails;
@@ -213,12 +226,14 @@ const registerCollege = async (req, res) => {
             const rawIfsc = bankDetails.ifsc || "";
             const rawAccountHolder = bankDetails.accountHolder || "";
 
+            // BUG-15: bcrypt is one-way — bank details must NOT be hashed (they need to be readable).
+            // Store as plain text for now. TODO: Replace with AES encryption if confidentiality is required.
             college.bankDetails = {
-                accountNumber: rawAccountNo ? await bcrypt.hash(rawAccountNo, salt) : "",
-                bank: rawBankName ? await bcrypt.hash(rawBankName, salt) : "",
-                branch: rawBranch ? await bcrypt.hash(rawBranch, salt) : "",
-                ifsc: rawIfsc ? await bcrypt.hash(rawIfsc, salt) : "",
-                accountHolder: rawAccountHolder ? await bcrypt.hash(rawAccountHolder, salt) : ""
+                accountNumber: rawAccountNo,
+                bank: rawBankName,
+                branch: rawBranch,
+                ifsc: rawIfsc,
+                accountHolder: rawAccountHolder
             };
         }
 

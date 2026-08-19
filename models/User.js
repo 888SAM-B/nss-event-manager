@@ -11,6 +11,7 @@ const insLoginScheme = new mongoose.Schema({
     email: { type: String, default: "" }, // College Email initialized by admin
     otp: { type: String, default: "" }, // OTP for registration verification
     otpExpiresAt: { type: Date },
+    otpVerified: { type: Boolean, default: false }, // BUG-07 fix: set true after OTP verified, cleared after registration
 
     // Legacy fields for backward compatibility
     location: { type: String, default: "" },

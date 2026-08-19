@@ -16,16 +16,30 @@ const registerProgramOfficer = async (req, res) => {
             return res.status(404).json({ success: false, message: "College not found" });
         }
 
-        const officerCount = await ProgramOfficer.countDocuments({ collegeId: college._id });
-        const officerID = `NSSPO${college.code}${String(officerCount + 1).padStart(2, '0')}`;
+        // BUG-06: Retry loop to handle race condition in officerID generation
+        let newOfficer;
+        let retries = 3;
+        while (retries > 0) {
+            const officerCount = await ProgramOfficer.countDocuments({ collegeId: college._id });
+            const officerID = `NSSPO${college.code}${String(officerCount + 1).padStart(2, '0')}`;
 
-        const newOfficer = new ProgramOfficer({
-            ...officerData,
-            collegeId: college._id,
-            officerID
-        });
+            newOfficer = new ProgramOfficer({
+                ...officerData,
+                collegeId: college._id,
+                officerID
+            });
 
-        await newOfficer.save();
+            try {
+                await newOfficer.save();
+                break;
+            } catch (saveErr) {
+                if (saveErr.code === 11000 && retries > 1) {
+                    retries--;
+                    continue;
+                }
+                throw saveErr;
+            }
+        }
 
         // If a specific unit was selected, update that unit's head reference
         if (officerData.unit) {
@@ -93,6 +107,11 @@ const getProgramOfficers = async (req, res) => {
         const college = await User.findOne({ code: collegeCode });
         if (!college) return res.status(404).json({ success: false, message: "College not found" });
 
+        // BUG-22: Verify ownership — only admin/nodal/college can view officers
+        if (!(await verifyOwnership(req, collegeCode))) {
+            return res.status(403).json({ success: false, message: "Forbidden: Unauthorized access" });
+        }
+
         const officers = await ProgramOfficer.find({ collegeId: college._id });
         res.json({ success: true, officers });
     } catch (error) {
@@ -137,6 +156,11 @@ const getUnassignedOfficers = async (req, res) => {
     try {
         const college = await User.findOne({ code: collegeCode });
         if (!college) return res.status(404).json({ success: false, message: "College not found" });
+
+        // BUG-23: Verify ownership — only admin/nodal/college can view unassigned officers
+        if (!(await verifyOwnership(req, collegeCode))) {
+            return res.status(403).json({ success: false, message: "Forbidden: Unauthorized access" });
+        }
 
         const unassignedOfficers = await ProgramOfficer.find({
             collegeId: college._id,

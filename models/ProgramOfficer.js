@@ -38,7 +38,7 @@ const programOfficerSchema = new mongoose.Schema({
     etlCertificate: { type: String, default: "" }, // Path to the uploaded document (Multer)
 
     collegeId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
-    officerID: String,
+    officerID: { type: String, unique: true, sparse: true }, // BUG-06: unique constraint prevents duplicate IDs from race conditions
     createdAt: { type: Date, default: Date.now }
 });
 

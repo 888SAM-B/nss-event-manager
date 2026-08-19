@@ -18,10 +18,11 @@ const eventSchema = new mongoose.Schema({
     meriBharathUrl: String,
     images: Array,
     brochure: String,
-    eventCode: String,
+    eventCode: { type: String, unique: true, sparse: true }, // BUG-05: unique constraint to prevent duplicate codes
     unitId: { type: mongoose.Schema.Types.ObjectId, ref: 'Unit' }, // Primary Organizing Unit
     coOrganizers: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Unit' }], // Co-Organizing Units (V2)
     attendees: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Member' }], // Primary Unit Attendees (or legacy combined)
+    isExternal: { type: Boolean, default: false },
 
     // Collaborators list for request flow
     collaborators: [{
@@ -46,6 +47,6 @@ const eventSchema = new mongoose.Schema({
         bloodUnitsCollected: Number, // For 'Blood Donation' category events
         rallyDistance: Number        // For 'Rallies' / 'Cleanliness Rally' category events (km)
     }
-});
+}, { timestamps: true }); // BUG-25: added timestamps for createdAt/updatedAt
 
 module.exports = mongoose.model('Event', eventSchema);

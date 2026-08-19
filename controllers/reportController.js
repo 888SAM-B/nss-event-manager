@@ -8,6 +8,11 @@ const submitPeriodicalReport = async (req, res) => {
         return res.status(403).json({ success: false, message: "Unauthorized access" });
     }
 
+    // BUG-19: Unit users must only submit reports for their own unit
+    if (req.user.role === 'unit' && req.user.unitNumber !== unitCode) {
+        return res.status(403).json({ success: false, message: "Unauthorized: You can only submit reports for your own unit" });
+    }
+
     const { 
         unitCode, 
         collegeCode, 
@@ -76,7 +81,8 @@ const submitPeriodicalReport = async (req, res) => {
 
 const getUnitPeriodicalReports = async (req, res) => {
     const { unitCode, collegeCode } = req.params;
-    
+
+    // BUG-20: Verify unit ownership for 'unit' role
     if (req.user.role === 'unit' && req.user.unitNumber !== unitCode) {
         return res.status(403).json({ success: false, message: "Unauthorized unit access" });
     }
@@ -84,6 +90,11 @@ const getUnitPeriodicalReports = async (req, res) => {
     try {
         const collegeObj = await User.findOne({ code: collegeCode });
         if (!collegeObj) return res.status(404).json({ success: false, message: "College not found" });
+
+        // BUG-20: Also verify college ownership for 'college' role
+        if (req.user.role === 'college' && req.user.userName !== collegeObj.userName) {
+            return res.status(403).json({ success: false, message: "Unauthorized: This college does not belong to your account" });
+        }
 
         const unitObj = await Unit.findOne({ unitNumber: unitCode, collegeId: collegeObj._id });
         if (!unitObj) return res.status(404).json({ success: false, message: "Unit not found" });
@@ -147,7 +158,10 @@ const getUnitPeriodicalReportPrefill = async (req, res) => {
             if (category.includes('drug') || name.includes('anti drug') || name.includes('anti-drug') || desc.includes('anti drug') || desc.includes('anti-drug') || name.includes('narcotics')) {
                 return 'anti_drug';
             }
-            if ((name.includes('voter') || name.includes('elect')) && name.includes('sir')) {
+            // BUG-29: voter_sir mapping — require both voter/election context AND the specific acronym 'SIR'
+            // (Systematic Inclusivity in Registration). Use word-boundary check to avoid false positives
+            // e.g. "Sir Syed Day", "Senior sir" should NOT match.
+            if ((name.includes('voter') || name.includes('elect')) && /\bsir\b/.test(name)) {
                 return 'voter_sir';
             }
             if ((name.includes('voter') || name.includes('elect') || name.includes('sveep')) && (name.includes('sveep') || desc.includes('sveep'))) {
@@ -190,11 +204,7 @@ const getUnitPeriodicalReportPrefill = async (req, res) => {
             any_other: { programmes: 0, colleges: 0, volunteers: 0, beneficiaries: 0, remarks: "" }
         };
 
-        console.log(`[PREFILL DEBUG] unitCode=${unitCode} collegeCode=${collegeCode} from=${fromDate} to=${toDate}`);
-        console.log(`[PREFILL DEBUG] unitObj._id=${unitObj._id} found ${events.length} events`);
-        events.forEach(evt => {
-            console.log(`  -> Event: "${evt.name}" | category="${evt.category}" | singleDay=${evt.singleDay} | date=${evt.date || ''} | dateFrom=${evt.dateFrom || ''} | dateTo=${evt.dateTo || ''} | submittedAt=${evt.report?.submittedAt} | treesPlanted=${evt.report?.treesPlanted} | bloodUnits=${evt.report?.bloodUnitsCollected} | volunteers=${evt.report?.volunteersParticipated}`);
-        });
+        // BUG-28: Removed debug console.log statements that leaked internal data to server logs
 
         events.forEach(evt => {
             const act = mapEventToActivity(evt);
@@ -314,17 +324,16 @@ const getAdminPeriodicalReports = async (req, res) => {
         if (collegeId) query.collegeId = collegeId;
         if (unitId) query.unitId = unitId;
         if (reportType) query.reportType = reportType;
-        
-        if (fromDate || toDate) {
-            query.$or = [];
-            if (fromDate && toDate) {
-                query.fromDate = { $gte: fromDate };
-                query.toDate = { $lte: toDate };
-            } else if (fromDate) {
-                query.fromDate = { $gte: fromDate };
-            } else if (toDate) {
-                query.toDate = { $lte: toDate };
-            }
+
+        // BUG-10: Removed erroneous 'query.$or = []' which caused MongoDB to crash
+        // (empty $or arrays are invalid in MongoDB queries)
+        if (fromDate && toDate) {
+            query.fromDate = { $gte: fromDate };
+            query.toDate = { $lte: toDate };
+        } else if (fromDate) {
+            query.fromDate = { $gte: fromDate };
+        } else if (toDate) {
+            query.toDate = { $lte: toDate };
         }
 
         const reports = await PeriodicalReport.find(query)

@@ -29,6 +29,8 @@ const addEvent = async (req, res) => {
 
         // Process Collaborators (Co-organizers)
         let processedCollaborators = [];
+        // BUG-16: Collect invalid collaborator codes and return error instead of silently skipping
+        const invalidCollaborators = [];
         if (eventData.collaborators && eventData.collaborators.length > 0) {
             for (const collabUnitCode of eventData.collaborators) {
                 const collabUnit = await Unit.findOne({ unitNumber: collabUnitCode, collegeId: collegeCodeId });
@@ -38,24 +40,49 @@ const addEvent = async (req, res) => {
                         unitCode: collabUnit.unitNumber,
                         status: 'pending'
                     });
+                } else {
+                    invalidCollaborators.push(collabUnitCode);
                 }
             }
         }
 
-        const eventCount = await Event.countDocuments({ unitId: unit._id });
-        const eventNumber = eventCount + 1;
-        const eventCode = `NSSEVT-${eventData.unitCode}-${String(eventNumber).padStart(3, '0')}`;
+        if (invalidCollaborators.length > 0) {
+            return res.status(400).json({
+                success: false,
+                message: `Invalid collaborator unit codes: ${invalidCollaborators.join(', ')}. Please check and try again.`
+            });
+        }
 
-        const newEvent = new Event({
-            ...eventData,
-            eventCode,
-            unitId: unit._id,
-            collegeId: collegeCodeId,
-            collaborators: processedCollaborators,
-            coOrganizers: [] // starts with empty until co-organizer accepts
-        });
+        // BUG-05: Retry loop to handle race condition in eventCode generation
+        // If two events are created simultaneously, the unique index on eventCode catches the conflict
+        let newEvent;
+        let retries = 3;
+        while (retries > 0) {
+            const eventCount = await Event.countDocuments({ unitId: unit._id });
+            const eventNumber = eventCount + 1;
+            const eventCode = `NSSEVT-${eventData.unitCode}-${String(eventNumber).padStart(3, '0')}`;
 
-        await newEvent.save();
+            newEvent = new Event({
+                ...eventData,
+                eventCode,
+                unitId: unit._id,
+                collegeId: collegeCodeId,
+                collaborators: processedCollaborators,
+                coOrganizers: [] // starts with empty until co-organizer accepts
+            });
+
+            try {
+                await newEvent.save();
+                break; // Success — exit retry loop
+            } catch (saveErr) {
+                if (saveErr.code === 11000 && retries > 1) {
+                    // Duplicate key (race condition) — retry with updated count
+                    retries--;
+                    continue;
+                }
+                throw saveErr; // Rethrow non-duplicate or exhausted retries
+            }
+        }
 
         unit.events.push(newEvent._id);
         collegeObject.events.push(newEvent._id);
@@ -104,7 +131,13 @@ const addEvent = async (req, res) => {
 const respondCollaboration = async (req, res) => {
     const { eventId, unitCode, response, collegeCode } = req.body; // response: 'accepted' or 'rejected'
 
-    if (req.user.unitNumber !== unitCode) return res.status(403).json({ message: "Unauthorized" });
+    // BUG-11: Only unit role users should respond to collaboration invites
+    if (req.user.role !== 'unit') {
+        return res.status(403).json({ success: false, message: "Unauthorized: Only unit users can respond to collaboration invitations" });
+    }
+    if (req.user.unitNumber !== unitCode) {
+        return res.status(403).json({ success: false, message: "Unauthorized: You can only respond on behalf of your own unit" });
+    }
 
     try {
         const event = await Event.findById(eventId);
@@ -206,7 +239,14 @@ const getEvents = async (req, res) => {
 const getUnitNotifications = async (req, res) => {
     const { unitCode, collegeCode } = req.params;
 
-    if (req.user.unitNumber !== unitCode) return res.status(403).json({ message: "Unauthorized" });
+    // BUG-12: Only unit role should access their own notifications; admin/nodal can access any
+    if (req.user.role === 'unit' && req.user.unitNumber !== unitCode) {
+        return res.status(403).json({ success: false, message: "Unauthorized: You can only view notifications for your own unit" });
+    }
+    if (req.user.role === 'college') {
+        // College can view notifications for their own units (ownership verified later via college lookup)
+        // This is acceptable — fall through to the query
+    }
 
     try {
         const college = await User.findOne({ code: collegeCode });
@@ -333,8 +373,13 @@ const updateEvent = async (req, res) => {
         const updatableFields = [
             'name', 'description', 'category', 'singleDay', 'date', 'dateFrom', 'dateTo',
             'timeFrom', 'timeTo', 'venue', 'resourcePerson', 'level', 'sponsorship',
-            'registeredMeriBharath', 'meriBharathUrl', 'images', 'brochure', 'attendees', 'isExternal'
+            'registeredMeriBharath', 'meriBharathUrl', 'images', 'brochure', 'attendees'
         ];
+
+        // BUG-17: isExternal should only be changeable by admin or college — not unit users
+        if (req.user.role === 'admin' || req.user.role === 'college') {
+            updatableFields.push('isExternal');
+        }
 
         updatableFields.forEach(field => {
             if (eventData[field] !== undefined) {
