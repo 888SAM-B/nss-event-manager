@@ -5,6 +5,7 @@ const Member = require('../models/Member');
 const ProgramOfficer = require('../models/ProgramOfficer');
 const { verifyOwnership } = require('../middlewares/auth');
 const { sendEmailViaBrevo } = require('../services/emailService');
+const { encryptBankDetails, decryptBankDetails } = require('../utils/encryption');
 
 // Create a new NSS Unit (uses College Code verification & auto unit number generation)
 const addUnit = async (req, res) => {
@@ -69,7 +70,7 @@ const addUnit = async (req, res) => {
             unitType: unitType || category || 'Funded',
             createdDate: createdDate || new Date().toISOString().split('T')[0],
             collegeId: college._id,
-            bankDetails: bankDetails || {}
+            bankDetails: bankDetails ? encryptBankDetails(bankDetails) : {}
         });
 
         await newUnit.save();
@@ -243,7 +244,10 @@ const getUnitDashboard = async (req, res) => {
             return res.status(404).json({ success: false, message: "Unit not found" });
         }
 
-        res.json({ success: true, unit, college: collegeObject });
+        const unitObj = unit.toObject();
+        unitObj.bankDetails = decryptBankDetails(unitObj.bankDetails);
+
+        res.json({ success: true, unit: unitObj, college: collegeObject });
     } catch (error) {
         console.error("Error fetching unit dashboard:", error);
         res.status(500).json({ success: false, message: "Internal Server Error" });
@@ -563,8 +567,8 @@ const updateUnitBankDetails = async (req, res) => {
             return res.status(400).json({ success: false, message: "OTP has expired. Please request a new one." });
         }
 
-        // Update bank details and reset OTP
-        unit.bankDetails = bankDetails;
+        // Update bank details (encrypted) and reset OTP
+        unit.bankDetails = encryptBankDetails(bankDetails);
         unit.bankOtp = "";
         unit.bankOtpExpiresAt = null;
         await unit.save();
@@ -572,7 +576,7 @@ const updateUnitBankDetails = async (req, res) => {
         res.json({
             success: true,
             message: "Unit bank account details updated successfully!",
-            bankDetails: unit.bankDetails
+            bankDetails: decryptBankDetails(unit.bankDetails)
         });
     } catch (error) {
         console.error("Error updating unit bank details:", error);
