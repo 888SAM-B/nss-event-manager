@@ -88,6 +88,115 @@ const UnitDashboard = () => {
     const [collaborators, setCollaborators] = useState([]);
     const [selectedCollaborator, setSelectedCollaborator] = useState("");
 
+    // Bank Details States & Handlers
+    const [showEditBankModal, setShowEditBankModal] = useState(false);
+    const [bankOtpStep, setBankOtpStep] = useState(1); // 1: Request OTP, 2: Enter OTP & Edit
+    const [bankOtpInput, setBankOtpInput] = useState("");
+    const [bankOtpSending, setBankOtpSending] = useState(false);
+    const [bankOtpMaskedEmail, setBankOtpMaskedEmail] = useState("");
+    const [editBankDetails, setEditBankDetails] = useState({
+        zbsca: { accountNo: "", bankName: "", branchName: "", ifscCode: "" },
+        vendor: { vendorName: "", accountNo: "", bankName: "", branchName: "", ifscCode: "" }
+    });
+
+    const maskAcc = (acc) => {
+        if (!acc) return "N/A";
+        const str = String(acc).trim();
+        if (str.length <= 4) return str;
+        return "•".repeat(str.length - 4) + str.slice(-4);
+    };
+
+    const handleOpenBankEditModal = () => {
+        setBankOtpStep(1);
+        setBankOtpInput("");
+        setBankOtpMaskedEmail("");
+        setEditBankDetails({
+            zbsca: {
+                accountNo: unit?.bankDetails?.zbsca?.accountNo || "",
+                bankName: unit?.bankDetails?.zbsca?.bankName || "",
+                branchName: unit?.bankDetails?.zbsca?.branchName || "",
+                ifscCode: unit?.bankDetails?.zbsca?.ifscCode || ""
+            },
+            vendor: {
+                vendorName: unit?.bankDetails?.vendor?.vendorName || "",
+                accountNo: unit?.bankDetails?.vendor?.accountNo || "",
+                bankName: unit?.bankDetails?.vendor?.bankName || "",
+                branchName: unit?.bankDetails?.vendor?.branchName || "",
+                ifscCode: unit?.bankDetails?.vendor?.ifscCode || ""
+            }
+        });
+        setShowEditBankModal(true);
+    };
+
+    const handleSendBankOtp = async () => {
+        setBankOtpSending(true);
+        try {
+            const token = localStorage.getItem("unitToken") || localStorage.getItem("nsstoken");
+            const res = await axios.post(
+                `${import.meta.env.VITE_API_URL}/send-unit-bank-otp`,
+                { unitCode: unit.unitNumber, collegeCode: college.code },
+                { headers: { Authorization: `Bearer ${token}` } }
+            );
+
+            if (res.data.success) {
+                toast.success(res.data.message || "OTP sent to Programme Officer email!");
+                setBankOtpMaskedEmail(res.data.emailMasked || "");
+                setBankOtpStep(2);
+            } else {
+                toast.error(res.data.message || "Failed to send OTP");
+            }
+        } catch (err) {
+            console.error("Error sending bank OTP:", err);
+            toast.error(err.response?.data?.message || "Server error sending OTP");
+        } finally {
+            setBankOtpSending(false);
+        }
+    };
+
+    const handleSaveBankDetailsWithOtp = async () => {
+        if (!bankOtpInput || bankOtpInput.trim().length !== 6) {
+            toast.error("Please enter the 6-digit OTP code sent to email.");
+            return;
+        }
+
+        if (!editBankDetails.zbsca.accountNo.trim() || !editBankDetails.zbsca.ifscCode.trim()) {
+            toast.error("ZBSCA Account Number and IFSC Code are mandatory.");
+            return;
+        }
+        if (!editBankDetails.vendor.accountNo.trim() || !editBankDetails.vendor.ifscCode.trim()) {
+            toast.error("Vendor Account Number and IFSC Code are mandatory.");
+            return;
+        }
+
+        setBankOtpSending(true);
+        try {
+            const token = localStorage.getItem("unitToken") || localStorage.getItem("nsstoken");
+            const res = await axios.post(
+                `${import.meta.env.VITE_API_URL}/update-unit-bank-details`,
+                {
+                    unitCode: unit.unitNumber,
+                    collegeCode: college.code,
+                    otp: bankOtpInput.trim(),
+                    bankDetails: editBankDetails
+                },
+                { headers: { Authorization: `Bearer ${token}` } }
+            );
+
+            if (res.data.success) {
+                toast.success("Bank account details updated successfully!");
+                setUnit({ ...unit, bankDetails: res.data.bankDetails || editBankDetails });
+                setShowEditBankModal(false);
+            } else {
+                toast.error(res.data.message || "Failed to update bank details");
+            }
+        } catch (err) {
+            console.error("Error updating bank details:", err);
+            toast.error(err.response?.data?.message || "Invalid or expired OTP");
+        } finally {
+            setBankOtpSending(false);
+        }
+    };
+
     // Event Report State
     const [showReportModal, setShowReportModal] = useState(false);
     const [reportingEvent, setReportingEvent] = useState(null);
@@ -2130,7 +2239,7 @@ const UnitDashboard = () => {
                                         </div>
                                         <div className="flex-between">
                                             <span style={{ color: 'var(--txt-3)' }}>NSS Unit:</span>
-                                            <span style={{ fontWeight: 600 }}>{unit.head.unit}</span>
+                                            <span style={{ fontWeight: 600 }}>{unit.head.unit || unit.unitNumber || '-'}</span>
                                         </div>
                                     </div>
                                 </div>
@@ -2197,6 +2306,108 @@ const UnitDashboard = () => {
                                             <p style={{ fontSize: '0.9rem', margin: 0, lineHeight: 1.6 }}>{unit.head.achievements}</p>
                                         </>
                                     )}
+                                </div>
+
+                                {/* Unit Bank Details Card */}
+                                <div className="card p-6 mt-6" style={{ background: 'var(--card-bg)', gridColumn: '1 / -1' }}>
+                                    <div className="flex-between mb-4 pb-3" style={{ borderBottom: '1px solid var(--border)' }}>
+                                        <div>
+                                            <h3 className="text-primary-400 mb-1" style={{ fontSize: '1.15rem', display: 'flex', alignItems: 'center', gap: '0.5rem', fontWeight: 700 }}>
+                                                <span>🏦</span>
+                                                <span>Unit Bank Account Details (ZBSCA & Vendor)</span>
+                                                <span className="badge badge-primary ml-2" style={{ fontSize: '0.72rem' }}>Funded Unit Accounts</span>
+                                            </h3>
+                                            <p style={{ margin: 0, color: 'var(--txt-3)', fontSize: '0.82rem' }}>
+                                                Official Zero Balance Subsidiary Account and Vendor Account details for government grant disbursements. Account numbers are masked for security.
+                                            </p>
+                                        </div>
+                                        <button className="btn btn-outline-primary btn-sm" onClick={handleOpenBankEditModal} style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', whitespace: 'nowrap' }}>
+                                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg> 🔒 Edit Bank Details (OTP Protected)
+                                        </button>
+                                    </div>
+
+                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.25rem' }}>
+                                        {/* 1. ZBSCA Account Box */}
+                                        <div style={{ background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: '10px', padding: '1.25rem' }}>
+                                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.85rem', paddingBottom: '0.5rem', borderBottom: '1px solid var(--border)' }}>
+                                                <h4 style={{ margin: 0, fontSize: '0.9rem', fontWeight: 700, color: 'var(--brand-500, #3b82f6)' }}>
+                                                    1. ZBSCA Account (Zero Balance Subsidiary)
+                                                </h4>
+                                                <span className="badge badge-success" style={{ fontSize: '0.7rem' }}>Active Account</span>
+                                            </div>
+
+                                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.85rem', fontSize: '0.85rem' }}>
+                                                <div>
+                                                    <span style={{ fontSize: '0.72rem', color: 'var(--txt-3)', textTransform: 'uppercase', fontWeight: 700 }}>Account Number (Masked)</span>
+                                                    <p style={{ margin: '0.15rem 0 0', fontWeight: 700, fontFamily: 'monospace', letterSpacing: '1px', fontSize: '0.95rem', color: 'var(--txt-1)' }}>
+                                                        {maskAcc(unit?.bankDetails?.zbsca?.accountNo)}
+                                                    </p>
+                                                </div>
+                                                <div>
+                                                    <span style={{ fontSize: '0.72rem', color: 'var(--txt-3)', textTransform: 'uppercase', fontWeight: 700 }}>IFSC Code</span>
+                                                    <p style={{ margin: '0.15rem 0 0', fontWeight: 700, fontFamily: 'monospace', color: 'var(--txt-1)' }}>
+                                                        {unit?.bankDetails?.zbsca?.ifscCode || 'N/A'}
+                                                    </p>
+                                                </div>
+                                                <div>
+                                                    <span style={{ fontSize: '0.72rem', color: 'var(--txt-3)', textTransform: 'uppercase', fontWeight: 700 }}>Bank Name</span>
+                                                    <p style={{ margin: '0.15rem 0 0', fontWeight: 600, color: 'var(--txt-1)' }}>
+                                                        {unit?.bankDetails?.zbsca?.bankName || 'State Bank of India'}
+                                                    </p>
+                                                </div>
+                                                <div>
+                                                    <span style={{ fontSize: '0.72rem', color: 'var(--txt-3)', textTransform: 'uppercase', fontWeight: 700 }}>Branch Name</span>
+                                                    <p style={{ margin: '0.15rem 0 0', fontWeight: 600, color: 'var(--txt-1)' }}>
+                                                        {unit?.bankDetails?.zbsca?.branchName || 'N/A'}
+                                                    </p>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        {/* 2. Vendor Account Box */}
+                                        <div style={{ background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: '10px', padding: '1.25rem' }}>
+                                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.85rem', paddingBottom: '0.5rem', borderBottom: '1px solid var(--border)' }}>
+                                                <h4 style={{ margin: 0, fontSize: '0.9rem', fontWeight: 700, color: 'var(--brand-500, #3b82f6)' }}>
+                                                    2. Vendor Account Details
+                                                </h4>
+                                                <span className="badge badge-secondary" style={{ fontSize: '0.7rem' }}>Vendor Entity</span>
+                                            </div>
+
+                                            <div className="mb-2">
+                                                <span style={{ fontSize: '0.72rem', color: 'var(--txt-3)', textTransform: 'uppercase', fontWeight: 700 }}>Vendor / Entity Name</span>
+                                                <p style={{ margin: '0.15rem 0 0', fontWeight: 700, color: 'var(--txt-1)' }}>
+                                                    {unit?.bankDetails?.vendor?.vendorName || 'College NSS Vendor Entity'}
+                                                </p>
+                                            </div>
+
+                                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.85rem', fontSize: '0.85rem', marginTop: '0.5rem' }}>
+                                                <div>
+                                                    <span style={{ fontSize: '0.72rem', color: 'var(--txt-3)', textTransform: 'uppercase', fontWeight: 700 }}>Account Number (Masked)</span>
+                                                    <p style={{ margin: '0.15rem 0 0', fontWeight: 700, fontFamily: 'monospace', letterSpacing: '1px', fontSize: '0.95rem', color: 'var(--txt-1)' }}>
+                                                        {maskAcc(unit?.bankDetails?.vendor?.accountNo)}
+                                                    </p>
+                                                </div>
+                                                <div>
+                                                    <span style={{ fontSize: '0.72rem', color: 'var(--txt-3)', textTransform: 'uppercase', fontWeight: 700 }}>IFSC Code</span>
+                                                    <p style={{ margin: '0.15rem 0 0', fontWeight: 700, fontFamily: 'monospace', color: 'var(--txt-1)' }}>
+                                                        {unit?.bankDetails?.vendor?.ifscCode || 'N/A'}
+                                                    </p>
+                                                </div>
+                                                <div>
+                                                    <span style={{ fontSize: '0.72rem', color: 'var(--txt-3)', textTransform: 'uppercase', fontWeight: 700 }}>Bank Name</span>
+                                                    <p style={{ margin: '0.15rem 0 0', fontWeight: 600, color: 'var(--txt-1)' }}>
+                                                        {unit?.bankDetails?.vendor?.bankName || 'N/A'}
+                                                    </p>
+                                                </div>
+                                                <div>
+                                                    <span style={{ fontSize: '0.72rem', color: 'var(--txt-3)', textTransform: 'uppercase', fontWeight: 700 }}>Branch Name</span>
+                                                    <p style={{ margin: '0.15rem 0 0', fontWeight: 600, color: 'var(--txt-1)' }}>
+                                                        {unit?.bankDetails?.vendor?.branchName || 'N/A'}
+                                                    </p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         )}
@@ -3181,12 +3392,137 @@ const UnitDashboard = () => {
                     insName={college?.insName}
                     insCode={college?.code}
                     units={[unit.unitNumber]}
-                    initialData={unit.head}
+                    initialData={{ ...unit.head, unit: unit.head.unit || unit.unitNumber }}
                     readOnly={false}
                     onSuccess={() => {
                         fetchDashboardData();
                     }}
                 />
+            )}
+
+            {/* Edit Bank Details OTP Protected Modal */}
+            {showEditBankModal && (
+                <div className="modal-overlay" style={{ zIndex: 1100 }}>
+                    <div className="modal-content" style={{ maxWidth: '650px' }}>
+                        <div className="flex-between mb-4 pb-2" style={{ borderBottom: '1px solid var(--border)' }}>
+                            <h3 className="mb-0" style={{ fontWeight: 800, color: 'var(--txt-1)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                <span>🏦</span>
+                                <span>Edit Unit Bank Account Details</span>
+                            </h3>
+                            <button className="btn btn-sm btn-secondary" onClick={() => setShowEditBankModal(false)}>&times;</button>
+                        </div>
+
+                        {bankOtpStep === 1 ? (
+                            <div className="text-center py-4">
+                                <div style={{ width: '64px', height: '64px', borderRadius: '50%', background: 'rgba(37,99,235,0.12)', color: '#2563eb', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1.25rem', fontSize: '1.75rem' }}>
+                                    🔒
+                                </div>
+                                <h4 style={{ fontWeight: 700, marginBottom: '0.5rem', color: 'var(--txt-1)' }}>Security OTP Verification Required</h4>
+                                <p style={{ color: 'var(--txt-3)', fontSize: '0.88rem', maxWidth: '480px', margin: '0 auto 1.5rem', lineHeight: 1.6 }}>
+                                    To protect sensitive grant funding bank accounts, updating Bank Details requires One-Time Password (OTP) verification. An OTP will be sent to the Programme Officer's registered email:
+                                </p>
+                                <div style={{ background: 'var(--bg)', padding: '0.75rem 1rem', borderRadius: '8px', border: '1px solid var(--border)', display: 'inline-block', fontWeight: 700, color: 'var(--primary-color)', marginBottom: '1.75rem', fontSize: '0.92rem' }}>
+                                    📧 {unit?.head?.email || 'Programme Officer Email'}
+                                </div>
+                                <div style={{ display: 'flex', justifyContent: 'center', gap: '1rem' }}>
+                                    <button className="btn btn-secondary" onClick={() => setShowEditBankModal(false)} disabled={bankOtpSending}>Cancel</button>
+                                    <button className="btn btn-primary" onClick={handleSendBankOtp} disabled={bankOtpSending}>
+                                        {bankOtpSending ? 'Sending OTP...' : '📩 Request OTP to PO Email'}
+                                    </button>
+                                </div>
+                            </div>
+                        ) : (
+                            <div>
+                                <div style={{ background: 'rgba(16, 185, 129, 0.08)', border: '1px solid rgba(16, 185, 129, 0.3)', borderRadius: '8px', padding: '0.75rem 1rem', marginBottom: '1.25rem', fontSize: '0.83rem', color: '#047857', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                    <div>
+                                        <strong>OTP Sent!</strong> Check <span>{bankOtpMaskedEmail || unit?.head?.email}</span> for the 6-digit code.
+                                    </div>
+                                    <button type="button" className="btn btn-sm btn-secondary" onClick={handleSendBankOtp} disabled={bankOtpSending} style={{ fontSize: '0.72rem', padding: '0.2rem 0.5rem' }}>
+                                        Resend OTP
+                                    </button>
+                                </div>
+
+                                <div className="form-group mb-4" style={{ background: 'var(--bg)', padding: '1rem', borderRadius: '10px', border: '1.5px solid var(--primary-color)' }}>
+                                    <label className="form-label" style={{ fontWeight: 800, color: 'var(--txt-1)' }}>Enter 6-Digit OTP Code <span style={{ color: 'red' }}>*</span></label>
+                                    <input
+                                        className="form-input"
+                                        type="text"
+                                        maxLength={6}
+                                        placeholder="e.g. 123456"
+                                        value={bankOtpInput}
+                                        onChange={(e) => setBankOtpInput(e.target.value.replace(/[^0-9]/g, ''))}
+                                        style={{ letterSpacing: '4px', fontWeight: 800, fontSize: '1.1rem', textAlign: 'center', height: '44px' }}
+                                    />
+                                </div>
+
+                                {/* 1. ZBSCA Account Inputs */}
+                                <div style={{ background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: '10px', padding: '1rem', marginBottom: '1rem' }}>
+                                    <h5 style={{ margin: '0 0 0.75rem', fontSize: '0.85rem', fontWeight: 700, color: 'var(--primary-color)' }}>
+                                        1. ZBSCA Account Details (Zero Balance Subsidiary)
+                                    </h5>
+                                    <div className="grid-cols-2 mb-3" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.85rem' }}>
+                                        <div className="form-group">
+                                            <label className="form-label">ZBSCA Account Number <span style={{ color: 'red' }}>*</span></label>
+                                            <input className="form-input" type="text" placeholder="Account No" value={editBankDetails.zbsca.accountNo} onChange={(e) => setEditBankDetails({ ...editBankDetails, zbsca: { ...editBankDetails.zbsca, accountNo: e.target.value } })} required />
+                                        </div>
+                                        <div className="form-group">
+                                            <label className="form-label">IFSC Code <span style={{ color: 'red' }}>*</span></label>
+                                            <input className="form-input" type="text" placeholder="IFSC Code" value={editBankDetails.zbsca.ifscCode} onChange={(e) => setEditBankDetails({ ...editBankDetails, zbsca: { ...editBankDetails.zbsca, ifscCode: e.target.value.toUpperCase() } })} required />
+                                        </div>
+                                    </div>
+                                    <div className="grid-cols-2" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.85rem' }}>
+                                        <div className="form-group">
+                                            <label className="form-label">Bank Name</label>
+                                            <input className="form-input" type="text" placeholder="Bank Name" value={editBankDetails.zbsca.bankName} onChange={(e) => setEditBankDetails({ ...editBankDetails, zbsca: { ...editBankDetails.zbsca, bankName: e.target.value } })} />
+                                        </div>
+                                        <div className="form-group">
+                                            <label className="form-label">Branch Name</label>
+                                            <input className="form-input" type="text" placeholder="Branch Name" value={editBankDetails.zbsca.branchName} onChange={(e) => setEditBankDetails({ ...editBankDetails, zbsca: { ...editBankDetails.zbsca, branchName: e.target.value } })} />
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* 2. Vendor Account Inputs */}
+                                <div style={{ background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: '10px', padding: '1rem', marginBottom: '1.25rem' }}>
+                                    <h5 style={{ margin: '0 0 0.75rem', fontSize: '0.85rem', fontWeight: 700, color: 'var(--primary-color)' }}>
+                                        2. Vendor Account Details
+                                    </h5>
+                                    <div className="form-group mb-3">
+                                        <label className="form-label">Vendor Name / Entity Name</label>
+                                        <input className="form-input" type="text" placeholder="Vendor Name" value={editBankDetails.vendor.vendorName} onChange={(e) => setEditBankDetails({ ...editBankDetails, vendor: { ...editBankDetails.vendor, vendorName: e.target.value } })} />
+                                    </div>
+                                    <div className="grid-cols-2 mb-3" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.85rem' }}>
+                                        <div className="form-group">
+                                            <label className="form-label">Vendor Account Number <span style={{ color: 'red' }}>*</span></label>
+                                            <input className="form-input" type="text" placeholder="Account No" value={editBankDetails.vendor.accountNo} onChange={(e) => setEditBankDetails({ ...editBankDetails, vendor: { ...editBankDetails.vendor, accountNo: e.target.value } })} required />
+                                        </div>
+                                        <div className="form-group">
+                                            <label className="form-label">IFSC Code <span style={{ color: 'red' }}>*</span></label>
+                                            <input className="form-input" type="text" placeholder="IFSC Code" value={editBankDetails.vendor.ifscCode} onChange={(e) => setEditBankDetails({ ...editBankDetails, vendor: { ...editBankDetails.vendor, ifscCode: e.target.value.toUpperCase() } })} required />
+                                        </div>
+                                    </div>
+                                    <div className="grid-cols-2" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.85rem' }}>
+                                        <div className="form-group">
+                                            <label className="form-label">Bank Name</label>
+                                            <input className="form-input" type="text" placeholder="Bank Name" value={editBankDetails.vendor.bankName} onChange={(e) => setEditBankDetails({ ...editBankDetails, vendor: { ...editBankDetails.vendor, bankName: e.target.value } })} />
+                                        </div>
+                                        <div className="form-group">
+                                            <label className="form-label">Branch Name</label>
+                                            <input className="form-input" type="text" placeholder="Branch Name" value={editBankDetails.vendor.branchName} onChange={(e) => setEditBankDetails({ ...editBankDetails, vendor: { ...editBankDetails.vendor, branchName: e.target.value } })} />
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem' }}>
+                                    <button className="btn btn-secondary" onClick={() => setShowEditBankModal(false)} disabled={bankOtpSending}>Cancel</button>
+                                    <button className="btn btn-primary" onClick={handleSaveBankDetailsWithOtp} disabled={bankOtpSending}>
+                                        {bankOtpSending ? 'Updating...' : 'Verify OTP & Save Bank Details'}
+                                    </button>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                </div>
             )}
         </div>
     );

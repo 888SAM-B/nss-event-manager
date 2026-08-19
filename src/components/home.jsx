@@ -361,6 +361,7 @@ const Home = () => {
                      width: 100%;
                      height: 100%;
                      object-fit: cover;
+                     object-position: top center;
                  }
                  .admin-card-details {
                      flex: 1;
@@ -618,7 +619,7 @@ const Home = () => {
             {/* ── Section 1.5: History of NSS ── */}
             <section id="history" style={{ padding: "5rem 0", background: "var(--bg)" }} data-aos="fade-up">
                 <div className="container">
-                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "4rem", alignItems: "center" }} className="hero-columns">
+                    <div className="hero-columns" style={{ marginTop: 0 }}>
                         {/* Left column: History description & download button */}
                         <div>
                             <span style={{ fontSize: "0.75rem", fontWeight: 700, letterSpacing: "0.15em", color: "#2563eb", textTransform: "uppercase" }}>Our Legacy</span>

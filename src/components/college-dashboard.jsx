@@ -133,6 +133,23 @@ const CollegeDashboard = () => {
     const [currentMemberPage, setCurrentMemberPage] = useState(1);
     const membersPerPage = 50;
 
+    // Unit Creation PO Assignment states
+    const [poMode, setPoMode] = useState("new"); // 'new' | 'existing'
+    const [selectedExistingPoId, setSelectedExistingPoId] = useState("");
+    const [poAssignmentChoice, setPoAssignmentChoice] = useState("transfer"); // 'transfer' | 'both'
+    const [showUnitConfirmModal, setShowUnitConfirmModal] = useState(false);
+
+    // Bank Account states for Funded Units (ZBSCA & Vendor)
+    const [zbscaAccNo, setZbscaAccNo] = useState("");
+    const [zbscaBankName, setZbscaBankName] = useState("");
+    const [zbscaBranchName, setZbscaBranchName] = useState("");
+    const [zbscaIfsc, setZbscaIfsc] = useState("");
+    const [vendorName, setVendorName] = useState("");
+    const [vendorAccNo, setVendorAccNo] = useState("");
+    const [vendorBankName, setVendorBankName] = useState("");
+    const [vendorBranchName, setVendorBranchName] = useState("");
+    const [vendorIfsc, setVendorIfsc] = useState("");
+
 
 
     // Check if admin is viewing this dashboard
@@ -267,7 +284,7 @@ const CollegeDashboard = () => {
         setNewMembers(updatedMembers);
     };
 
-    const handleCreateUnit = async () => {
+    const handleInitiateCreateUnit = () => {
         if (units.length >= 6) {
             toast.error("Maximum limit of 6 units reached.");
             return;
@@ -276,10 +293,31 @@ const CollegeDashboard = () => {
             toast.error("Please enter a unit password.");
             return;
         }
-        if (!poName.trim() || !poDesignation.trim() || !poDepartment.trim() || !poEmail.trim() || !poMobile.trim()) {
-            toast.error("Please fill in all mandatory Programme Officer details (Name, Designation, Department, Email, Mobile).");
-            return;
+        if (newUnitType === "Funded") {
+            if (!zbscaAccNo.trim() || !zbscaIfsc.trim()) {
+                toast.error("Please enter the mandatory ZBSCA Account Number and IFSC Code for Funded Unit.");
+                return;
+            }
+            if (!vendorAccNo.trim() || !vendorIfsc.trim()) {
+                toast.error("Please enter the mandatory Vendor Account Number and IFSC Code for Funded Unit.");
+                return;
+            }
         }
+        if (poMode === "existing") {
+            if (!selectedExistingPoId) {
+                toast.error("Please select an existing Programme Officer.");
+                return;
+            }
+        } else {
+            if (!poName.trim() || !poDesignation.trim() || !poDepartment.trim() || !poEmail.trim() || !poMobile.trim()) {
+                toast.error("Please fill in all mandatory Programme Officer details (Name, Designation, Department, Email, Mobile).");
+                return;
+            }
+        }
+        setShowUnitConfirmModal(true);
+    };
+
+    const handleConfirmCreateUnit = async () => {
         const assignedName = `Unit ${units.length + 1}`;
         const createdDate = newUnitCreationDate || new Date().toISOString().split('T')[0];
 
@@ -290,7 +328,32 @@ const CollegeDashboard = () => {
             members: newMembers,
             unitType: newUnitType,
             createdDate,
-            officerData: {
+            poMode
+        };
+
+        if (newUnitType === "Funded") {
+            payload.bankDetails = {
+                zbsca: {
+                    accountNo: zbscaAccNo,
+                    bankName: zbscaBankName,
+                    branchName: zbscaBranchName,
+                    ifscCode: zbscaIfsc
+                },
+                vendor: {
+                    vendorName: vendorName,
+                    accountNo: vendorAccNo,
+                    bankName: vendorBankName,
+                    branchName: vendorBranchName,
+                    ifscCode: vendorIfsc
+                }
+            };
+        }
+
+        if (poMode === "existing") {
+            payload.existingOfficerId = selectedExistingPoId;
+            payload.assignmentMode = poAssignmentChoice;
+        } else {
+            payload.officerData = {
                 name: poName,
                 designation: poDesignation,
                 department: poDepartment,
@@ -314,8 +377,9 @@ const CollegeDashboard = () => {
                 achievements: poAchievements,
                 etlTraining: poEtlTraining,
                 etlCertificate: poEtlCertificate
-            }
-        };
+            };
+        }
+
         setIsCreating(true);
         try {
             const res = await axios.post(
@@ -329,16 +393,30 @@ const CollegeDashboard = () => {
             );
 
             if (res.data.success) {
-                // Update local state assuming success or use response data if available
                 const createdUnit = res.data.unit || { ...payload, id: Date.now() };
                 setUnits([...units, createdUnit]);
+                setShowUnitConfirmModal(false);
                 setShowUnitModal(false);
                 setNewUnitName("");
                 setNewUnitPassword("");
                 setCollegePasskey("");
                 setNewMembers([]);
 
-                // Clear PO fields
+                // Clear Bank Details
+                setZbscaAccNo("");
+                setZbscaBankName("");
+                setZbscaBranchName("");
+                setZbscaIfsc("");
+                setVendorName("");
+                setVendorAccNo("");
+                setVendorBankName("");
+                setVendorBranchName("");
+                setVendorIfsc("");
+
+                // Clear PO fields & options
+                setPoMode("new");
+                setSelectedExistingPoId("");
+                setPoAssignmentChoice("transfer");
                 setPoName("");
                 setPoDesignation("");
                 setPoDepartment("");
@@ -1234,7 +1312,7 @@ const CollegeDashboard = () => {
                             {/* Date Filter Dropdown — hidden in Calendar view */}
                             {eventsTab !== 'calendar' && (
                                 <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '0.5rem', flexShrink: 0, flexWrap: 'nowrap' }}>
-                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ color: 'var(--txt-3)' }}><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ color: 'var(--txt-3)' }}><rect x="3" y="4" width="18" height="18" rx="2" ry="2" /><line x1="16" y1="2" x2="16" y2="6" /><line x1="8" y1="2" x2="8" y2="6" /><line x1="3" y1="10" x2="21" y2="10" /></svg>
                                     <select
                                         className="form-input"
                                         style={{ fontSize: '0.8rem', padding: '0.3rem 0.5rem', borderRadius: '6px', height: 34, minWidth: 120 }}
@@ -1442,12 +1520,12 @@ const CollegeDashboard = () => {
                         <div className="grid-cols-4 mb-4" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: '1rem' }}>
                             <div className="form-group">
                                 <label className="form-label">Unit Name</label>
-                                <div className="form-input" style={{ background: 'var(--bg-tertiary)', cursor: 'not-allowed', opacity: 0.8, display: 'flex', alignItems: 'center', height: '38px' }}>
+                                <div className="form-input" style={{ background: '#63636356', cursor: 'not-allowed', opacity: 0.8, display: 'flex', alignItems: 'center', height: '38px' }}>
                                     {`Unit ${units.length + 1}`}
                                 </div>
                             </div>
                             <div className="form-group">
-                                <label className="form-label">Unit Password <span style={{ color: 'red' }}>*</span></label>
+                                <label className="form-label">Password <span style={{ color: 'red' }}>*</span></label>
                                 <input className="form-input" type="password" placeholder="Set password" value={newUnitPassword} onChange={(e) => setNewUnitPassword(e.target.value)} />
                             </div>
                             <div className="form-group">
@@ -1465,180 +1543,440 @@ const CollegeDashboard = () => {
 
                         {/* Program Officer details */}
                         <div className="mb-6" style={{ borderTop: '1px solid var(--border)', paddingTop: '1.5rem' }}>
-                            <h3 className="mb-3 text-lg" style={{ color: 'var(--txt-1)', fontWeight: 700 }}>Programme Officer Details (Unit Head)</h3>
-
-                            <div className="grid-cols-2 mb-3" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-                                <div className="form-group">
-                                    <label className="form-label">Full Name <span style={{ color: 'red' }}>*</span></label>
-                                    <input className="form-input" type="text" placeholder="PO Name" value={poName} onChange={(e) => setPoName(e.target.value)} required />
-                                </div>
-                                <div className="form-group">
-                                    <label className="form-label">Designation <span style={{ color: 'red' }}>*</span></label>
-                                    <input className="form-input" type="text" placeholder="Designation" value={poDesignation} onChange={(e) => setPoDesignation(e.target.value)} required />
-                                </div>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+                                <h3 className="text-lg" style={{ color: 'var(--txt-1)', fontWeight: 700, margin: 0 }}>Programme Officer Assignment (Unit Head)</h3>
                             </div>
 
-                            <div className="grid-cols-2 mb-3" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-                                <div className="form-group">
-                                    <label className="form-label">Department <span style={{ color: 'red' }}>*</span></label>
-                                    <input className="form-input" type="text" placeholder="Department" value={poDepartment} onChange={(e) => setPoDepartment(e.target.value)} required />
-                                </div>
-                                <div className="form-group">
-                                    <label className="form-label">Date of Birth</label>
-                                    <input className="form-input" type="date" value={poDob} onChange={(e) => setPoDob(e.target.value)} />
-                                </div>
+                            {/* Mode Selector Toggle */}
+                            <div className="mb-4" style={{ display: 'flex', gap: '0.5rem', background: 'var(--bg)', padding: '0.35rem', borderRadius: '8px', border: '1px solid var(--border)' }}>
+                                <button
+                                    type="button"
+                                    className={`btn btn-sm ${poMode === 'new' ? 'btn-primary' : 'btn-secondary'}`}
+                                    style={{ flex: 1, padding: '0.5rem', fontSize: '0.8rem', fontWeight: 600 }}
+                                    onClick={() => setPoMode('new')}
+                                >
+                                    ➕ Create New Programme Officer
+                                </button>
+                                <button
+                                    type="button"
+                                    className={`btn btn-sm ${poMode === 'existing' ? 'btn-primary' : 'btn-secondary'}`}
+                                    style={{ flex: 1, padding: '0.5rem', fontSize: '0.8rem', fontWeight: 600 }}
+                                    onClick={() => setPoMode('existing')}
+                                >
+                                    👤 Assign Existing Programme Officer
+                                </button>
                             </div>
 
-                            <div className="grid-cols-3 mb-3" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '1rem' }}>
-                                <div className="form-group">
-                                    <label className="form-label">Community</label>
-                                    <select className="form-input" value={poCommunity} onChange={(e) => setPoCommunity(e.target.value)}>
-                                        <option value="General">General</option>
-                                        <option value="SC">SC</option>
-                                        <option value="ST">ST</option>
-                                        <option value="OBC">OBC</option>
-                                    </select>
-                                </div>
-                                <div className="form-group">
-                                    <label className="form-label">Email ID <span style={{ color: 'red' }}>*</span></label>
-                                    <input className="form-input" type="email" placeholder="Email" value={poEmail} onChange={(e) => setPoEmail(e.target.value)} required />
-                                </div>
-                                <div className="form-group">
-                                    <label className="form-label">Mobile Number <span style={{ color: 'red' }}>*</span></label>
-                                    <input className="form-input" type="text" placeholder="Mobile" value={poMobile} onChange={(e) => setPoMobile(e.target.value)} required />
-                                </div>
-                            </div>
-
-                            <div className="grid-cols-3 mb-3" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '1rem' }}>
-                                <div className="form-group">
-                                    <label className="form-label">Date of Appointment</label>
-                                    <input className="form-input" type="date" value={poDateOfAppointment} onChange={(e) => setPoDateOfAppointment(e.target.value)} />
-                                </div>
-                                <div className="form-group">
-                                    <label className="form-label">Teaching Experience (Years)</label>
-                                    <input className="form-input" type="text" placeholder="e.g. 5" value={poTeachingExperience} onChange={(e) => setPoTeachingExperience(e.target.value)} />
-                                </div>
-                                <div className="form-group">
-                                    <label className="form-label">Qualification</label>
-                                    <input className="form-input" type="text" placeholder="e.g. Ph.D" value={poQualification} onChange={(e) => setPoQualification(e.target.value)} />
-                                </div>
-                            </div>
-
-                            <div className="form-group mb-3">
-                                <label className="form-label">Address</label>
-                                <input className="form-input" type="text" placeholder="Personal Address" value={poAddress} onChange={(e) => setPoAddress(e.target.value)} />
-                            </div>
-
-                            <div className="grid-cols-4 mb-3" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: '1rem' }}>
-                                <div className="form-group">
-                                    <label className="form-label">Block</label>
-                                    <input className="form-input" type="text" placeholder="Block" value={poBlock} onChange={(e) => setPoBlock(e.target.value)} />
-                                </div>
-                                <div className="form-group">
-                                    <label className="form-label">Taluk</label>
-                                    <input className="form-input" type="text" placeholder="Taluk" value={poTaluk} onChange={(e) => setPoTaluk(e.target.value)} />
-                                </div>
-                                <div className="form-group">
-                                    <label className="form-label">District</label>
-                                    <input className="form-input" type="text" placeholder="District" value={poDistrict} onChange={(e) => setPoDistrict(e.target.value)} />
-                                </div>
-                                <div className="form-group">
-                                    <label className="form-label">Pincode</label>
-                                    <input className="form-input" type="text" placeholder="Pincode" value={poPincode} onChange={(e) => setPoPincode(e.target.value)} maxLength={6} />
-                                </div>
-                            </div>
-
-                            {/* Profile Image upload */}
-                            <div className="grid-cols-2 mb-3" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginTop: '1rem' }}>
-                                <div className="form-group">
-                                    <label className="form-label">Profile Image</label>
-                                    <input className="form-input" type="file" accept="image/*" onChange={handlePoImageChange} />
-                                </div>
-                                {poImage && (
-                                    <div className="form-group" style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                                        <img src={poImage} alt="PO Preview" style={{ width: '45px', height: '45px', borderRadius: '50%', objectFit: 'cover', border: '1px solid var(--border)' }} />
-                                        <button type="button" className="btn btn-sm btn-danger" style={{ padding: '0.2rem 0.5rem', fontSize: '0.75rem' }} onClick={() => setPoImage(null)}>Remove Preview</button>
+                            {poMode === 'existing' ? (
+                                <div style={{ background: 'var(--card)', border: '1px solid var(--border)', padding: '1.25rem', borderRadius: '10px' }}>
+                                    <div className="form-group mb-3">
+                                        <label className="form-label" style={{ fontWeight: 700 }}>Select Programme Officer <span style={{ color: 'red' }}>*</span></label>
+                                        <select
+                                            className="form-input"
+                                            style={{ height: '42px', fontSize: '0.88rem' }}
+                                            value={selectedExistingPoId}
+                                            onChange={(e) => {
+                                                setSelectedExistingPoId(e.target.value);
+                                                setPoAssignmentChoice('transfer');
+                                            }}
+                                        >
+                                            <option value="">-- Choose an existing Programme Officer --</option>
+                                            {programOfficers.map((po) => (
+                                                <option key={po._id} value={po._id}>
+                                                    {po.name} ({po.designation || 'PO'} - {po.department || 'N/A'}) {po.unit ? `[Currently: Unit ${po.unit}]` : '[Unassigned]'}
+                                                </option>
+                                            ))}
+                                        </select>
                                     </div>
-                                )}
-                            </div>
 
-                            {/* Seminars attended list */}
-                            <div className="form-group mb-3">
-                                <label className="form-label" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                    <span>Orientation / Refresher Seminars Attended</span>
-                                    <button type="button" className="btn btn-sm btn-secondary" style={{ padding: '0.2rem 0.5rem', fontSize: '0.7rem' }} onClick={() => addPoDynamicField("seminars")}>+ Add Seminar</button>
-                                </label>
-                                {poSeminars.map((sem, idx) => (
-                                    <div key={idx} style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.5rem' }}>
-                                        <input className="form-input" type="text" placeholder={`Seminar ${idx + 1}`} value={sem} onChange={(e) => handlePoDynamicChange(idx, "seminars", e.target.value)} style={{ flex: 1 }} />
-                                        {poSeminars.length > 1 && (
-                                            <button type="button" className="btn btn-danger btn-sm" onClick={() => removePoDynamicField(idx, "seminars")}>&times;</button>
+                                    {(() => {
+                                        const selectedPo = programOfficers.find(p => p._id === selectedExistingPoId);
+                                        if (!selectedPo) return null;
+                                        const isAssigned = selectedPo.unit && selectedPo.unit.trim() !== "";
+
+                                        if (isAssigned) {
+                                            return (
+                                                <div style={{ background: 'rgba(245, 158, 11, 0.08)', border: '1px solid rgba(245, 158, 11, 0.3)', borderRadius: '10px', padding: '1rem', marginTop: '1rem' }}>
+                                                    <p style={{ margin: '0 0 0.75rem', fontSize: '0.85rem', fontWeight: 700, color: '#b45309', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                                        <span>⚠️</span>
+                                                        <span><strong>{selectedPo.name}</strong> is currently assigned to <strong>Unit {selectedPo.unit}</strong>. Select assignment option:</span>
+                                                    </p>
+
+                                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                                                        <label style={{ display: 'flex', alignItems: 'flex-start', gap: '0.625rem', cursor: 'pointer', background: 'var(--card)', padding: '0.75rem', borderRadius: '8px', border: poAssignmentChoice === 'transfer' ? '2px solid var(--brand-600, #2563eb)' : '1px solid var(--border)' }}>
+                                                            <input
+                                                                type="radio"
+                                                                name="poAssignmentChoice"
+                                                                value="transfer"
+                                                                checked={poAssignmentChoice === 'transfer'}
+                                                                onChange={() => setPoAssignmentChoice('transfer')}
+                                                                style={{ marginTop: '3px' }}
+                                                            />
+                                                            <div>
+                                                                <div style={{ fontWeight: 700, fontSize: '0.85rem', color: 'var(--txt-1)' }}>1. Reassign / Transfer (Exit previous unit & join this unit)</div>
+                                                                <div style={{ color: 'var(--txt-3)', fontSize: '0.78rem', marginTop: '2px' }}>
+                                                                    Officer will exit Unit {selectedPo.unit} and become the head of Unit {units.length + 1} exclusively.
+                                                                </div>
+                                                            </div>
+                                                        </label>
+
+                                                        <label style={{ display: 'flex', alignItems: 'flex-start', gap: '0.625rem', cursor: 'pointer', background: 'var(--card)', padding: '0.75rem', borderRadius: '8px', border: poAssignmentChoice === 'both' ? '2px solid var(--brand-600, #2563eb)' : '1px solid var(--border)' }}>
+                                                            <input
+                                                                type="radio"
+                                                                name="poAssignmentChoice"
+                                                                value="both"
+                                                                checked={poAssignmentChoice === 'both'}
+                                                                onChange={() => setPoAssignmentChoice('both')}
+                                                                style={{ marginTop: '3px' }}
+                                                            />
+                                                            <div>
+                                                                <div style={{ fontWeight: 700, fontSize: '0.85rem', color: 'var(--txt-1)' }}>2. Dual Charge (Assign to both units)</div>
+                                                                <div style={{ color: 'var(--txt-3)', fontSize: '0.78rem', marginTop: '2px' }}>
+                                                                    Officer will manage both Unit {selectedPo.unit} and Unit {units.length + 1}.
+                                                                </div>
+                                                            </div>
+                                                        </label>
+                                                    </div>
+                                                </div>
+                                            );
+                                        } else {
+                                            return (
+                                                <div style={{ background: 'rgba(16, 185, 129, 0.08)', border: '1px solid rgba(16, 185, 129, 0.3)', borderRadius: '10px', padding: '0.875rem 1rem', marginTop: '1rem' }}>
+                                                    <p style={{ margin: 0, fontSize: '0.83rem', fontWeight: 600, color: '#047857', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                                        <span>ℹ️</span>
+                                                        <span><strong>{selectedPo.name}</strong> is currently unassigned. This officer will be assigned to Unit {units.length + 1}.</span>
+                                                    </p>
+                                                </div>
+                                            );
+                                        }
+                                    })()}
+                                </div>
+                            ) : (
+                                <div>
+                                    <div className="grid-cols-2 mb-3" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                                        <div className="form-group">
+                                            <label className="form-label">Full Name <span style={{ color: 'red' }}>*</span></label>
+                                            <input className="form-input" type="text" placeholder="PO Name" value={poName} onChange={(e) => setPoName(e.target.value)} required />
+                                        </div>
+                                        <div className="form-group">
+                                            <label className="form-label">Designation <span style={{ color: 'red' }}>*</span></label>
+                                            <input className="form-input" type="text" placeholder="Designation" value={poDesignation} onChange={(e) => setPoDesignation(e.target.value)} required />
+                                        </div>
+                                    </div>
+
+                                    <div className="grid-cols-2 mb-3" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                                        <div className="form-group">
+                                            <label className="form-label">Department <span style={{ color: 'red' }}>*</span></label>
+                                            <input className="form-input" type="text" placeholder="Department" value={poDepartment} onChange={(e) => setPoDepartment(e.target.value)} required />
+                                        </div>
+                                        <div className="form-group">
+                                            <label className="form-label">Date of Birth</label>
+                                            <input className="form-input" type="date" value={poDob} onChange={(e) => setPoDob(e.target.value)} />
+                                        </div>
+                                    </div>
+
+                                    <div className="grid-cols-3 mb-3" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '1rem' }}>
+                                        <div className="form-group">
+                                            <label className="form-label">Community</label>
+                                            <select className="form-input" value={poCommunity} onChange={(e) => setPoCommunity(e.target.value)}>
+                                                <option value="General">General</option>
+                                                <option value="SC">SC</option>
+                                                <option value="ST">ST</option>
+                                                <option value="OBC">OBC</option>
+                                            </select>
+                                        </div>
+                                        <div className="form-group">
+                                            <label className="form-label">Email ID <span style={{ color: 'red' }}>*</span></label>
+                                            <input className="form-input" type="email" placeholder="Email" value={poEmail} onChange={(e) => setPoEmail(e.target.value)} required />
+                                        </div>
+                                        <div className="form-group">
+                                            <label className="form-label">Mobile Number <span style={{ color: 'red' }}>*</span></label>
+                                            <input className="form-input" type="text" placeholder="Mobile" value={poMobile} onChange={(e) => setPoMobile(e.target.value)} required />
+                                        </div>
+                                    </div>
+
+                                    <div className="grid-cols-3 mb-3" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '1rem' }}>
+                                        <div className="form-group">
+                                            <label className="form-label">Date of Appointment</label>
+                                            <input className="form-input" type="date" value={poDateOfAppointment} onChange={(e) => setPoDateOfAppointment(e.target.value)} />
+                                        </div>
+                                        <div className="form-group">
+                                            <label className="form-label">Teaching Experience (Years)</label>
+                                            <input className="form-input" type="text" placeholder="e.g. 5" value={poTeachingExperience} onChange={(e) => setPoTeachingExperience(e.target.value)} />
+                                        </div>
+                                        <div className="form-group">
+                                            <label className="form-label">Qualification</label>
+                                            <input className="form-input" type="text" placeholder="e.g. Ph.D" value={poQualification} onChange={(e) => setPoQualification(e.target.value)} />
+                                        </div>
+                                    </div>
+
+                                    <div className="form-group mb-3">
+                                        <label className="form-label">Address</label>
+                                        <input className="form-input" type="text" placeholder="Personal Address" value={poAddress} onChange={(e) => setPoAddress(e.target.value)} />
+                                    </div>
+
+                                    <div className="grid-cols-4 mb-3" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: '1rem' }}>
+                                        <div className="form-group">
+                                            <label className="form-label">Block</label>
+                                            <input className="form-input" type="text" placeholder="Block" value={poBlock} onChange={(e) => setPoBlock(e.target.value)} />
+                                        </div>
+                                        <div className="form-group">
+                                            <label className="form-label">Taluk</label>
+                                            <input className="form-input" type="text" placeholder="Taluk" value={poTaluk} onChange={(e) => setPoTaluk(e.target.value)} />
+                                        </div>
+                                        <div className="form-group">
+                                            <label className="form-label">District</label>
+                                            <input className="form-input" type="text" placeholder="District" value={poDistrict} onChange={(e) => setPoDistrict(e.target.value)} />
+                                        </div>
+                                        <div className="form-group">
+                                            <label className="form-label">Pincode</label>
+                                            <input className="form-input" type="text" placeholder="Pincode" value={poPincode} onChange={(e) => setPoPincode(e.target.value)} maxLength={6} />
+                                        </div>
+                                    </div>
+
+                                    {/* Profile Image upload */}
+                                    <div className="grid-cols-2 mb-3" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginTop: '1rem' }}>
+                                        <div className="form-group">
+                                            <label className="form-label">Profile Image</label>
+                                            <input className="form-input" type="file" accept="image/*" onChange={handlePoImageChange} />
+                                        </div>
+                                        {poImage && (
+                                            <div className="form-group" style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                                                <img src={poImage} alt="PO Preview" style={{ width: '45px', height: '45px', borderRadius: '50%', objectFit: 'cover', border: '1px solid var(--border)' }} />
+                                                <button type="button" className="btn btn-sm btn-danger" style={{ padding: '0.2rem 0.5rem', fontSize: '0.75rem' }} onClick={() => setPoImage(null)}>Remove Preview</button>
+                                            </div>
                                         )}
                                     </div>
-                                ))}
-                            </div>
 
-                            {/* NSS Experience list */}
-                            <div className="form-group mb-3">
-                                <label className="form-label" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                    <span>NSS Experience (If any)</span>
-                                    <button type="button" className="btn btn-sm btn-secondary" style={{ padding: '0.2rem 0.5rem', fontSize: '0.7rem' }} onClick={() => addPoDynamicField("nssExperience")}>+ Add Experience</button>
-                                </label>
-                                {poNssExperience.map((exp, idx) => (
-                                    <div key={idx} style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.5rem' }}>
-                                        <input className="form-input" type="text" placeholder={`Experience details ${idx + 1}`} value={exp} onChange={(e) => handlePoDynamicChange(idx, "nssExperience", e.target.value)} style={{ flex: 1 }} />
-                                        {poNssExperience.length > 1 && (
-                                            <button type="button" className="btn btn-danger btn-sm" onClick={() => removePoDynamicField(idx, "nssExperience")}>&times;</button>
+                                    {/* Seminars attended list */}
+                                    <div className="form-group mb-3">
+                                        <label className="form-label" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                            <span>Orientation / Refresher Seminars Attended</span>
+                                            <button type="button" className="btn btn-sm btn-secondary" style={{ padding: '0.2rem 0.5rem', fontSize: '0.7rem' }} onClick={() => addPoDynamicField("seminars")}>+ Add Seminar</button>
+                                        </label>
+                                        {poSeminars.map((sem, idx) => (
+                                            <div key={idx} style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.5rem' }}>
+                                                <input className="form-input" type="text" placeholder={`Seminar ${idx + 1}`} value={sem} onChange={(e) => handlePoDynamicChange(idx, "seminars", e.target.value)} style={{ flex: 1 }} />
+                                                {poSeminars.length > 1 && (
+                                                    <button type="button" className="btn btn-danger btn-sm" onClick={() => removePoDynamicField(idx, "seminars")}>&times;</button>
+                                                )}
+                                            </div>
+                                        ))}
+                                    </div>
+
+                                    {/* NSS Experience list */}
+                                    <div className="form-group mb-3">
+                                        <label className="form-label" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                            <span>NSS Experience (If any)</span>
+                                            <button type="button" className="btn btn-sm btn-secondary" style={{ padding: '0.2rem 0.5rem', fontSize: '0.7rem' }} onClick={() => addPoDynamicField("nssExperience")}>+ Add Experience</button>
+                                        </label>
+                                        {poNssExperience.map((exp, idx) => (
+                                            <div key={idx} style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.5rem' }}>
+                                                <input className="form-input" type="text" placeholder={`Experience details ${idx + 1}`} value={exp} onChange={(e) => handlePoDynamicChange(idx, "nssExperience", e.target.value)} style={{ flex: 1 }} />
+                                                {poNssExperience.length > 1 && (
+                                                    <button type="button" className="btn btn-danger btn-sm" onClick={() => removePoDynamicField(idx, "nssExperience")}>&times;</button>
+                                                )}
+                                            </div>
+                                        ))}
+                                    </div>
+
+                                    {/* Special Talent list */}
+                                    <div className="form-group mb-3">
+                                        <label className="form-label" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                            <span>Special Talents</span>
+                                            <button type="button" className="btn btn-sm btn-secondary" style={{ padding: '0.2rem 0.5rem', fontSize: '0.7rem' }} onClick={() => addPoDynamicField("specialTalent")}>+ Add Talent</button>
+                                        </label>
+                                        {poSpecialTalent.map((tal, idx) => (
+                                            <div key={idx} style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.5rem' }}>
+                                                <input className="form-input" type="text" placeholder={`Special Talent ${idx + 1}`} value={tal} onChange={(e) => handlePoDynamicChange(idx, "specialTalent", e.target.value)} style={{ flex: 1 }} />
+                                                {poSpecialTalent.length > 1 && (
+                                                    <button type="button" className="btn btn-danger btn-sm" onClick={() => removePoDynamicField(idx, "specialTalent")}>&times;</button>
+                                                )}
+                                            </div>
+                                        ))}
+                                    </div>
+
+                                    {/* Achievements */}
+                                    <div className="form-group mb-3">
+                                        <label className="form-label">Achievements</label>
+                                        <textarea className="form-input" rows="2" placeholder="List any achievements..." value={poAchievements} onChange={(e) => setPoAchievements(e.target.value)} style={{ resize: 'vertical', width: '100%', padding: '0.65rem 0.85rem', borderRadius: '8px', border: '1px solid var(--border)', outline: 'none', background: 'var(--bg-card)', color: 'var(--txt-1)' }} />
+                                    </div>
+
+                                    {/* ETI Training & Certificate */}
+                                    <div className="grid-cols-2 mb-3" style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '1rem', alignItems: 'center' }}>
+                                        <div className="form-group">
+                                            <label className="form-label">ETI Training completed?</label>
+                                            <select className="form-input" value={poEtlTraining ? "Yes" : "No"} onChange={(e) => setPoEtlTraining(e.target.value === "Yes")}>
+                                                <option value="No">No</option>
+                                                <option value="Yes">Yes</option>
+                                            </select>
+                                        </div>
+                                        {poEtlTraining && (
+                                            <div className="form-group">
+                                                <label className="form-label">ETI Certificate Upload</label>
+                                                <input className="form-input" type="file" accept="image/*,application/pdf" onChange={handlePoEtlCertificateChange} />
+                                            </div>
                                         )}
                                     </div>
-                                ))}
-                            </div>
-
-                            {/* Special Talent list */}
-                            <div className="form-group mb-3">
-                                <label className="form-label" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                    <span>Special Talents</span>
-                                    <button type="button" className="btn btn-sm btn-secondary" style={{ padding: '0.2rem 0.5rem', fontSize: '0.7rem' }} onClick={() => addPoDynamicField("specialTalent")}>+ Add Talent</button>
-                                </label>
-                                {poSpecialTalent.map((tal, idx) => (
-                                    <div key={idx} style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.5rem' }}>
-                                        <input className="form-input" type="text" placeholder={`Special Talent ${idx + 1}`} value={tal} onChange={(e) => handlePoDynamicChange(idx, "specialTalent", e.target.value)} style={{ flex: 1 }} />
-                                        {poSpecialTalent.length > 1 && (
-                                            <button type="button" className="btn btn-danger btn-sm" onClick={() => removePoDynamicField(idx, "specialTalent")}>&times;</button>
-                                        )}
-                                    </div>
-                                ))}
-                            </div>
-
-                            {/* Achievements */}
-                            <div className="form-group mb-3">
-                                <label className="form-label">Achievements</label>
-                                <textarea className="form-input" rows="2" placeholder="List any achievements..." value={poAchievements} onChange={(e) => setPoAchievements(e.target.value)} style={{ resize: 'vertical', width: '100%', padding: '0.65rem 0.85rem', borderRadius: '8px', border: '1px solid var(--border)', outline: 'none', background: 'var(--bg-card)', color: 'var(--txt-1)' }} />
-                            </div>
-
-                            {/* ETI Training & Certificate */}
-                            <div className="grid-cols-2 mb-3" style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '1rem', alignItems: 'center' }}>
-                                <div className="form-group">
-                                    <label className="form-label">ETI Training completed?</label>
-                                    <select className="form-input" value={poEtlTraining ? "Yes" : "No"} onChange={(e) => setPoEtlTraining(e.target.value === "Yes")}>
-                                        <option value="No">No</option>
-                                        <option value="Yes">Yes</option>
-                                    </select>
                                 </div>
-                                {poEtlTraining && (
-                                    <div className="form-group">
-                                        <label className="form-label">ETI Certificate Upload</label>
-                                        <input className="form-input" type="file" accept="image/*,application/pdf" onChange={handlePoEtlCertificateChange} />
+                            )}
+                            {/* Bank Account Details (Required for Funded Units) */}
+                            {newUnitType === 'Funded' && (
+                                <div style={{ borderTop: '1px solid var(--border)', paddingTop: '1.25rem', marginTop: '1.25rem' }}>
+                                    <h4 className="mb-1" style={{ color: 'var(--txt-1)', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.95rem' }}>
+                                        <span>🏦</span>
+                                        <span>Bank Account Details (Required for Funded Unit)</span>
+                                    </h4>
+                                    <p style={{ fontSize: '0.78rem', color: 'var(--txt-3)', marginBottom: '1rem' }}>
+                                        Enter official ZBSCA Account & Vendor Account details for government grant funding.
+                                    </p>
+
+                                    {/* 1. ZBSCA Account Details */}
+                                    <div style={{ background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: '10px', padding: '1rem', marginBottom: '1rem' }}>
+                                        <h5 style={{ margin: '0 0 0.75rem', fontSize: '0.83rem', fontWeight: 700, color: 'var(--primary-color)' }}>
+                                            1. ZBSCA Account Details (Zero Balance Subsidiary Account)
+                                        </h5>
+                                        <div className="grid-cols-2 mb-3" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.85rem' }}>
+                                            <div className="form-group">
+                                                <label className="form-label">ZBSCA Account Number <span style={{ color: 'red' }}>*</span></label>
+                                                <input className="form-input" type="text" placeholder="e.g. 123456789012" value={zbscaAccNo} onChange={(e) => setZbscaAccNo(e.target.value)} required />
+                                            </div>
+                                            <div className="form-group">
+                                                <label className="form-label">IFSC Code <span style={{ color: 'red' }}>*</span></label>
+                                                <input className="form-input" type="text" placeholder="e.g. SBIN0001234" value={zbscaIfsc} onChange={(e) => setZbscaIfsc(e.target.value.toUpperCase())} required />
+                                            </div>
+                                        </div>
+                                        <div className="grid-cols-2" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.85rem' }}>
+                                            <div className="form-group">
+                                                <label className="form-label">Bank Name</label>
+                                                <input className="form-input" type="text" placeholder="e.g. State Bank of India" value={zbscaBankName} onChange={(e) => setZbscaBankName(e.target.value)} />
+                                            </div>
+                                            <div className="form-group">
+                                                <label className="form-label">Branch Name</label>
+                                                <input className="form-input" type="text" placeholder="e.g. Main Branch" value={zbscaBranchName} onChange={(e) => setZbscaBranchName(e.target.value)} />
+                                            </div>
+                                        </div>
                                     </div>
-                                )}
-                            </div>
+
+                                    {/* 2. Vendor Account Details */}
+                                    <div style={{ background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: '10px', padding: '1rem' }}>
+                                        <h5 style={{ margin: '0 0 0.75rem', fontSize: '0.83rem', fontWeight: 700, color: 'var(--primary-color)' }}>
+                                            2. Vendor Account Details
+                                        </h5>
+                                        <div className="form-group mb-3">
+                                            <label className="form-label">Vendor Name / Entity Name</label>
+                                            <input className="form-input" type="text" placeholder="e.g. College NSS Vendor Entity" value={vendorName} onChange={(e) => setVendorName(e.target.value)} />
+                                        </div>
+                                        <div className="grid-cols-2 mb-3" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.85rem' }}>
+                                            <div className="form-group">
+                                                <label className="form-label">Vendor Account Number <span style={{ color: 'red' }}>*</span></label>
+                                                <input className="form-input" type="text" placeholder="e.g. 987654321098" value={vendorAccNo} onChange={(e) => setVendorAccNo(e.target.value)} required />
+                                            </div>
+                                            <div className="form-group">
+                                                <label className="form-label">IFSC Code <span style={{ color: 'red' }}>*</span></label>
+                                                <input className="form-input" type="text" placeholder="e.g. IOBA0005678" value={vendorIfsc} onChange={(e) => setVendorIfsc(e.target.value.toUpperCase())} required />
+                                            </div>
+                                        </div>
+                                        <div className="grid-cols-2" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.85rem' }}>
+                                            <div className="form-group">
+                                                <label className="form-label">Bank Name</label>
+                                                <input className="form-input" type="text" placeholder="Bank Name" value={vendorBankName} onChange={(e) => setVendorBankName(e.target.value)} />
+                                            </div>
+                                            <div className="form-group">
+                                                <label className="form-label">Branch Name</label>
+                                                <input className="form-input" type="text" placeholder="Branch Name" value={vendorBranchName} onChange={(e) => setVendorBranchName(e.target.value)} />
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
                         </div>
-
-
 
                         <div className="flex-between pt-4" style={{ borderTop: '1px solid var(--border-color)' }}>
                             <button className="btn btn-secondary" onClick={() => setShowUnitModal(false)} disabled={isCreating}>Cancel</button>
-                            <button className="btn btn-primary" onClick={handleCreateUnit} disabled={isCreating}>{isCreating ? 'Creating...' : 'Create Unit'}</button>
+                            <button className="btn btn-primary" onClick={handleInitiateCreateUnit} disabled={isCreating}>Create Unit</button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Unit Creation Confirmation Modal */}
+            {showUnitConfirmModal && (
+                <div className="modal-overlay" style={{ zIndex: 1100 }}>
+                    <div className="modal-content" style={{ maxWidth: '520px' }}>
+                        <div className="flex-between mb-3">
+                            <h3 className="mb-0" style={{ fontWeight: 800, color: 'var(--txt-1)' }}>Confirm Unit Creation</h3>
+                            <button className="btn btn-sm btn-secondary" onClick={() => setShowUnitConfirmModal(false)}>&times;</button>
+                        </div>
+
+                        <div style={{ background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: '10px', padding: '1rem', marginBottom: '1.25rem', fontSize: '0.85rem' }}>
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem', marginBottom: '0.75rem', paddingBottom: '0.75rem', borderBottom: '1px solid var(--border)' }}>
+                                <div>
+                                    <span style={{ color: 'var(--txt-3)', fontSize: '0.72rem', fontWeight: 700, textTransform: 'uppercase' }}>Unit Name</span>
+                                    <p style={{ margin: 0, fontWeight: 700, color: 'var(--txt-1)' }}>Unit {units.length + 1}</p>
+                                </div>
+                                <div>
+                                    <span style={{ color: 'var(--txt-3)', fontSize: '0.72rem', fontWeight: 700, textTransform: 'uppercase' }}>Unit Type</span>
+                                    <p style={{ margin: 0, fontWeight: 700, color: 'var(--txt-1)' }}>{newUnitType}</p>
+                                </div>
+                            </div>
+
+                            <div>
+                                <span style={{ color: 'var(--txt-3)', fontSize: '0.72rem', fontWeight: 700, textTransform: 'uppercase' }}>Programme Officer Assignment</span>
+                                {poMode === 'new' ? (
+                                    <p style={{ margin: '0.25rem 0 0', fontWeight: 600, color: 'var(--txt-1)' }}>
+                                        ✨ New Officer: <strong>{poName}</strong> ({poDesignation}, {poDepartment})
+                                    </p>
+                                ) : (() => {
+                                    const selPo = programOfficers.find(p => p._id === selectedExistingPoId);
+                                    if (!selPo) return null;
+                                    const isAssigned = selPo.unit && selPo.unit.trim() !== "";
+                                    if (!isAssigned) {
+                                        return (
+                                            <p style={{ margin: '0.25rem 0 0', fontWeight: 600, color: '#047857' }}>
+                                                ✅ Unassigned Officer: <strong>{selPo.name}</strong> will be assigned as Head of Unit {units.length + 1}.
+                                            </p>
+                                        );
+                                    } else if (poAssignmentChoice === 'transfer') {
+                                        return (
+                                            <p style={{ margin: '0.25rem 0 0', fontWeight: 600, color: '#b45309' }}>
+                                                🔄 Transfer: <strong>{selPo.name}</strong> will <u>exit Unit {selPo.unit}</u> and join <strong>Unit {units.length + 1}</strong> exclusively.
+                                            </p>
+                                        );
+                                    } else {
+                                        return (
+                                            <p style={{ margin: '0.25rem 0 0', fontWeight: 600, color: '#2563eb' }}>
+                                                ⚡ Dual Charge: <strong>{selPo.name}</strong> will manage both <strong>Unit {selPo.unit}</strong> and <strong>Unit {units.length + 1}</strong>.
+                                            </p>
+                                        );
+                                    }
+                                })()}
+                            </div>
+
+                            {newUnitType === 'Funded' && (
+                                <div style={{ marginTop: '0.75rem', paddingTop: '0.75rem', borderTop: '1px solid var(--border)' }}>
+                                    <span style={{ color: 'var(--txt-3)', fontSize: '0.72rem', fontWeight: 700, textTransform: 'uppercase' }}>Bank Accounts (Funded Unit)</span>
+                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem', marginTop: '0.25rem' }}>
+                                        <div style={{ background: 'var(--card)', padding: '0.5rem 0.75rem', borderRadius: '6px', border: '1px solid var(--border)' }}>
+                                            <div style={{ fontWeight: 700, fontSize: '0.75rem', color: 'var(--primary-color)' }}>ZBSCA Account</div>
+                                            <div style={{ fontWeight: 600, fontSize: '0.78rem' }}>Acc: {zbscaAccNo}</div>
+                                            <div style={{ fontSize: '0.72rem', color: 'var(--txt-3)' }}>IFSC: {zbscaIfsc}</div>
+                                        </div>
+                                        <div style={{ background: 'var(--card)', padding: '0.5rem 0.75rem', borderRadius: '6px', border: '1px solid var(--border)' }}>
+                                            <div style={{ fontWeight: 700, fontSize: '0.75rem', color: 'var(--primary-color)' }}>Vendor Account</div>
+                                            <div style={{ fontWeight: 600, fontSize: '0.78rem' }}>Acc: {vendorAccNo}</div>
+                                            <div style={{ fontSize: '0.72rem', color: 'var(--txt-3)' }}>IFSC: {vendorIfsc}</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+
+                        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem' }}>
+                            <button className="btn btn-secondary" onClick={() => setShowUnitConfirmModal(false)} disabled={isCreating}>Back</button>
+                            <button className="btn btn-primary" onClick={handleConfirmCreateUnit} disabled={isCreating}>
+                                {isCreating ? 'Creating...' : 'Confirm & Create Unit'}
+                            </button>
                         </div>
                     </div>
                 </div>

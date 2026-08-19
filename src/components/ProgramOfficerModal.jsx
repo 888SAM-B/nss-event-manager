@@ -36,14 +36,16 @@ const ProgramOfficerModal = ({ isOpen, onClose, insName, insCode, units, initial
     });
 
     useEffect(() => {
+        const defaultUnit = (typeof units?.[0] === 'string' ? units[0] : units?.[0]?.unitNumber) || "";
         if (initialData) {
             setFormData({
                 ...initialData,
+                unit: initialData.unit || defaultUnit,
                 college: initialData.college || insName || "",
                 gender: initialData.gender || "Male",
                 seminars: initialData.seminars?.length ? initialData.seminars : [""],
                 nssExperience: initialData.nssExperience?.length ? initialData.nssExperience : [""],
-                specialTalent: initialData.specialTalent?.length ? initialData.specialTalent : ["",],
+                specialTalent: initialData.specialTalent?.length ? initialData.specialTalent : [""],
                 achievements: initialData.achievements || "",
                 etlTraining: initialData.etlTraining || false,
                 etlCertificate: initialData.etlCertificate || ""
@@ -53,7 +55,7 @@ const ProgramOfficerModal = ({ isOpen, onClose, insName, insCode, units, initial
                 name: "",
                 designation: "",
                 department: "",
-                unit: "",
+                unit: defaultUnit,
                 college: insName || "",
                 dob: "",
                 gender: "Male",
@@ -78,7 +80,7 @@ const ProgramOfficerModal = ({ isOpen, onClose, insName, insCode, units, initial
                 etlCertificate: ""
             });
         }
-    }, [initialData, insName, isOpen]);
+    }, [initialData, insName, isOpen, units]);
 
     if (!isOpen) return null;
 
@@ -269,11 +271,15 @@ const ProgramOfficerModal = ({ isOpen, onClose, insName, insCode, units, initial
                                 <input className="form-input" name="department" value={formData.department} onChange={handleInputChange} required disabled={readOnly} />
                             </div>
                             <div className="form-group">
-                                <label>Unit (Optional)</label>
-                                <select className="form-input" name="unit" value={formData.unit} onChange={handleInputChange} disabled={readOnly}>
-                                    <option value="">Unassigned</option>
-                                    {units.map(u => <option key={u.unitNumber} value={u.unitNumber}>{u.unitNumber} - {u.name}</option>)}
-                                </select>
+                                <label>Assigned NSS Unit</label>
+                                <input
+                                    className="form-input"
+                                    name="unit"
+                                    value={formData.unit || (typeof units?.[0] === 'string' ? units[0] : units?.[0]?.unitNumber) || initialData?.unit || "Unassigned"}
+                                    readOnly
+                                    disabled
+                                    style={{ background: 'var(--bg-tertiary, rgba(255,255,255,0.05))', opacity: 0.85, cursor: 'not-allowed', fontWeight: 'bold', color: 'var(--primary-color)' }}
+                                />
                             </div>
                         </div>
                     </div>

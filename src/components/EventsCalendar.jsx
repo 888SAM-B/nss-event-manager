@@ -79,10 +79,11 @@ const EventsCalendar = ({ events = [] }) => {
                     borderRadius: '8px',
                     background: isToday ? 'rgba(99,102,241,0.18)' : 'transparent',
                     border: isToday ? '1.5px solid rgba(99,102,241,0.5)' : '1.5px solid transparent',
-                    minHeight: '64px',
+                    minHeight: '48px',
                     display: 'flex',
                     flexDirection: 'column',
                     alignItems: 'center',
+                    justifyContent: 'center',
                     cursor: hasEvents ? 'pointer' : 'default',
                     transition: 'background 0.15s',
                     overflow: 'hidden',
@@ -90,35 +91,31 @@ const EventsCalendar = ({ events = [] }) => {
                 }}
             >
                 <span style={{
-                    fontSize: '0.82rem',
+                    fontSize: '0.85rem',
                     fontWeight: isToday ? 700 : 500,
                     color: isToday ? 'var(--primary-color)' : 'var(--txt-1)',
                     lineHeight: 1,
-                    marginBottom: '3px',
                 }}>
                     {day}
                 </span>
-                {dayEvents.slice(0, 3).map((ev, idx) => (
-                    <div key={idx} title={ev.name} style={{
-                        width: '100%',
-                        fontSize: '0.6rem',
-                        fontWeight: 600,
-                        background: getCategoryColor(ev.category),
-                        color: '#fff',
-                        borderRadius: '3px',
-                        padding: '1px 3px',
-                        whiteSpace: 'nowrap',
-                        overflow: 'hidden',
-                        textOverflow: 'ellipsis',
-                        lineHeight: 1.4,
-                    }}>
-                        {ev.name}
+                {hasEvents && (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '3px', marginTop: '3px' }}>
+                        <span
+                            title={dayEvents[0].name}
+                            style={{
+                                width: '6px',
+                                height: '6px',
+                                borderRadius: '50%',
+                                background: getCategoryColor(dayEvents[0].category),
+                                flexShrink: 0
+                            }}
+                        />
+                        {dayEvents.length > 1 && (
+                            <span style={{ fontSize: '0.62rem', fontWeight: 700, color: 'var(--primary-color, #4f46e5)', lineHeight: 1 }}>
+                                +{dayEvents.length - 1}
+                            </span>
+                        )}
                     </div>
-                ))}
-                {dayEvents.length > 3 && (
-                    <span style={{ fontSize: '0.58rem', color: 'var(--txt-3)', fontWeight: 600 }}>
-                        +{dayEvents.length - 3} more
-                    </span>
                 )}
             </div>
         );

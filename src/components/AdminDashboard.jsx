@@ -120,22 +120,22 @@ const EventsCalendar = ({ events }) => {
                 }}
             >
                 <span style={{ fontSize: '0.9rem', fontWeight: isToday ? 'bold' : 'normal' }}>{day}</span>
-                {dayEvents.length > 0 && (
-                    <div style={{ display: 'flex', gap: '2px', marginTop: '4px', flexWrap: 'wrap', justifyContent: 'center' }}>
-                        {dayEvents.slice(0, 3).map((event, idx) => (
-                            <div
-                                key={idx}
-                                title={event.name}
-                                style={{
-                                    width: '6px',
-                                    height: '6px',
-                                    borderRadius: '50%',
-                                    background: getCategoryColor(event.category)
-                                }}
-                            />
-                        ))}
-                        {dayEvents.length > 3 && (
-                            <span style={{ fontSize: '0.6rem', color: 'var(--text-muted)' }}>+{dayEvents.length - 3}</span>
+                {hasEvents && (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '3px', marginTop: '3px' }}>
+                        <span
+                            title={dayEvents[0].name}
+                            style={{
+                                width: '6px',
+                                height: '6px',
+                                borderRadius: '50%',
+                                background: getCategoryColor(dayEvents[0].category),
+                                flexShrink: 0
+                            }}
+                        />
+                        {dayEvents.length > 1 && (
+                            <span style={{ fontSize: '0.62rem', fontWeight: 700, color: 'var(--brand-600, #4f46e5)', lineHeight: 1 }}>
+                                +{dayEvents.length - 1}
+                            </span>
                         )}
                     </div>
                 )}
@@ -1306,7 +1306,7 @@ const AdminDashboard = () => {
                                     </div>
                                     {headPhoto && (
                                         <div style={{ marginBottom: '1rem', textAlign: 'center' }}>
-                                            <img src={headPhoto} alt="Head Preview" style={{ width: '100px', height: '100px', objectFit: 'cover', borderRadius: '50%', border: '2px solid var(--border)' }} />
+                                            <img src={headPhoto} alt="Head Preview" style={{ width: '100px', height: '100px', objectFit: 'cover', objectPosition: 'top center', borderRadius: '50%', border: '2px solid var(--border)' }} />
                                         </div>
                                     )}
                                     <div style={{ display: 'flex', gap: '0.5rem', marginTop: '1.25rem' }}>
@@ -1350,7 +1350,7 @@ const AdminDashboard = () => {
                                                     </button>
                                                 </div>
 
-                                                <img src={head.photo} alt={head.name} style={{ width: 80, height: 80, objectFit: 'cover', borderRadius: '50%', border: '2px solid var(--border)', marginBottom: '0.75rem', background: '#e2e8f0' }} />
+                                                <img src={head.photo} alt={head.name} style={{ width: 80, height: 80, objectFit: 'cover', objectPosition: 'top center', borderRadius: '50%', border: '2px solid var(--border)', marginBottom: '0.75rem', background: '#e2e8f0' }} />
                                                 <span style={{ fontSize: '0.65rem', fontWeight: 700, textTransform: 'uppercase', color: 'var(--brand-600)', background: 'rgba(99,102,241,0.08)', padding: '0.15rem 0.5rem', borderRadius: '999px', marginBottom: '0.5rem' }}>{head.position}</span>
                                                 <h4 style={{ margin: '0 0 0.25rem', fontSize: '0.95rem', fontWeight: 700, color: 'var(--txt-1)' }}>{head.name}</h4>
                                                 <p style={{ margin: 0, fontSize: '0.78rem', color: 'var(--txt-3)', fontWeight: 600 }}>{head.designation}</p>
