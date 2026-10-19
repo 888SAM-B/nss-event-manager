@@ -632,7 +632,7 @@ const Home = () => {
                             <div style={{ marginTop: "2rem" }}>
                                 <a
                                     href="/samplepdf.pdf"
-                                    download="NSS_Manual.pdf"
+                                    download="NSS_History_Book.pdf"
                                     className="btn btn-primary"
                                     style={{ padding: "0.75rem 1.5rem", textDecoration: "none" }}
                                 >
