@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import toast from "react-hot-toast";
 import ThemeToggle from "./ThemeToggle";
+import { EyeIcon, EyeOffIcon } from "./EyeIcons";
 
 const CollegeRegister = () => {
     const navigate = useNavigate();
@@ -18,6 +19,8 @@ const CollegeRegister = () => {
     // Step 2 Form State
     const [password, setPassword] = useState("");
     const [confirmPassword, setConfirmPassword] = useState("");
+    const [showPassword, setShowPassword] = useState(false);
+    const [showConfirmPassword, setShowConfirmPassword] = useState(false);
     
     const [principalName, setPrincipalName] = useState("");
     const [principalContact, setPrincipalContact] = useState("");
@@ -273,27 +276,65 @@ const CollegeRegister = () => {
                             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }}>
                                 <div className="form-group">
                                     <label className="form-label" style={{ fontSize: "0.7rem" }}>Password</label>
-                                    <input
-                                        type="password"
-                                        className="form-input"
-                                        placeholder="Min 6 characters"
-                                        value={password}
-                                        onChange={(e) => setPassword(e.target.value)}
-                                        required
-                                        style={{ width: "100%", padding: "0.6rem 0.8rem", borderRadius: "8px", border: "1px solid var(--border)" }}
-                                    />
+                                    <div style={{ position: "relative" }}>
+                                        <input
+                                            type={showPassword ? "text" : "password"}
+                                            className="form-input"
+                                            placeholder="Min 6 characters"
+                                            value={password}
+                                            onChange={(e) => setPassword(e.target.value)}
+                                            required
+                                            style={{ width: "100%", padding: "0.6rem 2.5rem 0.6rem 0.8rem", borderRadius: "8px", border: "1px solid var(--border)" }}
+                                        />
+                                        <button
+                                            type="button"
+                                            onClick={() => setShowPassword(!showPassword)}
+                                            style={{
+                                                position: 'absolute', right: '0.75rem',
+                                                top: '50%', transform: 'translateY(-50%)',
+                                                background: 'none', border: 'none',
+                                                color: 'var(--txt-3)', cursor: 'pointer',
+                                                display: 'flex', alignItems: 'center',
+                                                padding: '0.25rem', transition: 'color 0.15s'
+                                            }}
+                                            onMouseEnter={e => e.currentTarget.style.color = 'var(--txt-1)'}
+                                            onMouseLeave={e => e.currentTarget.style.color = 'var(--txt-3)'}
+                                            tabIndex={-1}
+                                        >
+                                            {showPassword ? <EyeOffIcon size={17} /> : <EyeIcon size={17} />}
+                                        </button>
+                                    </div>
                                 </div>
                                 <div className="form-group">
                                     <label className="form-label" style={{ fontSize: "0.7rem" }}>Confirm Password</label>
-                                    <input
-                                        type="password"
-                                        className="form-input"
-                                        placeholder="Re-enter password"
-                                        value={confirmPassword}
-                                        onChange={(e) => setConfirmPassword(e.target.value)}
-                                        required
-                                        style={{ width: "100%", padding: "0.6rem 0.8rem", borderRadius: "8px", border: "1px solid var(--border)" }}
-                                    />
+                                    <div style={{ position: "relative" }}>
+                                        <input
+                                            type={showConfirmPassword ? "text" : "password"}
+                                            className="form-input"
+                                            placeholder="Re-enter password"
+                                            value={confirmPassword}
+                                            onChange={(e) => setConfirmPassword(e.target.value)}
+                                            required
+                                            style={{ width: "100%", padding: "0.6rem 2.5rem 0.6rem 0.8rem", borderRadius: "8px", border: "1px solid var(--border)" }}
+                                        />
+                                        <button
+                                            type="button"
+                                            onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                                            style={{
+                                                position: 'absolute', right: '0.75rem',
+                                                top: '50%', transform: 'translateY(-50%)',
+                                                background: 'none', border: 'none',
+                                                color: 'var(--txt-3)', cursor: 'pointer',
+                                                display: 'flex', alignItems: 'center',
+                                                padding: '0.25rem', transition: 'color 0.15s'
+                                            }}
+                                            onMouseEnter={e => e.currentTarget.style.color = 'var(--txt-1)'}
+                                            onMouseLeave={e => e.currentTarget.style.color = 'var(--txt-3)'}
+                                            tabIndex={-1}
+                                        >
+                                            {showConfirmPassword ? <EyeOffIcon size={17} /> : <EyeIcon size={17} />}
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
                         </div>

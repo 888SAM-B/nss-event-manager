@@ -95,8 +95,7 @@ const UnitDashboard = () => {
     const [bankOtpSending, setBankOtpSending] = useState(false);
     const [bankOtpMaskedEmail, setBankOtpMaskedEmail] = useState("");
     const [editBankDetails, setEditBankDetails] = useState({
-        zbsca: { accountNo: "", bankName: "", branchName: "", ifscCode: "" },
-        vendor: { vendorName: "", accountNo: "", bankName: "", branchName: "", ifscCode: "" }
+        zbsca: { accountNo: "", bankName: "State Bank of India", branchName: "", ifscCode: "" }
     });
 
     const maskAcc = (acc) => {
@@ -113,16 +112,9 @@ const UnitDashboard = () => {
         setEditBankDetails({
             zbsca: {
                 accountNo: unit?.bankDetails?.zbsca?.accountNo || "",
-                bankName: unit?.bankDetails?.zbsca?.bankName || "",
+                bankName: "State Bank of India",
                 branchName: unit?.bankDetails?.zbsca?.branchName || "",
                 ifscCode: unit?.bankDetails?.zbsca?.ifscCode || ""
-            },
-            vendor: {
-                vendorName: unit?.bankDetails?.vendor?.vendorName || "",
-                accountNo: unit?.bankDetails?.vendor?.accountNo || "",
-                bankName: unit?.bankDetails?.vendor?.bankName || "",
-                branchName: unit?.bankDetails?.vendor?.branchName || "",
-                ifscCode: unit?.bankDetails?.vendor?.ifscCode || ""
             }
         });
         setShowEditBankModal(true);
@@ -161,10 +153,6 @@ const UnitDashboard = () => {
 
         if (!editBankDetails.zbsca.accountNo.trim() || !editBankDetails.zbsca.ifscCode.trim()) {
             toast.error("ZBSCA Account Number and IFSC Code are mandatory.");
-            return;
-        }
-        if (!editBankDetails.vendor.accountNo.trim() || !editBankDetails.vendor.ifscCode.trim()) {
-            toast.error("Vendor Account Number and IFSC Code are mandatory.");
             return;
         }
 
@@ -2314,11 +2302,11 @@ const UnitDashboard = () => {
                                         <div>
                                             <h3 className="text-primary-400 mb-1" style={{ fontSize: '1.15rem', display: 'flex', alignItems: 'center', gap: '0.5rem', fontWeight: 700 }}>
                                                 <span>🏦</span>
-                                                <span>Unit Bank Account Details (ZBSCA & Vendor)</span>
-                                                <span className="badge badge-primary ml-2" style={{ fontSize: '0.72rem' }}>Funded Unit Accounts</span>
+                                                <span>Unit Bank Account Details (ZBSCA)</span>
+                                                <span className="badge badge-primary ml-2" style={{ fontSize: '0.72rem' }}>Funded Unit Account</span>
                                             </h3>
                                             <p style={{ margin: 0, color: 'var(--txt-3)', fontSize: '0.82rem' }}>
-                                                Official Zero Balance Subsidiary Account and Vendor Account details for government grant disbursements. Account numbers are masked for security.
+                                                Official Zero Balance Subsidiary Account details for government grant disbursements. Account numbers are masked for security.
                                             </p>
                                         </div>
                                         <button className="btn btn-outline-primary btn-sm" onClick={handleOpenBankEditModal} style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', whitespace: 'nowrap' }}>
@@ -2326,17 +2314,17 @@ const UnitDashboard = () => {
                                         </button>
                                     </div>
 
-                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.25rem' }}>
-                                        {/* 1. ZBSCA Account Box */}
+                                    <div>
+                                        {/* ZBSCA Account Box */}
                                         <div style={{ background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: '10px', padding: '1.25rem' }}>
                                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.85rem', paddingBottom: '0.5rem', borderBottom: '1px solid var(--border)' }}>
                                                 <h4 style={{ margin: 0, fontSize: '0.9rem', fontWeight: 700, color: 'var(--brand-500, #3b82f6)' }}>
-                                                    1. ZBSCA Account (Zero Balance Subsidiary)
+                                                    ZBSCA Account (Zero Balance Subsidiary)
                                                 </h4>
                                                 <span className="badge badge-success" style={{ fontSize: '0.7rem' }}>Active Account</span>
                                             </div>
 
-                                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.85rem', fontSize: '0.85rem' }}>
+                                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '0.85rem', fontSize: '0.85rem' }}>
                                                 <div>
                                                     <span style={{ fontSize: '0.72rem', color: 'var(--txt-3)', textTransform: 'uppercase', fontWeight: 700 }}>Account Number (Masked)</span>
                                                     <p style={{ margin: '0.15rem 0 0', fontWeight: 700, fontFamily: 'monospace', letterSpacing: '1px', fontSize: '0.95rem', color: 'var(--txt-1)' }}>
@@ -2359,50 +2347,6 @@ const UnitDashboard = () => {
                                                     <span style={{ fontSize: '0.72rem', color: 'var(--txt-3)', textTransform: 'uppercase', fontWeight: 700 }}>Branch Name</span>
                                                     <p style={{ margin: '0.15rem 0 0', fontWeight: 600, color: 'var(--txt-1)' }}>
                                                         {unit?.bankDetails?.zbsca?.branchName || 'N/A'}
-                                                    </p>
-                                                </div>
-                                            </div>
-                                        </div>
-
-                                        {/* 2. Vendor Account Box */}
-                                        <div style={{ background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: '10px', padding: '1.25rem' }}>
-                                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.85rem', paddingBottom: '0.5rem', borderBottom: '1px solid var(--border)' }}>
-                                                <h4 style={{ margin: 0, fontSize: '0.9rem', fontWeight: 700, color: 'var(--brand-500, #3b82f6)' }}>
-                                                    2. Vendor Account Details
-                                                </h4>
-                                                <span className="badge badge-secondary" style={{ fontSize: '0.7rem' }}>Vendor Entity</span>
-                                            </div>
-
-                                            <div className="mb-2">
-                                                <span style={{ fontSize: '0.72rem', color: 'var(--txt-3)', textTransform: 'uppercase', fontWeight: 700 }}>Vendor / Entity Name</span>
-                                                <p style={{ margin: '0.15rem 0 0', fontWeight: 700, color: 'var(--txt-1)' }}>
-                                                    {unit?.bankDetails?.vendor?.vendorName || 'College NSS Vendor Entity'}
-                                                </p>
-                                            </div>
-
-                                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.85rem', fontSize: '0.85rem', marginTop: '0.5rem' }}>
-                                                <div>
-                                                    <span style={{ fontSize: '0.72rem', color: 'var(--txt-3)', textTransform: 'uppercase', fontWeight: 700 }}>Account Number (Masked)</span>
-                                                    <p style={{ margin: '0.15rem 0 0', fontWeight: 700, fontFamily: 'monospace', letterSpacing: '1px', fontSize: '0.95rem', color: 'var(--txt-1)' }}>
-                                                        {maskAcc(unit?.bankDetails?.vendor?.accountNo)}
-                                                    </p>
-                                                </div>
-                                                <div>
-                                                    <span style={{ fontSize: '0.72rem', color: 'var(--txt-3)', textTransform: 'uppercase', fontWeight: 700 }}>IFSC Code</span>
-                                                    <p style={{ margin: '0.15rem 0 0', fontWeight: 700, fontFamily: 'monospace', color: 'var(--txt-1)' }}>
-                                                        {unit?.bankDetails?.vendor?.ifscCode || 'N/A'}
-                                                    </p>
-                                                </div>
-                                                <div>
-                                                    <span style={{ fontSize: '0.72rem', color: 'var(--txt-3)', textTransform: 'uppercase', fontWeight: 700 }}>Bank Name</span>
-                                                    <p style={{ margin: '0.15rem 0 0', fontWeight: 600, color: 'var(--txt-1)' }}>
-                                                        {unit?.bankDetails?.vendor?.bankName || 'N/A'}
-                                                    </p>
-                                                </div>
-                                                <div>
-                                                    <span style={{ fontSize: '0.72rem', color: 'var(--txt-3)', textTransform: 'uppercase', fontWeight: 700 }}>Branch Name</span>
-                                                    <p style={{ margin: '0.15rem 0 0', fontWeight: 600, color: 'var(--txt-1)' }}>
-                                                        {unit?.bankDetails?.vendor?.branchName || 'N/A'}
                                                     </p>
                                                 </div>
                                             </div>
@@ -3473,42 +3417,11 @@ const UnitDashboard = () => {
                                     <div className="grid-cols-2" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.85rem' }}>
                                         <div className="form-group">
                                             <label className="form-label">Bank Name</label>
-                                            <input className="form-input" type="text" placeholder="Bank Name" value={editBankDetails.zbsca.bankName} onChange={(e) => setEditBankDetails({ ...editBankDetails, zbsca: { ...editBankDetails.zbsca, bankName: e.target.value } })} />
+                                            <input className="form-input" type="text" value="State Bank of India" readOnly disabled style={{ background: 'var(--bg-tertiary, rgba(255,255,255,0.05))', cursor: 'not-allowed', fontWeight: 600, color: 'var(--txt-1)' }} />
                                         </div>
                                         <div className="form-group">
                                             <label className="form-label">Branch Name</label>
                                             <input className="form-input" type="text" placeholder="Branch Name" value={editBankDetails.zbsca.branchName} onChange={(e) => setEditBankDetails({ ...editBankDetails, zbsca: { ...editBankDetails.zbsca, branchName: e.target.value } })} />
-                                        </div>
-                                    </div>
-                                </div>
-
-                                {/* 2. Vendor Account Inputs */}
-                                <div style={{ background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: '10px', padding: '1rem', marginBottom: '1.25rem' }}>
-                                    <h5 style={{ margin: '0 0 0.75rem', fontSize: '0.85rem', fontWeight: 700, color: 'var(--primary-color)' }}>
-                                        2. Vendor Account Details
-                                    </h5>
-                                    <div className="form-group mb-3">
-                                        <label className="form-label">Vendor Name / Entity Name</label>
-                                        <input className="form-input" type="text" placeholder="Vendor Name" value={editBankDetails.vendor.vendorName} onChange={(e) => setEditBankDetails({ ...editBankDetails, vendor: { ...editBankDetails.vendor, vendorName: e.target.value } })} />
-                                    </div>
-                                    <div className="grid-cols-2 mb-3" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.85rem' }}>
-                                        <div className="form-group">
-                                            <label className="form-label">Vendor Account Number <span style={{ color: 'red' }}>*</span></label>
-                                            <input className="form-input" type="text" placeholder="Account No" value={editBankDetails.vendor.accountNo} onChange={(e) => setEditBankDetails({ ...editBankDetails, vendor: { ...editBankDetails.vendor, accountNo: e.target.value } })} required />
-                                        </div>
-                                        <div className="form-group">
-                                            <label className="form-label">IFSC Code <span style={{ color: 'red' }}>*</span></label>
-                                            <input className="form-input" type="text" placeholder="IFSC Code" value={editBankDetails.vendor.ifscCode} onChange={(e) => setEditBankDetails({ ...editBankDetails, vendor: { ...editBankDetails.vendor, ifscCode: e.target.value.toUpperCase() } })} required />
-                                        </div>
-                                    </div>
-                                    <div className="grid-cols-2" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.85rem' }}>
-                                        <div className="form-group">
-                                            <label className="form-label">Bank Name</label>
-                                            <input className="form-input" type="text" placeholder="Bank Name" value={editBankDetails.vendor.bankName} onChange={(e) => setEditBankDetails({ ...editBankDetails, vendor: { ...editBankDetails.vendor, bankName: e.target.value } })} />
-                                        </div>
-                                        <div className="form-group">
-                                            <label className="form-label">Branch Name</label>
-                                            <input className="form-input" type="text" placeholder="Branch Name" value={editBankDetails.vendor.branchName} onChange={(e) => setEditBankDetails({ ...editBankDetails, vendor: { ...editBankDetails.vendor, branchName: e.target.value } })} />
                                         </div>
                                     </div>
                                 </div>

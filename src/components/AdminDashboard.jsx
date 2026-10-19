@@ -14,6 +14,7 @@ import AdminReportGenerator from './AdminReportGenerator';
 import AdminManageUnits from './AdminManageUnits';
 import AdminCircularsManager from './AdminCircularsManager';
 import CircularBellNotification from './CircularBellNotification';
+import { EyeIcon, EyeOffIcon } from './EyeIcons';
 
 ChartJS.register(ArcElement, Tooltip, Legend, CategoryScale, LinearScale, BarElement, Title);
 
@@ -332,6 +333,7 @@ const AdminDashboard = () => {
     const [collegeToDelete, setCollegeToDelete] = useState(null);
     const [adminUser, setAdminUser] = useState("");
     const [adminPass, setAdminPass] = useState("");
+    const [showAdminPass, setShowAdminPass] = useState(false);
     const [deleteError, setDeleteError] = useState("");
     const [isDeleting, setIsDeleting] = useState(false);
 
@@ -1472,8 +1474,27 @@ const AdminDashboard = () => {
                             </div>
                             <div className="form-group" style={{ marginBottom: '1.5rem' }}>
                                 <label className="form-label">Admin Password</label>
-                                <input type="password" className="form-input" placeholder="Confirm your password"
-                                    value={adminPass} onChange={(e) => setAdminPass(e.target.value)} required />
+                                <div style={{ position: 'relative' }}>
+                                    <input type={showAdminPass ? "text" : "password"} className="form-input" placeholder="Confirm your password"
+                                        value={adminPass} onChange={(e) => setAdminPass(e.target.value)} required style={{ paddingRight: '2.5rem' }} />
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowAdminPass(!showAdminPass)}
+                                        style={{
+                                            position: 'absolute', right: '0.75rem',
+                                            top: '50%', transform: 'translateY(-50%)',
+                                            background: 'none', border: 'none',
+                                            color: 'var(--txt-3)', cursor: 'pointer',
+                                            display: 'flex', alignItems: 'center',
+                                            padding: '0.25rem', transition: 'color 0.15s'
+                                        }}
+                                        onMouseEnter={e => e.currentTarget.style.color = 'var(--txt-1)'}
+                                        onMouseLeave={e => e.currentTarget.style.color = 'var(--txt-3)'}
+                                        tabIndex={-1}
+                                    >
+                                        {showAdminPass ? <EyeOffIcon size={17} /> : <EyeIcon size={17} />}
+                                    </button>
+                                </div>
                             </div>
 
                             {deleteError && (

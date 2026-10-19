@@ -11,6 +11,7 @@ import VolunteerEnrolmentModal from "./VolunteerEnrolmentModal";
 import EventsCalendar from "./EventsCalendar";
 import CircularBellNotification from "./CircularBellNotification";
 import UserCircularsView from "./UserCircularsView";
+import { EyeIcon, EyeOffIcon } from "./EyeIcons";
 
 const CollegeDashboard = () => {
     const username = localStorage.getItem("nss_username");
@@ -23,6 +24,7 @@ const CollegeDashboard = () => {
     const [newUnitHead, setNewUnitHead] = useState("");
     const [newMembers, setNewMembers] = useState([]);
     const [newUnitPassword, setNewUnitPassword] = useState("");
+    const [showUnitPassword, setShowUnitPassword] = useState(false);
     const [newUnitContact, setNewUnitContact] = useState("");
     const [newUnitMail, setNewUnitMail] = useState("");
     const [newUnitType, setNewUnitType] = useState("Funded");
@@ -139,16 +141,11 @@ const CollegeDashboard = () => {
     const [poAssignmentChoice, setPoAssignmentChoice] = useState("transfer"); // 'transfer' | 'both'
     const [showUnitConfirmModal, setShowUnitConfirmModal] = useState(false);
 
-    // Bank Account states for Funded Units (ZBSCA & Vendor)
+    // Bank Account states for Funded Units (ZBSCA)
     const [zbscaAccNo, setZbscaAccNo] = useState("");
-    const [zbscaBankName, setZbscaBankName] = useState("");
+    const [zbscaBankName, setZbscaBankName] = useState("State Bank of India");
     const [zbscaBranchName, setZbscaBranchName] = useState("");
     const [zbscaIfsc, setZbscaIfsc] = useState("");
-    const [vendorName, setVendorName] = useState("");
-    const [vendorAccNo, setVendorAccNo] = useState("");
-    const [vendorBankName, setVendorBankName] = useState("");
-    const [vendorBranchName, setVendorBranchName] = useState("");
-    const [vendorIfsc, setVendorIfsc] = useState("");
 
 
 
@@ -298,10 +295,6 @@ const CollegeDashboard = () => {
                 toast.error("Please enter the mandatory ZBSCA Account Number and IFSC Code for Funded Unit.");
                 return;
             }
-            if (!vendorAccNo.trim() || !vendorIfsc.trim()) {
-                toast.error("Please enter the mandatory Vendor Account Number and IFSC Code for Funded Unit.");
-                return;
-            }
         }
         if (poMode === "existing") {
             if (!selectedExistingPoId) {
@@ -335,16 +328,9 @@ const CollegeDashboard = () => {
             payload.bankDetails = {
                 zbsca: {
                     accountNo: zbscaAccNo,
-                    bankName: zbscaBankName,
+                    bankName: "State Bank of India",
                     branchName: zbscaBranchName,
                     ifscCode: zbscaIfsc
-                },
-                vendor: {
-                    vendorName: vendorName,
-                    accountNo: vendorAccNo,
-                    bankName: vendorBankName,
-                    branchName: vendorBranchName,
-                    ifscCode: vendorIfsc
                 }
             };
         }
@@ -404,14 +390,9 @@ const CollegeDashboard = () => {
 
                 // Clear Bank Details
                 setZbscaAccNo("");
-                setZbscaBankName("");
+                setZbscaBankName("State Bank of India");
                 setZbscaBranchName("");
                 setZbscaIfsc("");
-                setVendorName("");
-                setVendorAccNo("");
-                setVendorBankName("");
-                setVendorBranchName("");
-                setVendorIfsc("");
 
                 // Clear PO fields & options
                 setPoMode("new");
@@ -1526,7 +1507,33 @@ const CollegeDashboard = () => {
                             </div>
                             <div className="form-group">
                                 <label className="form-label">Password <span style={{ color: 'red' }}>*</span></label>
-                                <input className="form-input" type="password" placeholder="Set password" value={newUnitPassword} onChange={(e) => setNewUnitPassword(e.target.value)} />
+                                <div style={{ position: 'relative' }}>
+                                    <input
+                                        className="form-input"
+                                        type={showUnitPassword ? "text" : "password"}
+                                        placeholder="Set password"
+                                        value={newUnitPassword}
+                                        onChange={(e) => setNewUnitPassword(e.target.value)}
+                                        style={{ paddingRight: '2.5rem' }}
+                                    />
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowUnitPassword(!showUnitPassword)}
+                                        style={{
+                                            position: 'absolute', right: '0.75rem',
+                                            top: '50%', transform: 'translateY(-50%)',
+                                            background: 'none', border: 'none',
+                                            color: 'var(--txt-3)', cursor: 'pointer',
+                                            display: 'flex', alignItems: 'center',
+                                            padding: '0.25rem', transition: 'color 0.15s'
+                                        }}
+                                        onMouseEnter={e => e.currentTarget.style.color = 'var(--txt-1)'}
+                                        onMouseLeave={e => e.currentTarget.style.color = 'var(--txt-3)'}
+                                        tabIndex={-1}
+                                    >
+                                        {showUnitPassword ? <EyeOffIcon size={17} /> : <EyeIcon size={17} />}
+                                    </button>
+                                </div>
                             </div>
                             <div className="form-group">
                                 <label className="form-label">Type of Unit <span style={{ color: 'red' }}>*</span></label>
@@ -1828,13 +1835,13 @@ const CollegeDashboard = () => {
                                         <span>Bank Account Details (Required for Funded Unit)</span>
                                     </h4>
                                     <p style={{ fontSize: '0.78rem', color: 'var(--txt-3)', marginBottom: '1rem' }}>
-                                        Enter official ZBSCA Account & Vendor Account details for government grant funding.
+                                        Enter official ZBSCA Account details for government grant funding.
                                     </p>
 
-                                    {/* 1. ZBSCA Account Details */}
+                                    {/* ZBSCA Account Details */}
                                     <div style={{ background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: '10px', padding: '1rem', marginBottom: '1rem' }}>
                                         <h5 style={{ margin: '0 0 0.75rem', fontSize: '0.83rem', fontWeight: 700, color: 'var(--primary-color)' }}>
-                                            1. ZBSCA Account Details (Zero Balance Subsidiary Account)
+                                            ZBSCA Account Details (Zero Balance Subsidiary Account)
                                         </h5>
                                         <div className="grid-cols-2 mb-3" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.85rem' }}>
                                             <div className="form-group">
@@ -1849,42 +1856,11 @@ const CollegeDashboard = () => {
                                         <div className="grid-cols-2" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.85rem' }}>
                                             <div className="form-group">
                                                 <label className="form-label">Bank Name</label>
-                                                <input className="form-input" type="text" placeholder="e.g. State Bank of India" value={zbscaBankName} onChange={(e) => setZbscaBankName(e.target.value)} />
+                                                <input className="form-input" type="text" value="State Bank of India" readOnly disabled style={{ background: 'var(--bg-tertiary, rgba(255,255,255,0.05))', cursor: 'not-allowed', fontWeight: 600, color: 'var(--txt-1)' }} />
                                             </div>
                                             <div className="form-group">
                                                 <label className="form-label">Branch Name</label>
                                                 <input className="form-input" type="text" placeholder="e.g. Main Branch" value={zbscaBranchName} onChange={(e) => setZbscaBranchName(e.target.value)} />
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    {/* 2. Vendor Account Details */}
-                                    <div style={{ background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: '10px', padding: '1rem' }}>
-                                        <h5 style={{ margin: '0 0 0.75rem', fontSize: '0.83rem', fontWeight: 700, color: 'var(--primary-color)' }}>
-                                            2. Vendor Account Details
-                                        </h5>
-                                        <div className="form-group mb-3">
-                                            <label className="form-label">Vendor Name / Entity Name</label>
-                                            <input className="form-input" type="text" placeholder="e.g. College NSS Vendor Entity" value={vendorName} onChange={(e) => setVendorName(e.target.value)} />
-                                        </div>
-                                        <div className="grid-cols-2 mb-3" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.85rem' }}>
-                                            <div className="form-group">
-                                                <label className="form-label">Vendor Account Number <span style={{ color: 'red' }}>*</span></label>
-                                                <input className="form-input" type="text" placeholder="e.g. 987654321098" value={vendorAccNo} onChange={(e) => setVendorAccNo(e.target.value)} required />
-                                            </div>
-                                            <div className="form-group">
-                                                <label className="form-label">IFSC Code <span style={{ color: 'red' }}>*</span></label>
-                                                <input className="form-input" type="text" placeholder="e.g. IOBA0005678" value={vendorIfsc} onChange={(e) => setVendorIfsc(e.target.value.toUpperCase())} required />
-                                            </div>
-                                        </div>
-                                        <div className="grid-cols-2" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.85rem' }}>
-                                            <div className="form-group">
-                                                <label className="form-label">Bank Name</label>
-                                                <input className="form-input" type="text" placeholder="Bank Name" value={vendorBankName} onChange={(e) => setVendorBankName(e.target.value)} />
-                                            </div>
-                                            <div className="form-group">
-                                                <label className="form-label">Branch Name</label>
-                                                <input className="form-input" type="text" placeholder="Branch Name" value={vendorBranchName} onChange={(e) => setVendorBranchName(e.target.value)} />
                                             </div>
                                         </div>
                                     </div>
@@ -1955,17 +1931,12 @@ const CollegeDashboard = () => {
 
                             {newUnitType === 'Funded' && (
                                 <div style={{ marginTop: '0.75rem', paddingTop: '0.75rem', borderTop: '1px solid var(--border)' }}>
-                                    <span style={{ color: 'var(--txt-3)', fontSize: '0.72rem', fontWeight: 700, textTransform: 'uppercase' }}>Bank Accounts (Funded Unit)</span>
-                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem', marginTop: '0.25rem' }}>
+                                    <span style={{ color: 'var(--txt-3)', fontSize: '0.72rem', fontWeight: 700, textTransform: 'uppercase' }}>Bank Account (Funded Unit)</span>
+                                    <div style={{ marginTop: '0.25rem' }}>
                                         <div style={{ background: 'var(--card)', padding: '0.5rem 0.75rem', borderRadius: '6px', border: '1px solid var(--border)' }}>
-                                            <div style={{ fontWeight: 700, fontSize: '0.75rem', color: 'var(--primary-color)' }}>ZBSCA Account</div>
+                                            <div style={{ fontWeight: 700, fontSize: '0.75rem', color: 'var(--primary-color)' }}>ZBSCA Account (State Bank of India)</div>
                                             <div style={{ fontWeight: 600, fontSize: '0.78rem' }}>Acc: {zbscaAccNo}</div>
                                             <div style={{ fontSize: '0.72rem', color: 'var(--txt-3)' }}>IFSC: {zbscaIfsc}</div>
-                                        </div>
-                                        <div style={{ background: 'var(--card)', padding: '0.5rem 0.75rem', borderRadius: '6px', border: '1px solid var(--border)' }}>
-                                            <div style={{ fontWeight: 700, fontSize: '0.75rem', color: 'var(--primary-color)' }}>Vendor Account</div>
-                                            <div style={{ fontWeight: 600, fontSize: '0.78rem' }}>Acc: {vendorAccNo}</div>
-                                            <div style={{ fontSize: '0.72rem', color: 'var(--txt-3)' }}>IFSC: {vendorIfsc}</div>
                                         </div>
                                     </div>
                                 </div>

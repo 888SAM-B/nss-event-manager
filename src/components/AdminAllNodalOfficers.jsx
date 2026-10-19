@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
+import { EyeIcon, EyeOffIcon } from "./EyeIcons";
 
 const AdminAllNodalOfficers = () => {
     const navigate = useNavigate();
@@ -21,6 +22,7 @@ const AdminAllNodalOfficers = () => {
         password: ""
     });
     const [submitting, setSubmitting] = useState(false);
+    const [showPassword, setShowPassword] = useState(false);
 
     const loadNodalOfficers = async () => {
         const token = localStorage.getItem("adminToken");
@@ -346,14 +348,34 @@ const AdminAllNodalOfficers = () => {
                                 <label className="form-label">
                                     Password {selectedNodal && <span style={{ fontWeight: 400, color: "var(--txt-3)", fontSize: "0.75rem" }}>(Leave blank to keep current)</span>}
                                 </label>
-                                <input
-                                    type="password"
-                                    className="form-input"
-                                    placeholder="Enter password"
-                                    value={formData.password}
-                                    onChange={e => setFormData({ ...formData, password: e.target.value })}
-                                    required={!selectedNodal}
-                                />
+                                <div style={{ position: "relative" }}>
+                                    <input
+                                        type={showPassword ? "text" : "password"}
+                                        className="form-input"
+                                        placeholder="Enter password"
+                                        value={formData.password}
+                                        onChange={e => setFormData({ ...formData, password: e.target.value })}
+                                        required={!selectedNodal}
+                                        style={{ paddingRight: "2.5rem" }}
+                                    />
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowPassword(!showPassword)}
+                                        style={{
+                                            position: 'absolute', right: '0.75rem',
+                                            top: '50%', transform: 'translateY(-50%)',
+                                            background: 'none', border: 'none',
+                                            color: 'var(--txt-3)', cursor: 'pointer',
+                                            display: 'flex', alignItems: 'center',
+                                            padding: '0.25rem', transition: 'color 0.15s'
+                                        }}
+                                        onMouseEnter={e => e.currentTarget.style.color = 'var(--txt-1)'}
+                                        onMouseLeave={e => e.currentTarget.style.color = 'var(--txt-3)'}
+                                        tabIndex={-1}
+                                    >
+                                        {showPassword ? <EyeOffIcon size={17} /> : <EyeIcon size={17} />}
+                                    </button>
+                                </div>
                             </div>
 
                             <div className="flex-between pt-3" style={{ borderTop: "1px solid var(--border)" }}>

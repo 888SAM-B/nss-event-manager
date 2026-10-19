@@ -266,12 +266,12 @@ const Home = () => {
                 }
                  .identity-grid {
                      display: grid;
-                     grid-template-columns: 1fr 1fr;
-                     gap: 2rem;
+                     grid-template-columns: repeat(3, 1fr);
+                     gap: 1.75rem;
                  }
                  .identity-card {
                      display: flex;
-                     flex-direction: row;
+                     flex-direction: column;
                      align-items: stretch;
                      background: var(--card);
                      border-radius: 16px;
@@ -281,12 +281,12 @@ const Home = () => {
                      transition: all 0.3s ease;
                  }
                  .identity-card:hover {
-                     transform: translateY(-4px);
+                     transform: translateY(-5px);
                      box-shadow: var(--sh-md);
                  }
                  .identity-card-left {
-                     width: 160px;
-                     min-width: 160px;
+                     width: 100%;
+                     height: 150px;
                      display: flex;
                      align-items: center;
                      justify-content: center;
@@ -294,25 +294,19 @@ const Home = () => {
                  }
                  .identity-card-right {
                      flex: 1;
-                     padding: 2.5rem 2rem;
+                     padding: 1.75rem 1.75rem 2rem;
                      display: flex;
                      flex-direction: column;
                      gap: 0.75rem;
-                     justify-content: center;
                  }
-                 @media (max-width: 991px) {
+                 @media (max-width: 900px) {
                      .identity-grid {
                          grid-template-columns: 1fr;
                      }
                  }
                  @media (max-width: 576px) {
-                     .identity-card {
-                         flex-direction: column;
-                     }
                      .identity-card-left {
-                         width: 100%;
-                         height: 140px;
-                         padding: 1.5rem;
+                         height: 120px;
                      }
                  }
                  .objectives-grid {
@@ -626,7 +620,7 @@ const Home = () => {
                             <h2 style={{ fontSize: "2.25rem", fontWeight: 800, marginTop: "0.5rem", marginBottom: "1.5rem" }}>History of NSS</h2>
                             <div style={{ fontSize: "1.05rem", color: "var(--txt-2)", lineHeight: "1.8", display: "flex", flexDirection: "column", gap: "1rem", textAlign: "justify" }}>
                                 <p>
-                                    The overall aim of National Service Scheme as envisaged earlier, is to give an extension dimension to the higher education system and orient the student youth to community service while they are studying in educational institution.
+                                    The overall aim of National Service Scheme as envisaged earlier, is to give an extensive dimension to the higher education system and orient the student youth to community service while they are studying in educational institution.
                                 </p>
                                 <p>
                                     The reason for the formulation of this objective is the general realization that the college and +2 level students have a tendency to get alienated from the village/slum masses which constitute the majority of the population of the country. The educated youth who are expected to take the reins of administration in future are found to be unaware of the problems of the village/slum community and in certain cases are indifferent towards their needs and problems.
@@ -638,12 +632,12 @@ const Home = () => {
                             <div style={{ marginTop: "2rem" }}>
                                 <a
                                     href="/samplepdf.pdf"
-                                    download="NSS_History_Book.pdf"
+                                    download="NSS_Manual.pdf"
                                     className="btn btn-primary"
                                     style={{ padding: "0.75rem 1.5rem", textDecoration: "none" }}
                                 >
                                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" style={{ marginRight: 8 }}><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="7 10 12 15 17 10" /><line x1="12" y1="15" x2="12" y2="3" /></svg>
-                                    Download NSS History Book
+                                    Download NSS Manual
                                 </a>
                             </div>
                         </div>
@@ -785,47 +779,53 @@ const Home = () => {
 
                     <div className="identity-grid">
                         {/* NSS Symbol Card */}
-                        <div className="identity-card" style={{ borderLeft: "4px solid #2563eb" }}
-                            onMouseEnter={e => { e.currentTarget.style.borderColor = "#2563eb"; }}
-                            onMouseLeave={e => { e.currentTarget.style.borderColor = "var(--border)"; }}>
-                            <div className="identity-card-left" style={{ background: "linear-gradient(135deg, rgba(37,99,235,0.08) 0%, rgba(37,99,235,0.02) 100%)" }}>
-                                <img src="/nss-logo.png" alt="NSS Symbol Logo" style={{ width: "96px", height: "96px", objectFit: "contain" }} />
+                        <div className="identity-card" style={{ borderTop: "4px solid #2563eb", borderLeft: "1px solid var(--border)" }}
+                            onMouseEnter={e => { e.currentTarget.style.boxShadow = "0 12px 32px rgba(37,99,235,0.15)"; }}
+                            onMouseLeave={e => { e.currentTarget.style.boxShadow = ""; }}>
+                            <div className="identity-card-left" style={{ background: "linear-gradient(135deg, rgba(37,99,235,0.1) 0%, rgba(37,99,235,0.03) 100%)" }}>
+                                <img src="/nss-logo.png" alt="NSS Symbol Logo" style={{ width: "90px", height: "90px", objectFit: "contain" }} />
                             </div>
                             <div className="identity-card-right">
-                                <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
+                                <div style={{ display: "flex", alignItems: "center", gap: "0.6rem" }}>
                                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#2563eb" strokeWidth="2.5"><circle cx="12" cy="12" r="10" /><path d="M12 2v20" /><path d="M2 12h20" /><path d="m16.24 7.76-8.48 8.48" /><path d="m7.76 7.76 8.48 8.48" /></svg>
-                                    <h3 style={{ fontSize: "1.25rem", fontWeight: 800, margin: 0, color: "var(--txt-1)" }}>NSS Symbol</h3>
+                                    <h3 style={{ fontSize: "1.15rem", fontWeight: 800, margin: 0, color: "var(--txt-1)" }}>NSS Symbol</h3>
                                 </div>
-                                <p style={{ fontSize: "0.925rem", color: "var(--txt-2)", lineHeight: "1.65", margin: 0, textAlign: "justify" }}>
-                                    The symbol of the National Service Scheme is based on the 'Rath' wheel of the Konark Sun Temple situated in Orissa. These giant wheels of the Sun Temple portray the cycle of creation, preservation and release, and signify the movement in life across time and space. The design of the symbol, a simplified form of the Sun-chariot wheel primarily depicts movement. The wheel signifies the progressive cycle of life. It stands for continuity as well as change and implies the continuous striving of NSS for social transformation and upliftment.
+                                <p style={{ fontSize: "0.9rem", color: "var(--txt-2)", lineHeight: "1.7", margin: 0 }}>
+                                    The symbol is based on the 'Rath' wheel of the Konark Sun Temple in Orissa. The wheel signifies the progressive cycle of life and the continuous striving of NSS for social transformation and upliftment.
                                 </p>
                             </div>
                         </div>
 
-                        {/* NSS Badge Card */}
-                        <div className="identity-card" style={{ borderLeft: "4px solid #eab308" }}
-                            onMouseEnter={e => { e.currentTarget.style.borderColor = "#eab308"; }}
-                            onMouseLeave={e => { e.currentTarget.style.borderColor = "var(--border)"; }}>
-                            <div className="identity-card-left" style={{ background: "linear-gradient(135deg, rgba(234,179,8,0.08) 0%, rgba(234,179,8,0.02) 100%)" }}>
-                                <img src="/nss-logo.png" alt="NSS Badge Logo" style={{ width: "96px", height: "96px", objectFit: "contain" }} />
+                        {/* NSS Song Card */}
+                        <div className="identity-card" style={{ borderTop: "4px solid #8b5cf6", borderLeft: "1px solid var(--border)" }}
+                            onMouseEnter={e => { e.currentTarget.style.boxShadow = "0 12px 32px rgba(139,92,246,0.15)"; }}
+                            onMouseLeave={e => { e.currentTarget.style.boxShadow = ""; }}>
+                            <div className="identity-card-left" style={{ background: "linear-gradient(135deg, rgba(139,92,246,0.1) 0%, rgba(139,92,246,0.03) 100%)" }}>
+                                <div style={{ width: "80px", height: "80px", borderRadius: "20px", background: "rgba(139,92,246,0.12)", display: "flex", alignItems: "center", justifyContent: "center", color: "#8b5cf6" }}>
+                                    <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
+                                        <path d="M9 18V5l12-2v13" />
+                                        <circle cx="6" cy="18" r="3" />
+                                        <circle cx="18" cy="16" r="3" />
+                                    </svg>
+                                </div>
                             </div>
                             <div className="identity-card-right">
-                                <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
-                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#eab308" strokeWidth="2.5"><circle cx="12" cy="12" r="10" /><path d="M12 2v20" /><path d="M2 12h20" /><path d="m16.24 7.76-8.48 8.48" /><path d="m7.76 7.76 8.48 8.48" /></svg>
-                                    <h3 style={{ fontSize: "1.25rem", fontWeight: 800, margin: 0, color: "var(--txt-1)" }}>NSS Badge</h3>
+                                <div style={{ display: "flex", alignItems: "center", gap: "0.6rem" }}>
+                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#8b5cf6" strokeWidth="2.5"><path d="M9 18V5l12-2v13" /><circle cx="6" cy="18" r="3" /><circle cx="18" cy="16" r="3" /></svg>
+                                    <h3 style={{ fontSize: "1.15rem", fontWeight: 800, margin: 0, color: "var(--txt-1)" }}>NSS Song</h3>
                                 </div>
-                                <p style={{ fontSize: "0.925rem", color: "var(--txt-2)", lineHeight: "1.65", margin: 0, textAlign: "justify" }}>
-                                    The NSS symbol is embossed on the NSS badge. The NSS volunteers wear it while undertaking any programme of community service. The Konark wheel in the symbol has eight bars which represent the 24 hours of the day. Hence, the badge reminds the wearer to be in readiness for service of the nation round the clock i.e. for 24 hours. The red colour in the badge indicates that the NSS volunteers are full of blood i.e. lively, active, energetic and full of high spirit. The navy blue colour indicates the cosmos of which the NSS is a tiny part, ready to contribute its share for the welfare of the mankind.
+                                <p style={{ fontSize: "0.9rem", color: "var(--txt-2)", lineHeight: "1.7", margin: 0 }}>
+                                    During the Silver Jubilee Year, the NSS theme song was composed. All NSS volunteers are encouraged to learn and sing the theme song during NSS programmes and celebrations.
                                 </p>
                             </div>
                         </div>
 
                         {/* NSS Day Card */}
-                        <div className="identity-card" style={{ borderLeft: "4px solid #10b981" }}
-                            onMouseEnter={e => { e.currentTarget.style.borderColor = "#10b981"; }}
-                            onMouseLeave={e => { e.currentTarget.style.borderColor = "var(--border)"; }}>
-                            <div className="identity-card-left" style={{ background: "linear-gradient(135deg, rgba(16,185,129,0.08) 0%, rgba(16,185,129,0.02) 100%)" }}>
-                                <div style={{ width: "80px", height: "80px", borderRadius: "20px", background: "rgba(16,185,129,0.1)", display: "flex", alignItems: "center", justifyContent: "center", color: "#10b981" }}>
+                        <div className="identity-card" style={{ borderTop: "4px solid #10b981", borderLeft: "1px solid var(--border)" }}
+                            onMouseEnter={e => { e.currentTarget.style.boxShadow = "0 12px 32px rgba(16,185,129,0.15)"; }}
+                            onMouseLeave={e => { e.currentTarget.style.boxShadow = ""; }}>
+                            <div className="identity-card-left" style={{ background: "linear-gradient(135deg, rgba(16,185,129,0.1) 0%, rgba(16,185,129,0.03) 100%)" }}>
+                                <div style={{ width: "80px", height: "80px", borderRadius: "20px", background: "rgba(16,185,129,0.12)", display: "flex", alignItems: "center", justifyContent: "center", color: "#10b981" }}>
                                     <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
                                         <rect x="3" y="4" width="18" height="18" rx="4" ry="4" />
                                         <line x1="16" y1="2" x2="16" y2="6" />
@@ -836,36 +836,12 @@ const Home = () => {
                                 </div>
                             </div>
                             <div className="identity-card-right">
-                                <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
+                                <div style={{ display: "flex", alignItems: "center", gap: "0.6rem" }}>
                                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#10b981" strokeWidth="2.5"><rect x="3" y="4" width="18" height="18" rx="2" ry="2" /><line x1="16" y1="2" x2="16" y2="6" /><line x1="8" y1="2" x2="8" y2="6" /><line x1="3" y1="10" x2="21" y2="10" /></svg>
-                                    <h3 style={{ fontSize: "1.25rem", fontWeight: 800, margin: 0, color: "var(--txt-1)" }}>NSS Day</h3>
+                                    <h3 style={{ fontSize: "1.15rem", fontWeight: 800, margin: 0, color: "var(--txt-1)" }}>NSS Day</h3>
                                 </div>
-                                <p style={{ fontSize: "0.925rem", color: "var(--txt-2)", lineHeight: "1.65", margin: 0, textAlign: "justify" }}>
-                                    NSS was formally launched on <b>24th September, 1969</b>, the birth centenary year of the Father of the Nation. Therefore, 24 September is celebrated every year as NSS Day with appropriate programmes and activities.
-                                </p>
-                            </div>
-                        </div>
-
-                        {/* NSS Song Card */}
-                        <div className="identity-card" style={{ borderLeft: "4px solid #8b5cf6" }}
-                            onMouseEnter={e => { e.currentTarget.style.borderColor = "#8b5cf6"; }}
-                            onMouseLeave={e => { e.currentTarget.style.borderColor = "var(--border)"; }}>
-                            <div className="identity-card-left" style={{ background: "linear-gradient(135deg, rgba(139,92,246,0.08) 0%, rgba(139,92,246,0.02) 100%)" }}>
-                                <div style={{ width: "80px", height: "80px", borderRadius: "20px", background: "rgba(139,92,246,0.1)", display: "flex", alignItems: "center", justifyContent: "center", color: "#8b5cf6" }}>
-                                    <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
-                                        <path d="M9 18V5l12-2v13" />
-                                        <circle cx="6" cy="18" r="3" />
-                                        <circle cx="18" cy="16" r="3" />
-                                    </svg>
-                                </div>
-                            </div>
-                            <div className="identity-card-right">
-                                <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
-                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#8b5cf6" strokeWidth="2.5"><path d="M9 18V5l12-2v13" /><circle cx="6" cy="18" r="3" /><circle cx="18" cy="16" r="3" /></svg>
-                                    <h3 style={{ fontSize: "1.25rem", fontWeight: 800, margin: 0, color: "var(--txt-1)" }}>NSS Song</h3>
-                                </div>
-                                <p style={{ fontSize: "0.925rem", color: "var(--txt-2)", lineHeight: "1.65", margin: 0, textAlign: "justify" }}>
-                                    During Silver Jubilee Year the NSS theme song has been composed. All NSS volunteers are requested to learn the theme song and sing the song during NSS programmes and celebrations.
+                                <p style={{ fontSize: "0.9rem", color: "var(--txt-2)", lineHeight: "1.7", margin: 0 }}>
+                                    NSS was formally launched on <b>24th September, 1969</b>, the birth year of the Father of the Nation. Since then, 24 September is celebrated every year as NSS Day with special programmes and activities.
                                 </p>
                             </div>
                         </div>

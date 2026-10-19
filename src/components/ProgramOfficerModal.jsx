@@ -18,10 +18,6 @@ const ProgramOfficerModal = ({ isOpen, onClose, insName, insCode, units, initial
         email: "",
         mobile: "",
         address: "",
-        block: "",
-        taluk: "",
-        district: "",
-        pincode: "",
         dateOfAppointment: "",
         teachingExperience: "",
         qualification: "",
@@ -63,10 +59,6 @@ const ProgramOfficerModal = ({ isOpen, onClose, insName, insCode, units, initial
                 email: "",
                 mobile: "",
                 address: "",
-                block: "",
-                taluk: "",
-                district: "",
-                pincode: "",
                 dateOfAppointment: "",
                 teachingExperience: "",
                 qualification: "",
@@ -260,7 +252,7 @@ const ProgramOfficerModal = ({ isOpen, onClose, insName, insCode, units, initial
                             )}
                             <div className="form-group">
                                 <label>Name of Programme Officer</label>
-                                <input className="form-input" name="name" value={formData.name} onChange={handleInputChange} required disabled={readOnly} />
+                                <input className="form-input" name="name" value={formData.name} onChange={handleInputChange} placeholder="e.g. Dr. A. Kumar (Enter Name with Initial)" required disabled={readOnly} />
                             </div>
                             <div className="form-group">
                                 <label>Designation</label>
@@ -342,22 +334,6 @@ const ProgramOfficerModal = ({ isOpen, onClose, insName, insCode, units, initial
                             <div className="form-group col-span-2" style={{ gridColumn: "1 / -1" }}>
                                 <label>Address</label>
                                 <textarea className="form-input" name="address" value={formData.address} onChange={handleInputChange} rows="2" required disabled={readOnly}></textarea>
-                            </div>
-                            <div className="form-group">
-                                <label>Block</label>
-                                <input className="form-input" name="block" value={formData.block} onChange={handleInputChange} disabled={readOnly} />
-                            </div>
-                            <div className="form-group">
-                                <label>Taluk</label>
-                                <input className="form-input" name="taluk" value={formData.taluk} onChange={handleInputChange} disabled={readOnly} />
-                            </div>
-                            <div className="form-group">
-                                <label>District</label>
-                                <input className="form-input" name="district" value={formData.district} onChange={handleInputChange} disabled={readOnly} />
-                            </div>
-                            <div className="form-group">
-                                <label>Pincode</label>
-                                <input className="form-input" name="pincode" value={formData.pincode} onChange={handleInputChange} disabled={readOnly} maxLength={6} />
                             </div>
                         </div>
                     </div>
@@ -526,10 +502,6 @@ const ProgramOfficerModal = ({ isOpen, onClose, insName, insCode, units, initial
                         <p><strong>Community:</strong> {formData.community}</p>
                         <p><strong>Email:</strong> {formData.email}</p>
                         <p><strong>Mobile:</strong> {formData.mobile}</p>
-                        <p><strong>Block:</strong> {formData.block}</p>
-                        <p><strong>Taluk:</strong> {formData.taluk}</p>
-                        <p><strong>District:</strong> {formData.district}</p>
-                        <p><strong>Pincode:</strong> {formData.pincode}</p>
                         <p><strong>Date of Appointment:</strong> {formData.dateOfAppointment}</p>
                         <p><strong>Teaching Experience:</strong> {formData.teachingExperience}</p>
                     </div>
