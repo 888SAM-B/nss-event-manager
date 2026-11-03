@@ -35,10 +35,11 @@ const CollegeRegister = () => {
     const [taluk, setTaluk] = useState("");
     const [district, setDistrict] = useState("");
     const [pincode, setPincode] = useState("");
+    const [nearbyPoliceStation, setNearbyPoliceStation] = useState("");
 
-    // Bank Details (For Funded only)
+    // ZBSA Details (For Funded only)
     const [accountNo, setAccountNo] = useState("");
-    const [bankName, setBankName] = useState("");
+    const [bankName, setBankName] = useState("State Bank of India");
     const [branch, setBranch] = useState("");
     const [ifsc, setIfsc] = useState("");
 
@@ -129,16 +130,17 @@ const CollegeRegister = () => {
                 block,
                 taluk,
                 district,
-                pincode
+                pincode,
+                nearbyPoliceStation
             }
         };
 
         if (collegeInfo.collegeType && collegeInfo.collegeType.toLowerCase().includes("funded")) {
             data.bankDetails = {
                 accountNo,
-                bankName,
+                bankName: "State Bank of India",
                 branch,
-                ifsc
+                ifsc: ifsc.toUpperCase()
             };
         }
 
@@ -189,7 +191,7 @@ const CollegeRegister = () => {
                             Please enter your official College Code provided by the university admin to initiate profile setup.
                         </p>
                         <div className="form-group">
-                            <label className="form-label" style={{ fontWeight: 600, fontSize: "0.75rem" }}>College Code</label>
+                            <label className="form-label" style={{ fontWeight: 600, fontSize: "0.75rem" }}>College Code <span style={{ color: "red" }}>*</span></label>
                             <input
                                 type="text"
                                 className="form-input"
@@ -224,7 +226,7 @@ const CollegeRegister = () => {
 
                         <div className="form-group">
                             <label className="form-label" style={{ fontWeight: 600, fontSize: "0.75rem", textTransform: "uppercase", marginBottom: "0.5rem", display: "block" }}>
-                                Enter 6-Digit OTP Code
+                                Enter 6-Digit OTP Code <span style={{ color: "red" }}>*</span>
                             </label>
                             <input
                                 type="text"
@@ -275,7 +277,7 @@ const CollegeRegister = () => {
                             <h3 style={{ fontSize: "1rem", fontWeight: 700, marginBottom: "0.75rem", color: "var(--brand-500)", borderBottom: "1px solid var(--border)", paddingBottom: "0.25rem" }}>1. Account Credentials</h3>
                             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }}>
                                 <div className="form-group">
-                                    <label className="form-label" style={{ fontSize: "0.7rem" }}>Password</label>
+                                    <label className="form-label" style={{ fontSize: "0.7rem" }}>Password <span style={{ color: "red" }}>*</span></label>
                                     <div style={{ position: "relative" }}>
                                         <input
                                             type={showPassword ? "text" : "password"}
@@ -306,7 +308,7 @@ const CollegeRegister = () => {
                                     </div>
                                 </div>
                                 <div className="form-group">
-                                    <label className="form-label" style={{ fontSize: "0.7rem" }}>Confirm Password</label>
+                                    <label className="form-label" style={{ fontSize: "0.7rem" }}>Confirm Password <span style={{ color: "red" }}>*</span></label>
                                     <div style={{ position: "relative" }}>
                                         <input
                                             type={showConfirmPassword ? "text" : "password"}
@@ -344,7 +346,7 @@ const CollegeRegister = () => {
                             <h3 style={{ fontSize: "1rem", fontWeight: 700, marginBottom: "0.75rem", color: "var(--brand-500)", borderBottom: "1px solid var(--border)", paddingBottom: "0.25rem" }}>2. Principal Details</h3>
                             <div style={{ display: "grid", gridTemplateColumns: "1.2fr 1fr 1fr", gap: "1rem" }}>
                                 <div className="form-group">
-                                    <label className="form-label" style={{ fontSize: "0.7rem" }}>Principal Name</label>
+                                    <label className="form-label" style={{ fontSize: "0.7rem" }}>Principal Name <span style={{ color: "red" }}>*</span></label>
                                     <input
                                         type="text"
                                         className="form-input"
@@ -355,7 +357,7 @@ const CollegeRegister = () => {
                                     />
                                 </div>
                                 <div className="form-group">
-                                    <label className="form-label" style={{ fontSize: "0.7rem" }}>Contact Number</label>
+                                    <label className="form-label" style={{ fontSize: "0.7rem" }}>Contact Number <span style={{ color: "red" }}>*</span></label>
                                     <input
                                         type="text"
                                         className="form-input"
@@ -366,7 +368,7 @@ const CollegeRegister = () => {
                                     />
                                 </div>
                                 <div className="form-group">
-                                    <label className="form-label" style={{ fontSize: "0.7rem" }}>Email ID</label>
+                                    <label className="form-label" style={{ fontSize: "0.7rem" }}>Email ID <span style={{ color: "red" }}>*</span></label>
                                     <input
                                         type="email"
                                         className="form-input"
@@ -391,7 +393,6 @@ const CollegeRegister = () => {
                                         placeholder="nsscell@college.edu"
                                         value={collegeEmail}
                                         onChange={(e) => setCollegeEmail(e.target.value)}
-                                        required
                                     />
                                 </div>
                                 <div className="form-group">
@@ -402,7 +403,6 @@ const CollegeRegister = () => {
                                         placeholder="Office Landline / Contact"
                                         value={collegeContact}
                                         onChange={(e) => setCollegeContact(e.target.value)}
-                                        required
                                     />
                                 </div>
                                 <div className="form-group">
@@ -422,7 +422,7 @@ const CollegeRegister = () => {
                         <div>
                             <h3 style={{ fontSize: "1rem", fontWeight: 700, marginBottom: "0.75rem", color: "var(--brand-500)", borderBottom: "1px solid var(--border)", paddingBottom: "0.25rem" }}>4. Location Details</h3>
                             <div className="form-group" style={{ marginBottom: "1rem" }}>
-                                <label className="form-label" style={{ fontSize: "0.7rem" }}>Full Postal Address</label>
+                                <label className="form-label" style={{ fontSize: "0.7rem" }}>Full Postal Address <span style={{ color: "red" }}>*</span></label>
                                 <textarea
                                     className="form-input"
                                     placeholder="Enter complete postal address of the institution"
@@ -432,17 +432,17 @@ const CollegeRegister = () => {
                                     style={{ minHeight: "60px" }}
                                 />
                             </div>
-                            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: "1rem" }}>
+                            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "1rem", marginBottom: "1rem" }}>
                                 <div className="form-group">
-                                    <label className="form-label" style={{ fontSize: "0.7rem" }}>Block</label>
+                                    <label className="form-label" style={{ fontSize: "0.7rem" }}>Block <span style={{ color: "red" }}>*</span></label>
                                     <input type="text" className="form-input" placeholder="e.g. Salem" value={block} onChange={(e) => setBlock(e.target.value)} required />
                                 </div>
                                 <div className="form-group">
-                                    <label className="form-label" style={{ fontSize: "0.7rem" }}>Taluk</label>
+                                    <label className="form-label" style={{ fontSize: "0.7rem" }}>Taluk <span style={{ color: "red" }}>*</span></label>
                                     <input type="text" className="form-input" placeholder="e.g. Omalur" value={taluk} onChange={(e) => setTaluk(e.target.value)} required />
                                 </div>
                                 <div className="form-group">
-                                    <label className="form-label" style={{ fontSize: "0.7rem" }}>District</label>
+                                    <label className="form-label" style={{ fontSize: "0.7rem" }}>District <span style={{ color: "red" }}>*</span></label>
                                     <select className="form-input" value={district} onChange={(e) => setDistrict(e.target.value)} required>
                                         <option value="">Select District</option>
                                         <option value="Salem">Salem</option>
@@ -451,33 +451,40 @@ const CollegeRegister = () => {
                                         <option value="Krishnagiri">Krishnagiri</option>
                                     </select>
                                 </div>
+                            </div>
+                            <div style={{ display: "grid", gridTemplateColumns: "1fr 2fr", gap: "1rem" }}>
                                 <div className="form-group">
-                                    <label className="form-label" style={{ fontSize: "0.7rem" }}>Pincode</label>
+                                    <label className="form-label" style={{ fontSize: "0.7rem" }}>Pincode <span style={{ color: "red" }}>*</span></label>
                                     <input type="text" className="form-input" placeholder="6 digits" maxLength={6} value={pincode} onChange={(e) => setPincode(e.target.value)} required />
+                                </div>
+                                <div className="form-group">
+                                    <label className="form-label" style={{ fontSize: "0.7rem" }}>Nearby Police Station <span style={{ color: "red" }}>*</span></label>
+                                    <input type="text" className="form-input" placeholder="e.g. Omalur Police Station" value={nearbyPoliceStation} onChange={(e) => setNearbyPoliceStation(e.target.value)} required />
                                 </div>
                             </div>
                         </div>
 
-                        {/* Bank Details (Funded / Funded & Self-Financing Only) */}
+                        {/* ZBSA Account Details (Funded / Funded & Self-Financing Only) */}
                         {collegeInfo.collegeType && collegeInfo.collegeType.toLowerCase().includes("funded") && (
                             <div>
-                                <h3 style={{ fontSize: "1rem", fontWeight: 700, marginBottom: "0.75rem", color: "var(--brand-500)", borderBottom: "1px solid var(--border)", paddingBottom: "0.25rem" }}>5. Bank Details (NSS Funded Account)</h3>
+                                <h3 style={{ fontSize: "1rem", fontWeight: 700, marginBottom: "0.25rem", color: "var(--brand-500)", borderBottom: "1px solid var(--border)", paddingBottom: "0.25rem" }}>5. ZBSA Account Details (Zero Balance Subsidiary Account)</h3>
+                                <p style={{ fontSize: "0.75rem", color: "var(--txt-3)", marginBottom: "0.75rem" }}>Enter official ZBSA Account details for government grant funding.</p>
                                 <div style={{ display: "grid", gridTemplateColumns: "1.2fr 1fr 1fr 1fr", gap: "1rem" }}>
                                     <div className="form-group">
-                                        <label className="form-label" style={{ fontSize: "0.7rem" }}>Account Number</label>
+                                        <label className="form-label" style={{ fontSize: "0.7rem" }}>ZBSA Account Number <span style={{ color: "red" }}>*</span></label>
                                         <input type="text" className="form-input" placeholder="Account No" value={accountNo} onChange={(e) => setAccountNo(e.target.value)} required />
                                     </div>
                                     <div className="form-group">
                                         <label className="form-label" style={{ fontSize: "0.7rem" }}>Bank Name</label>
-                                        <input type="text" className="form-input" placeholder="Bank Name" value={bankName} onChange={(e) => setBankName(e.target.value)} required />
+                                        <input type="text" className="form-input" value="State Bank of India" readOnly disabled style={{ background: "var(--bg-tertiary, rgba(255,255,255,0.05))", cursor: "not-allowed", fontWeight: 600, color: "var(--txt-1)" }} />
                                     </div>
                                     <div className="form-group">
-                                        <label className="form-label" style={{ fontSize: "0.7rem" }}>Branch Name</label>
+                                        <label className="form-label" style={{ fontSize: "0.7rem" }}>Branch Name <span style={{ color: "red" }}>*</span></label>
                                         <input type="text" className="form-input" placeholder="Branch" value={branch} onChange={(e) => setBranch(e.target.value)} required />
                                     </div>
                                     <div className="form-group">
-                                        <label className="form-label" style={{ fontSize: "0.7rem" }}>IFSC Code</label>
-                                        <input type="text" className="form-input" placeholder="IFSC" value={ifsc} onChange={(e) => setIfsc(e.target.value)} required />
+                                        <label className="form-label" style={{ fontSize: "0.7rem" }}>IFSC Code <span style={{ color: "red" }}>*</span></label>
+                                        <input type="text" className="form-input" placeholder="e.g. SBIN0001234" value={ifsc} onChange={(e) => setIfsc(e.target.value.toUpperCase())} required />
                                     </div>
                                 </div>
                             </div>

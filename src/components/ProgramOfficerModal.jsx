@@ -88,6 +88,10 @@ const ProgramOfficerModal = ({ isOpen, onClose, insName, insCode, units, initial
     };
 
     const addDynamicField = (field) => {
+        if (field === 'specialTalent' && formData.specialTalent.length >= 2) {
+            toast.error("Maximum 2 special talents allowed.");
+            return;
+        }
         setFormData({ ...formData, [field]: [...formData[field], ""] });
     };
 
@@ -251,19 +255,19 @@ const ProgramOfficerModal = ({ isOpen, onClose, insName, insCode, units, initial
                                 </div>
                             )}
                             <div className="form-group">
-                                <label>Name of Programme Officer</label>
-                                <input className="form-input" name="name" value={formData.name} onChange={handleInputChange} placeholder="e.g. Dr. A. Kumar (Enter Name with Initial)" required disabled={readOnly} />
+                                <label>Name of Programme Officer <span style={{ color: 'red' }}>*</span></label>
+                                <input className="form-input" name="name" value={formData.name} onChange={handleInputChange} placeholder="e.g. Dr. R. Kumar" required disabled={readOnly} />
                             </div>
                             <div className="form-group">
-                                <label>Designation</label>
+                                <label>Designation <span style={{ color: 'red' }}>*</span></label>
                                 <input className="form-input" name="designation" value={formData.designation} onChange={handleInputChange} required disabled={readOnly} />
                             </div>
                             <div className="form-group">
-                                <label>Department</label>
+                                <label>Department <span style={{ color: 'red' }}>*</span></label>
                                 <input className="form-input" name="department" value={formData.department} onChange={handleInputChange} required disabled={readOnly} />
                             </div>
                             <div className="form-group">
-                                <label>Assigned NSS Unit</label>
+                                <label>Assigned NSS Unit <span style={{ color: 'red' }}>*</span></label>
                                 <input
                                     className="form-input"
                                     name="unit"
@@ -284,7 +288,7 @@ const ProgramOfficerModal = ({ isOpen, onClose, insName, insCode, units, initial
                         <div className="grid-cols-2">
                             {!readOnly && (
                                 <div className="form-group">
-                                    <label>Profile Image</label>
+                                    <label>RECENT Profile Image</label>
                                     <input type="file" className="form-input" accept="image/*" onChange={handleImageChange} />
                                 </div>
                             )}
@@ -295,7 +299,7 @@ const ProgramOfficerModal = ({ isOpen, onClose, insName, insCode, units, initial
                                 </div>
                             )}
                             <div className="form-group">
-                                <label>Date of Birth</label>
+                                <label>Date of Birth <span style={{ color: 'red' }}>*</span></label>
                                 <input type="date" className="form-input" name="dob" value={formData.dob} onChange={handleInputChange} required disabled={readOnly} />
                             </div>
                             <div className="form-group">
@@ -316,15 +320,15 @@ const ProgramOfficerModal = ({ isOpen, onClose, insName, insCode, units, initial
                                 </select>
                             </div>
                             <div className="form-group">
-                                <label>Email ID</label>
+                                <label>Email ID <span style={{ color: 'red' }}>*</span></label>
                                 <input type="email" className="form-input" name="email" value={formData.email} onChange={handleInputChange} required disabled={readOnly} />
                             </div>
                             <div className="form-group">
-                                <label>Mobile Number</label>
+                                <label>Mobile Number <span style={{ color: 'red' }}>*</span></label>
                                 <input className="form-input" name="mobile" value={formData.mobile} onChange={handleInputChange} required disabled={readOnly} />
                             </div>
                             <div className="form-group">
-                                <label>Date of Appointment in College</label>
+                                <label>Date of Appointment in College <span style={{ color: 'red' }}>*</span></label>
                                 <input type="date" className="form-input" name="dateOfAppointment" value={formData.dateOfAppointment} onChange={handleInputChange} required disabled={readOnly} />
                             </div>
                             <div className="form-group col-span-2" style={{ gridColumn: "1 / -1" }}>
@@ -332,7 +336,7 @@ const ProgramOfficerModal = ({ isOpen, onClose, insName, insCode, units, initial
                                 <input className="form-input" name="teachingExperience" value={formData.teachingExperience} onChange={handleInputChange} placeholder="e.g. 10 years including previous org" disabled={readOnly} />
                             </div>
                             <div className="form-group col-span-2" style={{ gridColumn: "1 / -1" }}>
-                                <label>Address</label>
+                                <label>Address <span style={{ color: 'red' }}>*</span></label>
                                 <textarea className="form-input" name="address" value={formData.address} onChange={handleInputChange} rows="2" required disabled={readOnly}></textarea>
                             </div>
                         </div>
@@ -344,7 +348,7 @@ const ProgramOfficerModal = ({ isOpen, onClose, insName, insCode, units, initial
                             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c0 2 2 3 6 3s6-1 6-3v-5"/></svg> Academic & Training
                         </div>
                         <div className="form-group">
-                            <label>Qualification</label>
+                            <label>Qualification <span style={{ color: 'red' }}>*</span></label>
                             <input className="form-input" name="qualification" value={formData.qualification} onChange={handleInputChange} required disabled={readOnly} />
                         </div>
                         <div className="form-group">
@@ -399,7 +403,7 @@ const ProgramOfficerModal = ({ isOpen, onClose, insName, insCode, units, initial
                         </div>
                         <div className="form-group">
                             <label className="flex-between">
-                                Previous Experience in NSS
+                                PREVIOUS NSS Experience (If any)
                                 {!readOnly && <button type="button" className="btn btn-sm btn-secondary" onClick={() => addDynamicField("nssExperience")}>+</button>}
                             </label>
                             {formData.nssExperience.map((item, idx) => (
@@ -413,8 +417,8 @@ const ProgramOfficerModal = ({ isOpen, onClose, insName, insCode, units, initial
                         </div>
                         <div className="form-group">
                             <label className="flex-between">
-                                Special Talent
-                                {!readOnly && <button type="button" className="btn btn-sm btn-secondary" onClick={() => addDynamicField("specialTalent")}>+</button>}
+                                Special Talents (Max 2)
+                                {!readOnly && formData.specialTalent.length < 2 && <button type="button" className="btn btn-sm btn-secondary" onClick={() => addDynamicField("specialTalent")}>+</button>}
                             </label>
                             {formData.specialTalent.map((item, idx) => (
                                 <div key={idx} className="input-group mb-2">
