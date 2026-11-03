@@ -2,6 +2,7 @@ const bcrypt = require('bcryptjs');
 const crypto = require('crypto');
 const User = require('../models/User');
 const { sendEmailViaBrevo } = require('../services/emailService');
+const { encryptCollegeBankDetails, decryptCollegeBankDetails } = require('../utils/encryption');
 
 // Admin registers a college shell
 const addOrganization = async (req, res) => {
@@ -205,7 +206,7 @@ const registerCollege = async (req, res) => {
         const hashedPassword = await bcrypt.hash(password, salt);
 
         // Update college fields
-        college.userName = collegeDetails.email; // Use college email as login username
+        college.userName = (collegeDetails.email && collegeDetails.email.trim()) ? collegeDetails.email.trim() : (college.email || college.code); // Use college email or fallback to code
         college.password = hashedPassword;
         college.isRegistered = true;
         college.otpVerified = false; // BUG-07: Reset otpVerified flag after registration completes
@@ -219,22 +220,22 @@ const registerCollege = async (req, res) => {
         college.pincode = collegeLocation.pincode;
         college.location = collegeLocation.address;
 
-        if (college.collegeType === 'Funded' && bankDetails) {
+        const isFunded = college.collegeType && college.collegeType.toLowerCase().includes('funded');
+        if (isFunded && bankDetails) {
             const rawAccountNo = bankDetails.accountNo || bankDetails.accountNumber || "";
-            const rawBankName = bankDetails.bankName || bankDetails.bank || "";
+            const rawBankName = bankDetails.bankName || bankDetails.bank || "State Bank of India";
             const rawBranch = bankDetails.branch || "";
             const rawIfsc = bankDetails.ifsc || "";
-            const rawAccountHolder = bankDetails.accountHolder || "";
+            const rawAccountHolder = bankDetails.accountHolder || college.insName || "";
 
-            // BUG-15: bcrypt is one-way — bank details must NOT be hashed (they need to be readable).
-            // Store as plain text for now. TODO: Replace with AES encryption if confidentiality is required.
-            college.bankDetails = {
+            // Encrypt all sensitive ZBSA bank details before saving to database
+            college.bankDetails = encryptCollegeBankDetails({
                 accountNumber: rawAccountNo,
                 bank: rawBankName,
                 branch: rawBranch,
                 ifsc: rawIfsc,
                 accountHolder: rawAccountHolder
-            };
+            });
         }
 
         await college.save();
@@ -313,9 +314,14 @@ const getCollegeDashboard = async (req, res) => {
             populate: { path: 'head' }
         });
 
+        const collegeObj = populatedCollege.toObject ? populatedCollege.toObject() : populatedCollege;
+        if (collegeObj && collegeObj.bankDetails) {
+            collegeObj.bankDetails = decryptCollegeBankDetails(collegeObj.bankDetails);
+        }
+
         res.json({
             success: true,
-            user: populatedCollege
+            user: collegeObj
         });
     } catch (error) {
         console.error("Error getting dashboard:", error);

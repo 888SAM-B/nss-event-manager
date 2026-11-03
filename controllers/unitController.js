@@ -70,7 +70,7 @@ const addUnit = async (req, res) => {
             unitType: unitType || category || 'Funded',
             createdDate: createdDate || new Date().toISOString().split('T')[0],
             collegeId: college._id,
-            bankDetails: bankDetails ? encryptBankDetails(bankDetails) : {}
+            bankDetails: {}
         });
 
         await newUnit.save();
@@ -502,7 +502,7 @@ const sendUnitBankOtp = async (req, res) => {
                     <div style="font-family: Arial, sans-serif; padding: 20px; line-height: 1.6; color: #333;">
                         <h2 style="color: #1e3a8a;">NSS Unit Bank Details Edit Verification</h2>
                         <p>Dear <strong>${unit.head?.name || 'Programme Officer'}</strong> (${unit.unitNumber}),</p>
-                        <p>A request was submitted to edit/update the official <strong>ZBSCA & Vendor Bank Account Details</strong> for NSS Unit <strong>${unit.unitNumber}</strong> (${college.insName}).</p>
+                        <p>A request was submitted to edit/update the official <strong>ZBSCA Bank Account Details</strong> for NSS Unit <strong>${unit.unitNumber}</strong> (${college.insName}).</p>
                         <p>Your One-Time Verification OTP is:</p>
                         <div style="background: #f1f5f9; padding: 15px; text-align: center; border-radius: 8px; margin: 20px 0;">
                             <h1 style="color: #2563eb; letter-spacing: 6px; margin: 0; font-size: 32px;">${otp}</h1>

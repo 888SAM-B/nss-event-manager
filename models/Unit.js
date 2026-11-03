@@ -16,13 +16,6 @@ const unitSchema = new mongoose.Schema({
             bankName: String,
             branchName: String,
             ifscCode: String
-        },
-        vendor: {
-            vendorName: String,
-            accountNo: String,
-            bankName: String,
-            branchName: String,
-            ifscCode: String
         }
     },
     bankOtp: { type: String, default: "" },

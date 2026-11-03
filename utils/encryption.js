@@ -70,13 +70,6 @@ const encryptBankDetails = (bankDetails) => {
             bankName: encryptText(bankDetails.zbsca?.bankName),
             branchName: encryptText(bankDetails.zbsca?.branchName),
             ifscCode: encryptText(bankDetails.zbsca?.ifscCode)
-        },
-        vendor: {
-            vendorName: encryptText(bankDetails.vendor?.vendorName),
-            accountNo: encryptText(bankDetails.vendor?.accountNo),
-            bankName: encryptText(bankDetails.vendor?.bankName),
-            branchName: encryptText(bankDetails.vendor?.branchName),
-            ifscCode: encryptText(bankDetails.vendor?.ifscCode)
         }
     };
 };
@@ -92,14 +85,35 @@ const decryptBankDetails = (bankDetails) => {
             bankName: decryptText(bankDetails.zbsca?.bankName),
             branchName: decryptText(bankDetails.zbsca?.branchName),
             ifscCode: decryptText(bankDetails.zbsca?.ifscCode)
-        },
-        vendor: {
-            vendorName: decryptText(bankDetails.vendor?.vendorName),
-            accountNo: decryptText(bankDetails.vendor?.accountNo),
-            bankName: decryptText(bankDetails.vendor?.bankName),
-            branchName: decryptText(bankDetails.vendor?.branchName),
-            ifscCode: decryptText(bankDetails.vendor?.ifscCode)
         }
+    };
+};
+
+/**
+ * Encrypt college bank details object before saving
+ */
+const encryptCollegeBankDetails = (bankDetails) => {
+    if (!bankDetails) return {};
+    return {
+        accountHolder: encryptText(bankDetails.accountHolder),
+        bank: encryptText(bankDetails.bank || bankDetails.bankName || "State Bank of India"),
+        branch: encryptText(bankDetails.branch || bankDetails.branchName),
+        accountNumber: encryptText(bankDetails.accountNumber || bankDetails.accountNo),
+        ifsc: encryptText(bankDetails.ifsc || bankDetails.ifscCode)
+    };
+};
+
+/**
+ * Decrypt college bank details object when reading
+ */
+const decryptCollegeBankDetails = (bankDetails) => {
+    if (!bankDetails) return {};
+    return {
+        accountHolder: decryptText(bankDetails.accountHolder),
+        bank: decryptText(bankDetails.bank),
+        branch: decryptText(bankDetails.branch),
+        accountNumber: decryptText(bankDetails.accountNumber),
+        ifsc: decryptText(bankDetails.ifsc)
     };
 };
 
@@ -107,5 +121,7 @@ module.exports = {
     encryptText,
     decryptText,
     encryptBankDetails,
-    decryptBankDetails
+    decryptBankDetails,
+    encryptCollegeBankDetails,
+    decryptCollegeBankDetails
 };
