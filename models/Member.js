@@ -16,6 +16,8 @@ const memberSchema = new mongoose.Schema({
     fatherName: String,
     fatherPhone: String,
     sex: String,
+    gender: String,
+    yearOfStudy: String,
     height: String,
     weight: String,
     aadhaar: String,

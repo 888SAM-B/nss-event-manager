@@ -301,7 +301,7 @@ const updateUnitMember = async (req, res) => {
         // BUG-14: Whitelist safe fields only — prevent unitId/collegeId from being overwritten via request body
         const safeFields = [
             'name', 'regNo', 'dept', 'course', 'community', 'contact', 'bloodGroup',
-            'dob', 'batchFrom', 'batchTo', 'fatherName', 'fatherPhone', 'sex', 'height',
+            'dob', 'batchFrom', 'batchTo', 'fatherName', 'fatherPhone', 'sex', 'gender', 'yearOfStudy', 'height',
             'weight', 'aadhaar', 'enrolmentDate', 'culturalTalents', 'hobbies', 'address',
             'enrolmentNo', 'remarks', 'universityName', 'email', 'isEnrolled'
         ];
@@ -309,6 +309,8 @@ const updateUnitMember = async (req, res) => {
         safeFields.forEach(field => {
             if (memberData[field] !== undefined) safeUpdateData[field] = memberData[field];
         });
+        if (safeUpdateData.gender && !safeUpdateData.sex) safeUpdateData.sex = safeUpdateData.gender;
+        if (safeUpdateData.sex && !safeUpdateData.gender) safeUpdateData.gender = safeUpdateData.sex;
 
         const updatedMember = await Member.findByIdAndUpdate(memberId, safeUpdateData, { new: true });
         res.json({ success: true, message: "Member updated successfully", member: updatedMember });
@@ -370,6 +372,8 @@ const bulkAddMembers = async (req, res) => {
 
         const memberDocs = members.map(m => ({
             ...m,
+            sex: m.gender || m.sex || "Male",
+            gender: m.gender || m.sex || "Male",
             unitId: unit._id,
             collegeId: user._id
         }));
@@ -406,11 +410,14 @@ const addUnitMember = async (req, res) => {
             return res.status(404).json({ success: false, message: "Unit not found" });
         }
 
-        const newMember = new Member({
+        const memberData = {
             ...member,
+            sex: member.gender || member.sex || "Male",
+            gender: member.gender || member.sex || "Male",
             unitId: unit._id,
             collegeId: collegeId
-        });
+        };
+        const newMember = new Member(memberData);
         await newMember.save();
 
         unit.members.push(newMember._id);
