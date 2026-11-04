@@ -165,7 +165,7 @@ const EventsCalendar = ({ events }) => {
                 {days}
             </div>
             <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-                <p className="mb-1">💡 Click on dates with colored dots to view events</p>
+                <p className="mb-1">💡 Click on dates with colored dots to view activities</p>
             </div>
 
             {/* Event Details Modal */}
@@ -174,8 +174,8 @@ const EventsCalendar = ({ events }) => {
                     <div className="modal-content calender-pop " onClick={(e) => e.stopPropagation()} style={{ maxWidth: '700px', maxHeight: '80vh', overflowY: 'auto' }}>
                         <div className="flex-between mb-4">
                             <div>
-                                <h2 className="mb-1">Events on {selectedDate}</h2>
-                                <p className="text-muted mb-0">{selectedDayEvents.length} event{selectedDayEvents.length !== 1 ? 's' : ''} scheduled</p>
+                                <h2 className="mb-1">Activities on {selectedDate}</h2>
+                                <p className="text-muted mb-0">{selectedDayEvents.length} activit{selectedDayEvents.length !== 1 ? 'ies' : 'y'} scheduled</p>
                             </div>
                             <button className="btn btn-sm btn-secondary" onClick={() => setSelectedDayEvents(null)}>
                                 &times;
@@ -254,7 +254,7 @@ const EventsCalendar = ({ events }) => {
                                     {event.report && (
                                         <div className="mt-4 p-3 rounded" style={{ background: 'var(--bg-secondary)', borderLeft: '3px solid var(--success-500)' }}>
                                             <div className="flex-between mb-2">
-                                                <h4 className="mb-0" style={{ fontSize: '0.9rem', color: 'var(--success-500)' }}>Event Report</h4>
+                                                <h4 className="mb-0" style={{ fontSize: '0.9rem', color: 'var(--success-500)' }}>Activity Report</h4>
                                                 {event.report.reportFile && (
                                                     <a
                                                         href={event.report.reportFile.replace('/upload/', '/upload/fl_attachment/')}
@@ -667,7 +667,7 @@ const AdminDashboard = () => {
     const categoryData = {
         labels: stats.eventsByCategory.map(c => c._id),
         datasets: [{
-            label: '# of Events',
+            label: '# of Activities',
             data: stats.eventsByCategory.map(c => c.count),
             backgroundColor: monoColors,
             borderColor: '#FFFFFF',
@@ -688,7 +688,7 @@ const AdminDashboard = () => {
                 borderRadius: 3,
             },
             {
-                label: 'Events',
+                label: 'Activities',
                 data: stats.colleges.map(c => c.events.length),
                 backgroundColor: '#CBD5E1',
                 borderColor: '#94A3B8',
@@ -815,7 +815,7 @@ const AdminDashboard = () => {
                     </button>
                     <button className={`sidebar-item ${activeTab === 'events' ? 'active' : ''}`} onClick={() => { setActiveTab('events'); setIsSidebarOpen(false); }}>
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2" /><line x1="16" y1="2" x2="16" y2="6" /><line x1="8" y1="2" x2="8" y2="6" /><line x1="3" y1="10" x2="21" y2="10" /></svg>
-                        Manage Events
+                        Manage Activities
                     </button>
                     <button className={`sidebar-item ${activeTab === 'officers' ? 'active' : ''}`} onClick={() => { setActiveTab('officers'); setIsSidebarOpen(false); }}>
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M22 21v-2a4 4 0 0 0-3-3.87" /><path d="M16 3.13a4 4 0 0 1 0 7.75" /></svg>
@@ -831,7 +831,7 @@ const AdminDashboard = () => {
                     </button>
                     <button className={`sidebar-item ${activeTab === 'gallery' ? 'active' : ''}`} onClick={() => { setActiveTab('gallery'); setIsSidebarOpen(false); }}>
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2" /><circle cx="8.5" cy="8.5" r="1.5" /><polyline points="21 15 16 10 5 21" /></svg>
-                        Event Gallery
+                        Activity Gallery
                     </button>
                     <button className={`sidebar-item ${activeTab === 'reports' ? 'active' : ''}`} onClick={() => { setActiveTab('reports'); setIsSidebarOpen(false); }}>
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
@@ -926,11 +926,11 @@ const AdminDashboard = () => {
                                     bgLight: 'rgba(37, 99, 235, 0.1)'
                                 },
                                 {
-                                    title: 'Events',
+                                    title: 'Activities',
                                     total: totalEvents,
-                                    sub1Label: 'Completed Events',
+                                    sub1Label: 'Completed Activities',
                                     sub1Val: completedEvents,
-                                    sub2Label: 'Upcoming Events',
+                                    sub2Label: 'Upcoming Activities',
                                     sub2Val: upcomingEvents,
                                     icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2" /><line x1="16" y1="2" x2="16" y2="6" /><line x1="8" y1="2" x2="8" y2="6" /><line x1="3" y1="10" x2="21" y2="10" /></svg>,
                                     color: '#10B981',
@@ -1012,7 +1012,7 @@ const AdminDashboard = () => {
                             <div style={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: '0.5rem', padding: '1.25rem', boxShadow: 'var(--sh-sm)', height: 360 }}>
                                 <div className="flex-between" style={{ marginBottom: '1rem' }}>
                                     <div>
-                                        <h3 style={{ margin: 0, fontSize: '0.875rem', fontWeight: 700, color: '#0F172A' }}>Events by Category</h3>
+                                        <h3 style={{ margin: 0, fontSize: '0.875rem', fontWeight: 700, color: '#0F172A' }}>Activities by Category</h3>
                                         <p style={{ margin: 0, fontSize: '0.72rem', color: '#64748B' }}>Distribution across categories</p>
                                     </div>
                                     <span style={{ fontSize: '0.68rem', fontWeight: 600, background: '#F1F5F9', color: '#475569', border: '1px solid #CBD5E1', padding: '0.2rem 0.5rem', borderRadius: '3px' }}>{stats.eventsByCategory.length} types</span>
@@ -1025,7 +1025,7 @@ const AdminDashboard = () => {
                                 <div className="flex-between" style={{ marginBottom: '1rem' }}>
                                     <div>
                                         <h3 style={{ margin: 0, fontSize: '0.875rem', fontWeight: 700, color: '#0F172A' }}>College Overview</h3>
-                                        <p style={{ margin: 0, fontSize: '0.72rem', color: '#64748B' }}>Units & events per college</p>
+                                        <p style={{ margin: 0, fontSize: '0.72rem', color: '#64748B' }}>Units & activities per college</p>
                                     </div>
                                     <span style={{ fontSize: '0.68rem', fontWeight: 600, background: '#F1F5F9', color: '#475569', border: '1px solid #CBD5E1', padding: '0.2rem 0.5rem', borderRadius: '3px' }}>{stats.colleges.length} colleges</span>
                                 </div>
@@ -1039,7 +1039,7 @@ const AdminDashboard = () => {
                         <div className="grid-cols-2 mb-5" style={{ gridTemplateColumns: '2fr 1fr', gap: '0.875rem' }}>
                             <div style={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: '0.5rem', padding: '1.25rem', boxShadow: 'var(--sh-sm)' }}>
                                 <div className="flex-between" style={{ marginBottom: '1rem' }}>
-                                    <h3 style={{ margin: 0, fontSize: '0.875rem', fontWeight: 700, color: '#0F172A' }}>Events Calendar</h3>
+                                    <h3 style={{ margin: 0, fontSize: '0.875rem', fontWeight: 700, color: '#0F172A' }}>Activities Calendar</h3>
                                     <button style={{ fontSize: '0.75rem', fontWeight: 600, padding: '0.3rem 0.75rem', borderRadius: '4px', border: '1px solid #CBD5E1', background: '#F1F5F9', color: '#334155', cursor: 'pointer' }} onClick={() => setActiveTab('events')}>View All →</button>
                                 </div>
                                 <EventsCalendar events={stats.allEvents || []} />
@@ -1049,7 +1049,7 @@ const AdminDashboard = () => {
                                 <h3 style={{ margin: '0 0 0.25rem', fontSize: '0.875rem', fontWeight: 700, color: '#0F172A' }}>Quick Actions</h3>
                                 {[
                                     {
-                                        label: 'Manage All Events',
+                                        label: 'Manage All Activities',
                                         icon: <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2" /><line x1="16" y1="2" x2="16" y2="6" /><line x1="8" y1="2" x2="8" y2="6" /><line x1="3" y1="10" x2="21" y2="10" /></svg>,
                                         handler: () => setActiveTab('events'),
                                     },
@@ -1064,7 +1064,7 @@ const AdminDashboard = () => {
                                         handler: () => setActiveTab('students'),
                                     },
                                     {
-                                        label: 'Event Gallery',
+                                        label: 'Activity Gallery',
                                         icon: <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2" /><circle cx="8.5" cy="8.5" r="1.5" /><polyline points="21 15 16 10 5 21" /></svg>,
                                         handler: () => setActiveTab('gallery'),
                                     },
@@ -1102,7 +1102,7 @@ const AdminDashboard = () => {
                                 <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.8125rem' }}>
                                     <thead>
                                         <tr style={{ background: 'var(--bg-2)', borderBottom: '1px solid var(--border)' }}>
-                                            {['Code', 'Institution Name', 'Status', 'Units', 'Events', userRole === 'admin' ? 'Actions' : ''].map(h => (
+                                            {['Code', 'Institution Name', 'Status', 'Units', 'Activities', userRole === 'admin' ? 'Actions' : ''].map(h => (
                                                 h && <th key={h} style={{ padding: '0.625rem 0.875rem', textAlign: h === 'Actions' ? 'right' : 'left', fontSize: '0.675rem', fontWeight: 700, color: 'var(--txt-3)', textTransform: 'uppercase', letterSpacing: '0.07em', whiteSpace: 'nowrap' }}>{h}</th>
                                             ))}
                                         </tr>
@@ -1153,8 +1153,8 @@ const AdminDashboard = () => {
                 {activeTab === "events" && (
                     <div>
                         <div className="mb-4">
-                            <h2 style={{ fontSize: '1.5rem', fontWeight: 800, margin: 0 }}>All Events Management</h2>
-                            <p style={{ margin: 0, color: 'var(--txt-3)', fontSize: '0.9rem' }}>Monitor and view details of all college and unit events</p>
+                            <h2 style={{ fontSize: '1.5rem', fontWeight: 800, margin: 0 }}>All Activities Management</h2>
+                            <p style={{ margin: 0, color: 'var(--txt-3)', fontSize: '0.9rem' }}>Monitor and view details of all college and unit activities</p>
                         </div>
                         <AdminAllEvents subview={true} />
                     </div>
@@ -1184,7 +1184,7 @@ const AdminDashboard = () => {
                     <div>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', flexWrap: 'wrap', gap: '0.75rem' }}>
                             <div>
-                                <h2 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 700, color: 'var(--txt-1)' }}>Manage Event Gallery</h2>
+                                <h2 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 700, color: 'var(--txt-1)' }}>Manage Activity Gallery</h2>
                                 <p style={{ margin: '0.2rem 0 0', color: 'var(--txt-3)', fontSize: '0.78rem' }}>Manage photos displayed in the public portal gallery</p>
                             </div>
                             <span style={{ fontSize: '0.72rem', fontWeight: 600, background: 'var(--bg-2)', color: 'var(--txt-2)', border: '1px solid var(--border)', padding: '0.25rem 0.625rem', borderRadius: '3px' }}>{galleryImages.length} images</span>

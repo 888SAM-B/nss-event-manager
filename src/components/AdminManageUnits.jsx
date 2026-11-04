@@ -195,7 +195,7 @@ const AdminManageUnits = () => {
                                         <th>District</th>
                                         <th>Programme Officer</th>
                                         <th className="text-center">Volunteers</th>
-                                        <th className="text-center">Events</th>
+                                        <th className="text-center">Activities</th>
                                         <th className="text-center">Actions</th>
                                     </tr>
                                 </thead>
@@ -331,7 +331,7 @@ const AdminManageUnits = () => {
                             {[
                                 { id: 'profile', label: 'Unit Profile & Villages' },
                                 { id: 'volunteers', label: `Enrolled Volunteers (${selectedUnit.membersCount})` },
-                                { id: 'events', label: `Events Conducted (${selectedUnit.events?.length || 0})` }
+                                { id: 'events', label: `Activities Conducted (${selectedUnit.events?.length || 0})` }
                             ].map(tab => (
                                 <button
                                     key={tab.id}
@@ -471,18 +471,18 @@ const AdminManageUnits = () => {
                             {/* Events Tab */}
                             {activeDetailTab === 'events' && (
                                 <div className="card p-6" style={{ background: 'var(--card-bg)' }}>
-                                    <h4 className="mb-4 text-primary-400" style={{ fontSize: '1.1rem' }}>Conducted / Co-organized Events</h4>
+                                    <h4 className="mb-4 text-primary-400" style={{ fontSize: '1.1rem' }}>Conducted / Co-organized Activities</h4>
                                     {!selectedUnit.events || selectedUnit.events.length === 0 ? (
-                                        <p style={{ color: 'var(--txt-3)' }}>No events conducted by this unit yet.</p>
+                                        <p style={{ color: 'var(--txt-3)' }}>No activities conducted by this unit yet.</p>
                                     ) : (
                                         <div style={{ overflowX: 'auto' }}>
                                             <table className="styled-table" style={{ margin: 0, boxShadow: 'none' }}>
                                                 <thead>
                                                     <tr>
                                                         <th>S.No</th>
-                                                        <th>Event Name</th>
+                                                        <th>Activity Name</th>
                                                         <th>Category</th>
-                                                        <th>Event Code</th>
+                                                        <th>Activity Code</th>
                                                         <th>Date</th>
                                                         <th className="text-center">Volunteers</th>
                                                         <th className="text-center">Action</th>
@@ -539,7 +539,7 @@ const AdminManageUnits = () => {
                 <div className="modal-overlay" onClick={() => setSelectedEvent(null)} style={{ zIndex: 1100 }}>
                     <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '600px' }}>
                         <div className="flex-between mb-4 pb-2" style={{ borderBottom: '1px solid var(--border)' }}>
-                            <h3 style={{ margin: 0, fontSize: '1.2rem', fontWeight: 800 }}>Event Details</h3>
+                            <h3 style={{ margin: 0, fontSize: '1.2rem', fontWeight: 800 }}>Activity Details</h3>
                             <button 
                                 onClick={() => setSelectedEvent(null)}
                                 style={{ background: 'none', border: 'none', fontSize: '1.3rem', cursor: 'pointer', color: 'var(--txt-3)' }}
@@ -549,7 +549,7 @@ const AdminManageUnits = () => {
                         </div>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.875rem', fontSize: '0.9rem' }}>
                             <div style={{ display: 'grid', gridTemplateColumns: '130px 1fr' }}>
-                                <span style={{ fontWeight: 600, color: 'var(--txt-3)' }}>Event Name:</span>
+                                <span style={{ fontWeight: 600, color: 'var(--txt-3)' }}>Activity Name:</span>
                                 <span style={{ fontWeight: 700 }}>{selectedEvent.name}</span>
                             </div>
                             <div style={{ display: 'grid', gridTemplateColumns: '130px 1fr' }}>
@@ -557,7 +557,7 @@ const AdminManageUnits = () => {
                                 <span>{selectedEvent.category}</span>
                             </div>
                             <div style={{ display: 'grid', gridTemplateColumns: '130px 1fr' }}>
-                                <span style={{ fontWeight: 600, color: 'var(--txt-3)' }}>Event Code:</span>
+                                <span style={{ fontWeight: 600, color: 'var(--txt-3)' }}>Activity Code:</span>
                                 <span><code>{selectedEvent.eventCode}</code></span>
                             </div>
                             <div style={{ display: 'grid', gridTemplateColumns: '130px 1fr' }}>

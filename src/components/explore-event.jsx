@@ -159,10 +159,10 @@ const ExploreEvents = () => {
 
   const handleDeleteEvent = async (eventId, e) => {
     e.stopPropagation();
-    if (!window.confirm("Are you sure you want to delete this event? This action cannot be undone.")) return;
+    if (!window.confirm("Are you sure you want to delete this activity? This action cannot be undone.")) return;
 
     setIsDeleting(true);
-    const toastId = toast.loading("Deleting event...");
+    const toastId = toast.loading("Deleting activity...");
 
     try {
       const res = await axios.post(`${import.meta.env.VITE_API_URL}/deleteEvent`, {
@@ -177,13 +177,13 @@ const ExploreEvents = () => {
 
       if (res.data.success) {
         setUnitEvents(prev => prev.filter(ev => ev._id !== eventId));
-        toast.success("Event deleted successfully", { id: toastId });
+        toast.success("Activity deleted successfully", { id: toastId });
       } else {
-        toast.error("Failed to delete event: " + res.data.message, { id: toastId });
+        toast.error("Failed to delete activity: " + res.data.message, { id: toastId });
       }
     } catch (err) {
       console.error(err);
-      toast.error("Error deleting event", { id: toastId });
+      toast.error("Error deleting activity", { id: toastId });
     } finally {
       setIsDeleting(false);
     }
@@ -552,7 +552,7 @@ const ExploreEvents = () => {
           <h2 className="mb-0" style={{ fontSize: '1.4rem', fontWeight: 700, color: 'var(--txt-1)' }}>{title} ({filtered.length})</h2>
           {isOwnEvent && (
             <button className="btn btn-primary btn-sm" onClick={handleAddEvent} style={{ borderRadius: '6px' }}>
-              + Add Event
+              + Add Activity
             </button>
           )}
         </div>
@@ -564,7 +564,7 @@ const ExploreEvents = () => {
           </div>
         ) : (
           <div className="card p-6 text-center" style={{ background: 'var(--card-bg)', border: '1px dashed var(--border-color)', borderRadius: '8px' }}>
-            <p className="text-muted mb-0">No matching events found in this category.</p>
+            <p className="text-muted mb-0">No matching activities found in this category.</p>
           </div>
         )}
       </div>
@@ -574,7 +574,7 @@ const ExploreEvents = () => {
   if (loading) return (
     <div className="flex-center" style={{ height: '100vh' }}>
       <div className="loading"></div>
-      <h2 className="ms-2">Loading Events...</h2>
+      <h2 className="ms-2">Loading Activities...</h2>
     </div>
   );
 
@@ -591,7 +591,7 @@ const ExploreEvents = () => {
       <header className="dashboard-header" style={{ borderBottom: '1px solid var(--border-color)', background: 'var(--card-bg)' }}>
         <div className="container flex-between" style={{ padding: '1rem 0' }}>
           <div>
-            <h1 className="mb-0" style={{ fontSize: '1.6rem', fontWeight: 800, color: 'var(--txt-1)' }}>Explore Events</h1>
+            <h1 className="mb-0" style={{ fontSize: '1.6rem', fontWeight: 800, color: 'var(--txt-1)' }}>Explore Activities</h1>
             <p className="text-sm text-muted mb-0">Discover and manage activities in your unit and college</p>
           </div>
           <div className="d-flex align-items-center width-set gap-3">
@@ -614,7 +614,7 @@ const ExploreEvents = () => {
               <input
                 type="text"
                 className="form-input"
-                placeholder="Search events by name, category, or venue..."
+                placeholder="Search activities by name, category, or venue..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 style={{ paddingLeft: '2.5rem', width: '100%', borderRadius: '8px' }}
@@ -649,10 +649,10 @@ const ExploreEvents = () => {
         </div>
 
         {location.state?.fromRole !== 'college' && (
-          <Section title="My Unit Events" events={unitEvents} isOwnEvent={true} />
+          <Section title="My Unit Activities" events={unitEvents} isOwnEvent={true} />
         )}
-        <Section title="College Events" events={collegeEvents} isOwnEvent={false} />
-        <Section title="Other Events" events={otherEvents} isOwnEvent={false} />
+        <Section title="College Activities" events={collegeEvents} isOwnEvent={false} />
+        <Section title="Other Activities" events={otherEvents} isOwnEvent={false} />
       </main>
 
       {/* Report Form Modal */}
@@ -660,7 +660,7 @@ const ExploreEvents = () => {
         <div className="modal-overlay">
           <div className="modal-content" style={{ maxWidth: '850px', width: '95%', maxHeight: '90vh', overflowY: 'auto' }}>
             <div className="flex-between mb-4">
-              <h2 className="mb-0">Event Report: {reportingEvent.name}</h2>
+              <h2 className="mb-0">Activity Report: {reportingEvent.name}</h2>
               <button className="btn btn-sm btn-secondary" onClick={() => setShowReportModal(false)}>&times;</button>
             </div>
 
@@ -674,7 +674,7 @@ const ExploreEvents = () => {
                     onChange={handleReportInputChange}
                     className="form-check-input"
                   />
-                  <span className="ms-2">Was the event conducted on the scheduled date?</span>
+                  <span className="ms-2">Was the activity conducted on the scheduled date?</span>
                 </label>
               </div>
 
@@ -721,7 +721,7 @@ const ExploreEvents = () => {
                     min="1"
                     placeholder="e.g. 100"
                   />
-                  <small className="text-muted">Total number of saplings/trees planted during this event.</small>
+                  <small className="text-muted">Total number of saplings/trees planted during this activity.</small>
                 </div>
               )}
 
@@ -826,7 +826,7 @@ const ExploreEvents = () => {
               </div>
 
               <div className="form-group mb-3">
-                <label>Outcome of the Event <span className="text-danger">*</span></label>
+                <label>Outcome of the Activity <span className="text-danger">*</span></label>
                 <textarea
                   name="outcome"
                   className="form-control"
@@ -839,7 +839,7 @@ const ExploreEvents = () => {
               </div>
 
               <div className="form-group mb-4">
-                <label>Event Photos <span className="text-danger">*</span></label>
+                <label>Activity Photos <span className="text-danger">*</span></label>
                 <div style={{ background: '#FFFBEB', border: '1px solid #FEF3C7', color: '#B45309', padding: '0.75rem', borderRadius: '4px', fontSize: '0.8rem', marginBottom: '0.75rem' }}>
                   ⚠️ <strong>Required:</strong> Please upload at least one photo showing <strong>Newspaper cuttings</strong>, <strong>invitation</strong>, or <strong>certificate</strong>. (Max: 5 photos in total)
                 </div>
@@ -850,7 +850,7 @@ const ExploreEvents = () => {
                   className="form-control"
                   onChange={(e) => handleReportFileChange(e, 'photo')}
                 />
-                <small className="text-muted d-block mt-1">Select up to 5 best photos of the event.</small>
+                <small className="text-muted d-block mt-1">Select up to 5 best photos of the activity.</small>
                 {(reportForm.reportPhotos && reportForm.reportPhotos.length > 0) && (
                   <small className="text-success d-block mt-1">✓ {reportForm.reportPhotos.length} photos already attached</small>
                 )}
@@ -859,7 +859,7 @@ const ExploreEvents = () => {
               <div className="flex-between pt-4" style={{ borderTop: '1px solid var(--border-color)' }}>
                 <button type="button" className="btn btn-secondary" onClick={() => setShowReportModal(false)} disabled={isSubmittingReport}>Cancel</button>
                 <button type="submit" className="btn btn-primary" disabled={isSubmittingReport}>
-                  {isSubmittingReport ? "Submitting..." : "Submit Report"}
+                  {isSubmittingReport ? "Submitting..." : "Submit Activity Report"}
                 </button>
               </div>
             </form>
@@ -890,12 +890,8 @@ const ExploreEvents = () => {
                   )}
                 </div>
                 <div>
-                  <p className="mb-2"><strong>Level of Event:</strong> <span className="badge badge-primary">{selectedEvent.level || "College"}</span></p>
-                  <p className="mb-2"><strong>Sponsorship:</strong> {selectedEvent.sponsorship || "N/A"}</p>
-                  <p className="mb-2"><strong>MY Bharat Registration:</strong> {selectedEvent.registeredMeriBharath || "No"}</p>
-                  {selectedEvent.registeredMeriBharath === "Yes" && selectedEvent.meriBharathUrl && (
-                    <p className="mb-0"><strong>MY Bharat URL:</strong> <a href={selectedEvent.meriBharathUrl} target="_blank" rel="noopener noreferrer" className="text-primary">View Event Link</a></p>
-                  )}
+                  <p className="mb-2"><strong>Level of Activity:</strong> <span className="badge badge-primary">{selectedEvent.level || "College"}</span></p>
+                  <p className="mb-0"><strong>Sponsorship:</strong> {selectedEvent.sponsorship || "N/A"}</p>
                 </div>
               </div>
             </div>
@@ -908,7 +904,7 @@ const ExploreEvents = () => {
                 <div className="p-3 rounded d-flex align-items-center gap-3" style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border-color)' }}>
                   <div style={{ color: 'var(--primary-500)', fontSize: '1.5rem' }}>📄</div>
                   <div style={{ flex: 1 }}>
-                    <p className="mb-0 fw-bold">Event Brochure</p>
+                    <p className="mb-0 fw-bold">Activity Brochure</p>
                     <p className="mb-0 text-xs text-muted">Download for more details and schedules</p>
                   </div>
                   <a href={selectedEvent.brochure} target="_blank" rel="noopener noreferrer" className="btn btn-primary btn-sm">Download PDF</a>
@@ -918,7 +914,7 @@ const ExploreEvents = () => {
 
             {selectedEvent.report && (
               <div className="mb-6 p-4 rounded" style={{ background: 'var(--bg-secondary)', border: '1px solid var(--primary-500)' }}>
-                <h3 className="text-lg mb-3">Event Report</h3>
+                <h3 className="text-lg mb-3">Activity Report</h3>
                 <div className="grid-cols-2 gap-4">
                   <p><strong>Status:</strong> {selectedEvent.report.participantsCount ? (selectedEvent.report.conductedOnDate ? "Conducted on time" : "Delayed/Rescheduled") : "Yet to be updated"}</p>
                   <p><strong>Participants:</strong> {selectedEvent.report.participantsCount}</p>
@@ -965,7 +961,7 @@ const ExploreEvents = () => {
 
             {selectedEvent.report?.reportPhotos && selectedEvent.report.reportPhotos.length > 0 ?
               <div className="mb-6">
-                <h3 className="text-lg mb-3">Event Photos (From Report)</h3>
+                <h3 className="text-lg mb-3">Activity Photos (From Report)</h3>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: '1rem' }}>
                   {selectedEvent.report.reportPhotos.map((img, idx) => (
                     <div key={idx} style={{ height: '150px', borderRadius: '4px', overflow: 'hidden', cursor: 'pointer' }} onClick={() => { setSelectedEvent({ ...selectedEvent, images: selectedEvent.report.reportPhotos }); openGallery(idx); }}>
@@ -977,7 +973,7 @@ const ExploreEvents = () => {
              : 
               selectedEvent.images && selectedEvent.images.length > 0 ?
                 <div className="mb-6">
-                  <h3 className="text-lg mb-3">Event Gallery</h3>
+                  <h3 className="text-lg mb-3">Activity Gallery</h3>
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '1rem' }}>
                     {selectedEvent.images.map((img, idx) => (
                       <div key={idx} style={{ height: '200px', borderRadius: 'var(--radius-md)', overflow: 'hidden', border: '1px solid var(--border-color)', cursor: 'pointer' }} onClick={() => openGallery(idx)}>

@@ -26,7 +26,7 @@ export const getCategoryColor = (category) => {
 const monthNames = ['January','February','March','April','May','June',
     'July','August','September','October','November','December'];
 
-const EventsCalendar = ({ events = [] }) => {
+const EventsCalendar = ({ events = [], compact = false }) => {
     const [currentDate, setCurrentDate] = useState(new Date());
     const [selectedDayEvents, setSelectedDayEvents] = useState(null);
     const [selectedDateLabel, setSelectedDateLabel] = useState('');
@@ -60,7 +60,7 @@ const EventsCalendar = ({ events = [] }) => {
 
     const days = [];
     for (let i = 0; i < firstDay; i++) {
-        days.push(<div key={`empty-${i}`} style={{ padding: '6px' }} />);
+        days.push(<div key={`empty-${i}`} style={{ padding: compact ? '2px' : '6px' }} />);
     }
     for (let day = 1; day <= daysInMonth; day++) {
         const dayEvents = getEventsForDate(day);
@@ -75,11 +75,11 @@ const EventsCalendar = ({ events = [] }) => {
                 onMouseEnter={e => { if (hasEvents) e.currentTarget.style.background = 'rgba(99,102,241,0.12)'; }}
                 onMouseLeave={e => { e.currentTarget.style.background = isToday ? 'rgba(99,102,241,0.18)' : 'transparent'; }}
                 style={{
-                    padding: '4px 2px',
-                    borderRadius: '8px',
+                    padding: compact ? '2px 1px' : '4px 2px',
+                    borderRadius: compact ? '5px' : '8px',
                     background: isToday ? 'rgba(99,102,241,0.18)' : 'transparent',
                     border: isToday ? '1.5px solid rgba(99,102,241,0.5)' : '1.5px solid transparent',
-                    minHeight: '48px',
+                    minHeight: compact ? '28px' : '48px',
                     display: 'flex',
                     flexDirection: 'column',
                     alignItems: 'center',
@@ -87,11 +87,11 @@ const EventsCalendar = ({ events = [] }) => {
                     cursor: hasEvents ? 'pointer' : 'default',
                     transition: 'background 0.15s',
                     overflow: 'hidden',
-                    gap: '2px',
+                    gap: compact ? '1px' : '2px',
                 }}
             >
                 <span style={{
-                    fontSize: '0.85rem',
+                    fontSize: compact ? '0.74rem' : '0.85rem',
                     fontWeight: isToday ? 700 : 500,
                     color: isToday ? 'var(--primary-color)' : 'var(--txt-1)',
                     lineHeight: 1,
@@ -99,19 +99,19 @@ const EventsCalendar = ({ events = [] }) => {
                     {day}
                 </span>
                 {hasEvents && (
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '3px', marginTop: '3px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '2px', marginTop: compact ? '1px' : '3px' }}>
                         <span
                             title={dayEvents[0].name}
                             style={{
-                                width: '6px',
-                                height: '6px',
+                                width: compact ? '5px' : '6px',
+                                height: compact ? '5px' : '6px',
                                 borderRadius: '50%',
                                 background: getCategoryColor(dayEvents[0].category),
                                 flexShrink: 0
                             }}
                         />
                         {dayEvents.length > 1 && (
-                            <span style={{ fontSize: '0.62rem', fontWeight: 700, color: 'var(--primary-color, #4f46e5)', lineHeight: 1 }}>
+                            <span style={{ fontSize: compact ? '0.55rem' : '0.62rem', fontWeight: 700, color: 'var(--primary-color, #4f46e5)', lineHeight: 1 }}>
                                 +{dayEvents.length - 1}
                             </span>
                         )}
@@ -124,29 +124,29 @@ const EventsCalendar = ({ events = [] }) => {
     return (
         <div>
             {/* Calendar Header */}
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
-                <button className="btn btn-sm btn-secondary" onClick={prevMonth}>←</button>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                    <h3 style={{ margin: 0, fontWeight: 700, fontSize: '1.1rem', color: 'var(--txt-1)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: compact ? '0.5rem' : '1rem' }}>
+                <button className="btn btn-sm btn-secondary" style={{ padding: compact ? '0.15rem 0.4rem' : undefined, fontSize: compact ? '0.75rem' : undefined }} onClick={prevMonth}>←</button>
+                <div style={{ display: 'flex', alignItems: 'center', gap: compact ? '0.4rem' : '0.75rem' }}>
+                    <h3 style={{ margin: 0, fontWeight: 700, fontSize: compact ? '0.88rem' : '1.1rem', color: 'var(--txt-1)' }}>
                         {monthNames[month]} {year}
                     </h3>
-                    <button className="btn btn-sm btn-secondary" style={{ fontSize: '0.75rem', padding: '0.2rem 0.5rem' }} onClick={goToday}>
+                    <button className="btn btn-sm btn-secondary" style={{ fontSize: compact ? '0.68rem' : '0.75rem', padding: compact ? '0.15rem 0.35rem' : '0.2rem 0.5rem' }} onClick={goToday}>
                         Today
                     </button>
                 </div>
-                <button className="btn btn-sm btn-secondary" onClick={nextMonth}>→</button>
+                <button className="btn btn-sm btn-secondary" style={{ padding: compact ? '0.15rem 0.4rem' : undefined, fontSize: compact ? '0.75rem' : undefined }} onClick={nextMonth}>→</button>
             </div>
 
             {/* Day-of-week headers */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '4px', marginBottom: '4px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: compact ? '2px' : '4px', marginBottom: compact ? '2px' : '4px' }}>
                 {['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].map(d => (
                     <div key={d} style={{
                         textAlign: 'center',
-                        fontSize: '0.72rem',
+                        fontSize: compact ? '0.64rem' : '0.72rem',
                         fontWeight: 700,
                         color: 'var(--txt-3)',
-                        padding: '4px 0',
-                        letterSpacing: '0.04em',
+                        padding: compact ? '2px 0' : '4px 0',
+                        letterSpacing: '0.02em',
                         textTransform: 'uppercase',
                     }}>
                         {d}
@@ -155,18 +155,18 @@ const EventsCalendar = ({ events = [] }) => {
             </div>
 
             {/* Grid */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '4px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: compact ? '2px' : '4px' }}>
                 {days}
             </div>
 
             {/* Legend */}
-            <div style={{ marginTop: '1rem', display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
-                {[...new Set(events.map(e => e.category).filter(Boolean))].slice(0, 8).map(cat => (
+            <div style={{ marginTop: compact ? '0.5rem' : '1rem', display: 'flex', flexWrap: 'wrap', gap: compact ? '0.35rem' : '0.5rem' }}>
+                {[...new Set(events.map(e => e.category).filter(Boolean))].slice(0, compact ? 4 : 8).map(cat => (
                     <span key={cat} style={{
-                        display: 'flex', alignItems: 'center', gap: '4px',
-                        fontSize: '0.68rem', color: 'var(--txt-2)', fontWeight: 500,
+                        display: 'flex', alignItems: 'center', gap: '3px',
+                        fontSize: compact ? '0.62rem' : '0.68rem', color: 'var(--txt-2)', fontWeight: 500,
                     }}>
-                        <span style={{ width: 8, height: 8, borderRadius: '50%', background: getCategoryColor(cat), display: 'inline-block' }} />
+                        <span style={{ width: compact ? 6 : 8, height: compact ? 6 : 8, borderRadius: '50%', background: getCategoryColor(cat), display: 'inline-block' }} />
                         {cat}
                     </span>
                 ))}
@@ -178,8 +178,8 @@ const EventsCalendar = ({ events = [] }) => {
                     <div className="modal-content" onClick={e => e.stopPropagation()} style={{ maxWidth: '680px', maxHeight: '80vh', overflowY: 'auto' }}>
                         <div className="flex-between mb-4">
                             <div>
-                                <h2 className="mb-1">Events on {selectedDateLabel}</h2>
-                                <p className="text-muted mb-0">{selectedDayEvents.length} event{selectedDayEvents.length !== 1 ? 's' : ''} scheduled</p>
+                                <h2 className="mb-1">Activities on {selectedDateLabel}</h2>
+                                <p className="text-muted mb-0">{selectedDayEvents.length} activit{selectedDayEvents.length !== 1 ? 'ies' : 'y'} scheduled</p>
                             </div>
                             <button className="btn btn-sm btn-secondary" onClick={() => setSelectedDayEvents(null)}>&times;</button>
                         </div>

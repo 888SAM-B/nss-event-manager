@@ -3,6 +3,28 @@ import axios from "axios";
 import toast from "react-hot-toast";
 import jsPDF from "jspdf";
 import html2canvas from "html2canvas";
+import { puLogoBase64, nssLogoBase64 } from "../assets/logos";
+
+// Calculate academic year of study strictly from batch (July to May academic calendar)
+export const calculateYearOfStudy = (batchFrom) => {
+    if (!batchFrom) return "I Year";
+    const startYear = parseInt(batchFrom, 10);
+    if (isNaN(startYear)) return "I Year";
+
+    const now = new Date();
+    const currentYear = now.getFullYear();
+    const currentMonth = now.getMonth() + 1; // 1-12
+    // Academic year is July to May: if Month >= 7 (July-Dec), academic start year is currentYear, else currentYear - 1
+    const academicStartYear = currentMonth >= 7 ? currentYear : currentYear - 1;
+    const yearNum = academicStartYear - startYear + 1;
+
+    if (yearNum <= 1) return "I Year";
+    if (yearNum === 2) return "II Year";
+    if (yearNum === 3) return "III Year";
+    if (yearNum === 4) return "IV Year";
+    if (yearNum === 5) return "V Year";
+    return `${yearNum} Year`;
+};
 
 const VolunteerEnrolmentModal = ({ isOpen, onClose, member, collegeData, unitData, onSuccess, isNewMember, unitCode, collegeCode, mode = "edit" }) => {
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -11,15 +33,17 @@ const VolunteerEnrolmentModal = ({ isOpen, onClose, member, collegeData, unitDat
         regNo: member?.regNo || "",
         dept: member?.dept || "",
         course: member?.course || "",
+        yearOfStudy: member?.yearOfStudy || calculateYearOfStudy(member?.batchFrom),
         batchFrom: member?.batchFrom || "",
         batchTo: member?.batchTo || "",
-        community: member?.community || "General",
+        community: member?.community || "OBC",
         bloodGroup: member?.bloodGroup || "",
         dob: member?.dob || "",
         contact: member?.contact || "",
         fatherName: "",
         fatherPhone: "",
-        sex: "Male",
+        sex: member?.gender || member?.sex || "Male",
+        gender: member?.gender || member?.sex || "Male",
         address: "",
         height: "",
         weight: "",
@@ -43,11 +67,13 @@ const VolunteerEnrolmentModal = ({ isOpen, onClose, member, collegeData, unitDat
                 regNo: member.regNo || "",
                 dept: member.dept || "",
                 course: member.course || "",
+                yearOfStudy: member.yearOfStudy || calculateYearOfStudy(member.batchFrom),
                 batchFrom: member.batchFrom || "",
                 batchTo: member.batchTo || "",
-                sex: member.sex || "Male",
+                sex: member.gender || member.sex || "Male",
+                gender: member.gender || member.sex || "Male",
                 dob: member.dob || "",
-                community: member.community || "General",
+                community: (member.community === "SC" || member.community === "ST") ? member.community : "OBC",
                 bloodGroup: member.bloodGroup || "",
                 contact: member.contact || "",
                 universityName: member.universityName || collegeData?.universityName || "",
@@ -73,7 +99,16 @@ const VolunteerEnrolmentModal = ({ isOpen, onClose, member, collegeData, unitDat
 
     const handleInputChange = (e) => {
         const { name, value } = e.target;
-        setFormData({ ...formData, [name]: value });
+        if (name === "gender") {
+            setFormData(prev => ({ ...prev, gender: value, sex: value }));
+        } else if (name === "sex") {
+            setFormData(prev => ({ ...prev, gender: value, sex: value }));
+        } else if (name === "batchFrom") {
+            const autoYear = calculateYearOfStudy(value);
+            setFormData(prev => ({ ...prev, batchFrom: value, yearOfStudy: autoYear }));
+        } else {
+            setFormData(prev => ({ ...prev, [name]: value }));
+        }
     };
 
     const validateForm = () => {
@@ -126,40 +161,44 @@ const VolunteerEnrolmentModal = ({ isOpen, onClose, member, collegeData, unitDat
     const generatePDF = async (skipValidation = false) => {
         if (!skipValidation && !validateForm()) return;
 
-        const page1 = document.getElementById("enrolment-page-1");
-        const page2 = document.getElementById("enrolment-page-2");
-        if (!page1 || !page2) return;
+        const singlePage = document.getElementById("enrolment-single-page");
+        if (!singlePage) return;
 
-        toast.loading("Generating Enrolment Form...");
+        const toastId = toast.loading("Generating Single-Page Enrolment Form...");
         try {
+            singlePage.style.display = "block";
+            const canvas = await html2canvas(singlePage, {
+                scale: 2,
+                useCORS: true,
+                logging: false
+            });
+            singlePage.style.display = "none";
+
             const pdf = new jsPDF("p", "mm", "a4");
-            const pdfWidth = pdf.internal.pageSize.getWidth();
+            const pdfWidth = pdf.internal.pageSize.getWidth(); // 210mm
+            const pdfHeight = pdf.internal.pageSize.getHeight(); // 297mm
 
-            // Page 1
-            page1.style.display = "block";
-            const canvas1 = await html2canvas(page1, { scale: 2, useCORS: true, logging: false });
-            page1.style.display = "none";
-            const imgData1 = canvas1.toDataURL("image/png");
-            const imgProps1 = pdf.getImageProperties(imgData1);
-            const pdfHeight1 = (imgProps1.height * pdfWidth) / imgProps1.width;
-            pdf.addImage(imgData1, "PNG", 0, 0, pdfWidth, pdfHeight1);
+            const imgData = canvas.toDataURL("image/png");
+            const imgProps = pdf.getImageProperties(imgData);
+            const renderedHeight = (imgProps.height * pdfWidth) / imgProps.width;
 
-            // Page 2
-            pdf.addPage();
-            page2.style.display = "block";
-            const canvas2 = await html2canvas(page2, { scale: 2, useCORS: true, logging: false });
-            page2.style.display = "none";
-            const imgData2 = canvas2.toDataURL("image/png");
-            const imgProps2 = pdf.getImageProperties(imgData2);
-            const pdfHeight2 = (imgProps2.height * pdfWidth) / imgProps2.width;
-            pdf.addImage(imgData2, "PNG", 0, 0, pdfWidth, pdfHeight2);
+            // Fit cleanly onto strictly 1 page without spilling or second page
+            if (renderedHeight > pdfHeight) {
+                const scale = pdfHeight / renderedHeight;
+                const scaledWidth = pdfWidth * scale;
+                const offsetX = (pdfWidth - scaledWidth) / 2;
+                pdf.addImage(imgData, "PNG", offsetX, 0, scaledWidth, pdfHeight);
+            } else {
+                // Header at the top
+                pdf.addImage(imgData, "PNG", 0, 0, pdfWidth, renderedHeight);
+            }
 
-            pdf.save(`NSS_Enrolment_${formData.name.replace(/\s+/g, "_")}.pdf`);
-            toast.dismiss();
-            toast.success("Enrolment Form Downloaded!");
+            pdf.save(`NSS_Enrolment_${(formData.name || "volunteer").replace(/\s+/g, "_")}.pdf`);
+            toast.dismiss(toastId);
+            toast.success("Enrolment Form Downloaded (1 Page)!");
         } catch (error) {
             console.error("PDF Error:", error);
-            toast.dismiss();
+            toast.dismiss(toastId);
             toast.error("Failed to generate PDF");
         }
     };
@@ -170,11 +209,18 @@ const VolunteerEnrolmentModal = ({ isOpen, onClose, member, collegeData, unitDat
         setIsSubmitting(true);
         const token = localStorage.getItem("nsstoken") || localStorage.getItem("unitToken");
         try {
+            const payload = {
+                ...formData,
+                sex: formData.gender || formData.sex || "Male",
+                gender: formData.gender || formData.sex || "Male",
+                isEnrolled: true
+            };
+
             if (isNewMember) {
                 const res = await axios.post(`${import.meta.env.VITE_API_URL}/add-unit-member`, {
                     unitCode: unitCode,
                     collegeCode: collegeCode,
-                    member: { ...formData, isEnrolled: true }
+                    member: payload
                 }, {
                     headers: { Authorization: `Bearer ${token}` }
                 });
@@ -187,7 +233,7 @@ const VolunteerEnrolmentModal = ({ isOpen, onClose, member, collegeData, unitDat
             } else {
                 const res = await axios.put(`${import.meta.env.VITE_API_URL}/update-unit-member`, {
                     memberId: member._id,
-                    memberData: { ...formData, isEnrolled: true }
+                    memberData: payload
                 }, {
                     headers: { Authorization: `Bearer ${token}` }
                 });
@@ -206,13 +252,25 @@ const VolunteerEnrolmentModal = ({ isOpen, onClose, member, collegeData, unitDat
         }
     };
 
+    const currentGender = String(formData.gender || formData.sex || "Male").trim();
+    const genderLower = currentGender.toLowerCase();
+    const isMale = genderLower === "male" || genderLower === "m";
+    const isFemale = genderLower === "female" || genderLower === "f";
+    const isOther = !isMale && !isFemale && genderLower.length > 0;
+
+    const currentCommunity = String(formData.community || "OBC").trim();
+    const commUpper = currentCommunity.toUpperCase();
+    const isSC = commUpper === "SC";
+    const isST = commUpper === "ST";
+    const isOBC = commUpper === "OBC" || (!isSC && !isST);
+
     return (
         <div className="modal-overlay">
             <div className="modal-content" style={{ maxWidth: "950px" }}>
                 <div className="flex-between mb-6">
                     <h2 className="mb-0">
-                        {mode === "view" ? "Volunteer Profile Details" : 
-                         isNewMember ? "Add New NSS Volunteer" : "Edit Volunteer Details"}
+                        {mode === "view" ? "Volunteer Profile Details" :
+                            isNewMember ? "Add New NSS Volunteer" : "Edit Volunteer Details"}
                     </h2>
                     <button className="btn btn-sm btn-secondary" onClick={onClose}>&times;</button>
                 </div>
@@ -221,7 +279,7 @@ const VolunteerEnrolmentModal = ({ isOpen, onClose, member, collegeData, unitDat
                     {/* SECTION 1: Basic Details */}
                     <div style={{ marginBottom: "2rem" }}>
                         <div className="form-section-header" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg> Basic Details
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" /><line x1="16" y1="13" x2="8" y2="13" /><line x1="16" y1="17" x2="8" y2="17" /><polyline points="10 9 9 9 8 9" /></svg> Basic Details
                         </div>
                         <div className="grid-cols-2">
                             <div className="form-group">
@@ -241,23 +299,30 @@ const VolunteerEnrolmentModal = ({ isOpen, onClose, member, collegeData, unitDat
                                 <input className="form-input" name="course" value={formData.course} onChange={handleInputChange} placeholder="e.g. B.E. / B.Tech" required disabled={readOnly} />
                             </div>
                             <div className="form-group">
+                                <label>Year of Study <span style={{ color: "red" }}>*</span></label>
+                                <select className="form-input" name="yearOfStudy" value={formData.yearOfStudy || calculateYearOfStudy(formData.batchFrom)} onChange={handleInputChange} disabled={readOnly}>
+                                    <option value="I Year">I Year</option>
+                                    <option value="II Year">II Year</option>
+                                    <option value="III Year">III Year</option>
+                                    <option value="IV Year">IV Year</option>
+                                    <option value="V Year">V Year</option>
+                                </select>
+                            </div>
+                            <div className="form-group">
+                                <label>Community <span style={{ color: "red" }}>*</span></label>
+                                <select className="form-input" name="community" value={currentCommunity} onChange={handleInputChange} disabled={readOnly}>
+                                    <option value="OBC">OBC</option>
+                                    <option value="SC">SC</option>
+                                    <option value="ST">ST</option>
+                                </select>
+                            </div>
+                            <div className="form-group">
                                 <label>Batch From (Year) <span style={{ color: "red" }}>*</span></label>
                                 <input className="form-input" type="number" name="batchFrom" value={formData.batchFrom} onChange={handleInputChange} placeholder="e.g. 2022" required disabled={readOnly} />
                             </div>
                             <div className="form-group">
                                 <label>Batch To (Year) <span style={{ color: "red" }}>*</span></label>
                                 <input className="form-input" type="number" name="batchTo" value={formData.batchTo} onChange={handleInputChange} placeholder="e.g. 2026" required disabled={readOnly} />
-                            </div>
-                            <div className="form-group">
-                                <label>Community <span style={{ color: "red" }}>*</span></label>
-                                <select className="form-input" name="community" value={formData.community} onChange={handleInputChange} disabled={readOnly}>
-                                    <option value="General">General</option>
-                                    <option value="OBC">OBC</option>
-                                    <option value="MBC">MBC</option>
-                                    <option value="BC">BC</option>
-                                    <option value="SC">SC</option>
-                                    <option value="ST">ST</option>
-                                </select>
                             </div>
                             <div className="form-group">
                                 <label>Blood Group <span style={{ color: "red" }}>*</span></label>
@@ -287,12 +352,12 @@ const VolunteerEnrolmentModal = ({ isOpen, onClose, member, collegeData, unitDat
                     {/* SECTION 2: Enrolment Details */}
                     <div style={{ marginBottom: "2rem" }}>
                         <div className="form-section-header" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 1 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg> Enrolment Details
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7" /><path d="M18.5 2.5a2.121 2.121 0 1 1 3 3L12 15l-4 1 1-4 9.5-9.5z" /></svg> Enrolment Details
                         </div>
                         <div className="grid-cols-2">
                             <div className="form-group">
-                                <label>Sex <span style={{ color: "red" }}>*</span></label>
-                                <select className="form-input" name="sex" value={formData.sex} onChange={handleInputChange} disabled={readOnly}>
+                                <label>Gender <span style={{ color: "red" }}>*</span></label>
+                                <select className="form-input" name="gender" value={currentGender} onChange={handleInputChange} disabled={readOnly}>
                                     <option value="Male">Male</option>
                                     <option value="Female">Female</option>
                                     <option value="Other">Other</option>
@@ -347,7 +412,7 @@ const VolunteerEnrolmentModal = ({ isOpen, onClose, member, collegeData, unitDat
 
                     <div className="flex-between mt-8 pt-6" style={{ borderTop: "1px solid var(--border)" }}>
                         <button type="button" className="btn btn-outline-primary" onClick={() => generatePDF(false)} style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem' }}>
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg> Download Enrolment PDF
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="7 10 12 15 17 10" /><line x1="12" y1="15" x2="12" y2="3" /></svg> Download Enrolment PDF (1 Page)
                         </button>
                         <div className="d-flex gap-3">
                             <button type="button" className="btn btn-secondary" onClick={onClose}>
@@ -362,106 +427,163 @@ const VolunteerEnrolmentModal = ({ isOpen, onClose, member, collegeData, unitDat
                     </div>
                 </form>
 
-                {/* PDF TEMPLATE PAGE 1 */}
-                <div id="enrolment-page-1" style={{
+                {/* SINGLE PAGE PDF TEMPLATE (Strictly 1 Page, Well-Spaced & Symmetrical) */}
+                <div id="enrolment-single-page" style={{
                     display: "none",
                     width: "210mm",
-                    padding: "15mm 20mm",
+                    padding: "6mm 14mm 8mm 14mm",
                     backgroundColor: "#fff",
                     color: "#000",
-                    fontFamily: "serif",
-                    lineHeight: "1.2"
+                    fontFamily: "'Times New Roman', serif",
+                    boxSizing: "border-box"
                 }}>
                     <style>{`
-                        #enrolment-page-1 *, #enrolment-page-2 * { color: #000 !important; font-family: 'Times New Roman', serif; }
-                        .enrolment-table { width: 100%; border-collapse: collapse; margin-top: 10px; }
-                        .enrolment-table th, .enrolment-table td { border: 1px solid #000; padding: 6px 10px; text-align: left; font-size: 13px; }
-                        .enrolment-table th { background: #f0f0f0; width: 40px; text-align: center; }
+                        #enrolment-single-page * { color: #000 !important; font-family: 'Times New Roman', serif; box-sizing: border-box; }
+                        .enrol-single-table { width: 100%; border-collapse: collapse; margin-top: 6px; }
+                        .enrol-single-table th, .enrol-single-table td { border: 1px solid #000; padding: 4px 8px; text-align: left; font-size: 11px; line-height: 1.32; }
+                        .enrol-single-table th { background: #f4f4f4; width: 32px; text-align: center; font-weight: bold; }
                     `}</style>
 
-                    <div style={{ textAlign: "center", marginBottom: "15px" }}>
-                        <h3 style={{ margin: "0", fontSize: "16px", fontWeight: "bold" }}>ANNEXURE – A</h3>
-                        <h2 style={{ margin: "5px 0", fontSize: "15px", fontWeight: "bold" }}>NSS VOLUNTEER ENROLMENT (AT UNIT LEVEL)</h2>
+                    {/* Header with PU Logo (Left), Title (Center), NSS Logo (Right) */}
+                    <div style={{
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "space-between",
+                        marginBottom: "8px",
+                        paddingBottom: "6px",
+                        borderBottom: "1.5px solid #000"
+                    }}>
+                        <div style={{ width: "22mm", height: "22mm", minWidth: "22mm", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                            <img src={puLogoBase64} alt="Periyar University" style={{ width: "100%", height: "100%", objectFit: "contain" }} />
+                        </div>
+                        <div style={{ flex: 1, textAlign: "center", padding: "0 10px" }}>
+                            <div style={{ fontSize: "14px", fontWeight: "bold", letterSpacing: "1px" }}>ANNEXURE – A</div>
+                            <div style={{ fontSize: "13px", fontWeight: "bold", marginTop: "2px", letterSpacing: "0.5px" }}>NSS VOLUNTEER ENROLMENT (AT UNIT LEVEL)</div>
+                        </div>
+                        <div style={{ width: "22mm", height: "22mm", minWidth: "22mm", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                            <img src={nssLogoBase64} alt="NSS Logo" style={{ width: "100%", height: "100%", objectFit: "contain" }} />
+                        </div>
                     </div>
 
-                    <div style={{ display: "flex", justifyContent: "space-between", position: "relative" }}>
-                        <div style={{ flex: 1, fontSize: "14px" }}>
-                            <p style={{ margin: "8px 0" }}><strong>Name of the College: </strong> {collegeData?.insName || "...................................................................................."}</p>
-                            <p style={{ margin: "8px 0" }}><strong>Address: </strong> {collegeData?.location || "...................................................................................."}</p>
-                            <p style={{ margin: "8px 0" }}><strong>Name of the University: </strong> {formData.universityName || "........................................................................."}</p>
-                            <p style={{ margin: "8px 0" }}><strong>Unit No: </strong> {unitData?.unitNumber || "...................................................................................."}</p>
-                        </div>
-                        <div style={{ width: "30mm", height: "35mm", border: "1px solid #000", textAlign: "center", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                            <span style={{ fontSize: "9px" }}>Affix passport size photo</span>
+                    {/* Meta info & Photo box */}
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "8px", gap: "12px" }}>
+                        <table style={{ flex: 1, border: "none", borderCollapse: "collapse", fontSize: "11.5px", lineHeight: "1.55" }}>
+                            <tbody>
+                                <tr>
+                                    <td style={{ width: "155px", fontWeight: "bold", padding: "2.5px 0", border: "none" }}>Name of the College</td>
+                                    <td style={{ width: "12px", fontWeight: "bold", padding: "2.5px 0", border: "none" }}>:</td>
+                                    <td style={{ padding: "2.5px 0", border: "none" }}>{collegeData?.insName || "...................................................................."}</td>
+                                </tr>
+                                <tr>
+                                    <td style={{ fontWeight: "bold", padding: "2.5px 0", border: "none" }}>Address</td>
+                                    <td style={{ fontWeight: "bold", padding: "2.5px 0", border: "none" }}>:</td>
+                                    <td style={{ padding: "2.5px 0", border: "none" }}>{collegeData?.location || "...................................................................."}</td>
+                                </tr>
+                                <tr>
+                                    <td style={{ fontWeight: "bold", padding: "2.5px 0", border: "none" }}>Name of the University</td>
+                                    <td style={{ fontWeight: "bold", padding: "2.5px 0", border: "none" }}>:</td>
+                                    <td style={{ padding: "2.5px 0", border: "none" }}>{formData.universityName || collegeData?.universityName || "...................................................................."}</td>
+                                </tr>
+                                <tr>
+                                    <td style={{ fontWeight: "bold", padding: "2.5px 0", border: "none" }}>Unit No.</td>
+                                    <td style={{ fontWeight: "bold", padding: "2.5px 0", border: "none" }}>:</td>
+                                    <td style={{ padding: "2.5px 0", border: "none" }}>{unitData?.unitNumber || "...................................................................."}</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        <div style={{
+                            width: "35mm",
+                            height: "44mm",
+                            minWidth: "35mm",
+                            border: "1.5px solid #000",
+                            textAlign: "center",
+                            display: "flex",
+                            flexDirection: "column",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            padding: "6px",
+                            backgroundColor: "#fafafa"
+                        }}>
+                            <span style={{ fontSize: "9px", fontWeight: "600", lineHeight: "1.3", color: "#333", textAlign: "center" }}>
+                                Affix Passport Size<br />Photograph<br />
+                                <span style={{ fontSize: "8px", fontWeight: "normal", color: "#666" }}>(Self-Attested)</span>
+                            </span>
                         </div>
                     </div>
 
-                    <table className="enrolment-table">
-                        <tbody>
-                            <tr><th>1</th><td>Name of the Volunteer</td><td>{formData.name}</td></tr>
-                            <tr><th>2</th><td>Father/Guardian's Name</td><td>{formData.fatherName}</td></tr>
-                            <tr><th>3</th><td>Father/Guardian's Phone No.</td><td>{formData.fatherPhone}</td></tr>
-                            <tr><th>4</th><td>Sex</td><td>
-                                <span style={{ marginRight: "20px" }}>Male {formData.sex === "Male" ? "[✓]" : "[ ]"}</span>
-                                <span>Female {formData.sex === "Female" ? "[✓]" : "[ ]"}</span>
+                    {/* Table */}
+                    <table className="enrol-single-table">
+                        <tbody className="table-height-tbody" >
+                            <tr><th>1</th><td className="table-height" style={{ width: "215px", height: "34px", fontWeight: 600 }}>Name of the Volunteer</td><td>{formData.name}</td></tr>
+                            <tr><th>2</th><td style={{ fontWeight: 600 }}>Father/Guardian's Name</td><td>{formData.fatherName}</td></tr>
+                            <tr><th>3</th><td style={{ fontWeight: 600 }}>Father/Guardian's Phone No.</td><td>{formData.fatherPhone}</td></tr>
+                            <tr><th>4</th><td style={{ fontWeight: 600 }}>Gender</td><td>
+                                <span style={{ marginRight: "24px" }}>Male [{isMale ? "✓" : " "}]</span>
+                                <span style={{ marginRight: "24px" }}>Female [{isFemale ? "✓" : " "}]</span>
+                                <span>Other [{isOther ? "✓" : " "}]</span>
                             </td></tr>
-                            <tr><th>5</th><td>Date of birth</td><td>{formData.dob}</td></tr>
-                            <tr><th>6</th><td>Year & Branch in which studying</td><td>{formData.course} - {formData.dept}</td></tr>
-                            <tr><th>7</th><td>Community</td><td>
-                                <span style={{ marginRight: "10px" }}>General {formData.community === "General" ? "[✓]" : "[ ]"}</span>
-                                <span style={{ marginRight: "10px" }}>SC {formData.community === "SC" ? "[✓]" : "[ ]"}</span>
-                                <span style={{ marginRight: "10px" }}>ST {formData.community === "ST" ? "[✓]" : "[ ]"}</span>
-                                <span>OBC {formData.community === "OBC" ? "[✓]" : "[ ]"}</span>
+                            <tr><th>5</th><td style={{ fontWeight: 600 }}>Date of birth</td><td>{formData.dob}</td></tr>
+                            <tr><th>6</th><td style={{ fontWeight: 600 }}>Year & Branch in which studying</td><td>
+                                {[formData.yearOfStudy || calculateYearOfStudy(formData.batchFrom), formData.course, formData.dept].filter(Boolean).join(" - ")}{formData.batchFrom && formData.batchTo ? ` (${formData.batchFrom} - ${formData.batchTo})` : ""}
                             </td></tr>
-                            <tr><th>8</th><td>Residential Address</td><td style={{ height: "40px" }}>{formData.address}</td></tr>
-                            <tr><th>9</th><td>Blood Group</td><td>{formData.bloodGroup}</td></tr>
-                            <tr><th>10</th><td colSpan="1">Height in {formData.height} (cm)</td><td>Weight {formData.weight} kg</td></tr>
-                            <tr><th>11</th><td>Mobile Phone No.</td><td>{formData.contact}</td></tr>
-                            <tr><th>12</th><td>E-mail ID</td><td>{formData.email}</td></tr>
-                            <tr><th>13</th><td>Aadhaar Card No.</td><td>{formData.aadhaar}</td></tr>
-                            <tr><th>14</th><td>Date/Year of Enrolment</td><td>{formData.enrolmentDate}</td></tr>
-                            <tr><th>15</th><td>Cultural Talents (Please specify)</td><td>{formData.culturalTalents}</td></tr>
-                            <tr><th>16</th><td>Hobbies</td><td>{formData.hobbies}</td></tr>
+                            <tr><th>7</th><td style={{ fontWeight: 600 }}>Community</td><td>
+                                <span style={{ marginRight: "28px" }}>SC [{isSC ? "✓" : " "}]</span>
+                                <span style={{ marginRight: "28px" }}>ST [{isST ? "✓" : " "}]</span>
+                                <span>OBC [{isOBC ? "✓" : " "}]</span>
+                            </td></tr>
+                            <tr><th>8</th><td style={{ fontWeight: 600 }}>Residential Address</td><td style={{ minHeight: "36px", verticalAlign: "middle" }}>{formData.address}</td></tr>
+                            <tr><th>9</th><td style={{ fontWeight: 600 }}>Blood Group</td><td>{formData.bloodGroup}</td></tr>
+                            <tr><th>10</th><td style={{ fontWeight: 600 }}>Physical Standards</td><td>Height: <strong>{formData.height || "—"} cm</strong> &nbsp;&nbsp;&nbsp;&nbsp;|&nbsp;&nbsp;&nbsp;&nbsp; Weight: <strong>{formData.weight || "—"} kg</strong></td></tr>
+                            <tr><th>11</th><td style={{ fontWeight: 600 }}>Mobile Phone No.</td><td>{formData.contact}</td></tr>
+                            <tr><th>12</th><td style={{ fontWeight: 600 }}>E-mail ID</td><td>{formData.email}</td></tr>
+                            <tr><th>13</th><td style={{ fontWeight: 600 }}>Aadhaar Card No.</td><td>{formData.aadhaar}</td></tr>
+                            <tr><th>14</th><td style={{ fontWeight: 600 }}>Date/Year of Enrolment</td><td>{formData.enrolmentDate}</td></tr>
+                            <tr><th>15</th><td style={{ fontWeight: 600 }}>Cultural Talents (Please specify)</td><td>{formData.culturalTalents || "NIL"}</td></tr>
+                            <tr><th>16</th><td style={{ fontWeight: 600 }}>Hobbies</td><td>{formData.hobbies || "NIL"}</td></tr>
                         </tbody>
                     </table>
 
-                    <div style={{ marginTop: "20px", fontSize: "14px", textAlign: "center" }}>
-                        <p style={{ fontWeight: "bold" }}>Declaration</p>
-                    </div>
-                    <div style={{ fontSize: "13px", textAlign: "justify", lineHeight: "1.4" }}>
-                        <p>I <strong>{formData.name}</strong> hereby agree to obey all the rules and regulations of National Service Scheme and work imbibing the spirit of the Scheme.</p>
-                        <div style={{ display: "flex", justifyContent: "space-between", marginTop: "15px" }}>
-                            <div>
-                                <p>Date: {formData.enrolmentDate}</p>
-                                <p>Place:</p>
+                    {/* Declaration */}
+                    <div style={{ marginTop: "10px", fontSize: "11px" }}>
+                        <div style={{ fontWeight: "bold", textAlign: "center", marginBottom: "3px", fontSize: "11.5px", letterSpacing: "0.5px" }}>DECLARATION</div>
+                        <p style={{ margin: "2px 0 8px 0", fontSize: "10.5px", textAlign: "justify", lineHeight: "1.35" }}>
+                            I <strong>{formData.name}</strong> hereby agree to obey all the rules and regulations of National Service Scheme and work imbibing the spirit of the Scheme.
+                        </p>
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end" }}>
+                            <div style={{ fontSize: "10.5px", lineHeight: "1.6" }}>
+                                <div><strong>Date :</strong> {formData.enrolmentDate || "............................"}</div>
+                                <div><strong>Place :</strong> ............................................</div>
                             </div>
-                            <div style={{ textAlign: "right", marginTop: "30px" }}>
-                                <p><strong>Signature of the applicant</strong></p>
+                            <div style={{ textAlign: "right", fontSize: "11px" }}>
+                                <div style={{ height: "26px" }}></div>
+                                <strong>Signature of the Volunteer / Applicant</strong>
                             </div>
                         </div>
                     </div>
-                </div>
 
-                {/* PDF TEMPLATE PAGE 2 */}
-                <div id="enrolment-page-2" style={{
-                    display: "none",
-                    width: "210mm",
-                    height: "297mm",
-                    padding: "20mm 20mm",
-                    backgroundColor: "#fff",
-                    color: "#000",
-                    fontFamily: "serif",
-                }}>
-                    <div style={{ borderTop: "1px solid #000", paddingTop: "10px", textAlign: "center" }}>
-                        <p style={{ fontWeight: "bold", fontSize: "14px" }}>For office use only</p>
-                    </div>
-                    <div style={{ marginTop: "30px", fontSize: "14px" }}>
-                        <p style={{ margin: "15px 0" }}>Date of Enrolment: {formData.enrolmentDate}</p>
-                        <p style={{ margin: "15px 0" }}>Enrolment No. &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;: {formData.enrolmentNo || "............................................."}</p>
-                        <p style={{ margin: "15px 0" }}>Remarks if any &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;: {formData.remarks || "............................................."}</p>
-                    </div>
-                    <div style={{ marginTop: "100px", textAlign: "right" }}>
-                        <p><strong>Signature of the Programme Officer</strong></p>
+                    {/* For office use only - Merged on same page */}
+                    <div style={{
+                        marginTop: "12px",
+                        border: "1.5px solid #000",
+                        padding: "7px 12px",
+                        backgroundColor: "#fafafa"
+                    }}>
+                        <div style={{ textAlign: "center", fontWeight: "bold", fontSize: "11.5px", marginBottom: "6px", letterSpacing: "0.5px", textDecoration: "underline" }}>
+                            FOR OFFICE USE ONLY
+                        </div>
+                        <div style={{ display: "flex", justifyContent: "space-between", fontSize: "10.5px", lineHeight: "1.4" }}>
+                            <div><strong>Date of Enrolment:</strong> {formData.enrolmentDate}</div>
+                            <div><strong>Enrolment No.:</strong> {formData.enrolmentNo || "...................................."}</div>
+                            <div><strong>Remarks:</strong> {formData.remarks || "...................................."}</div>
+                        </div>
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginTop: "42px" }}>
+                            <div style={{ fontSize: "10px", color: "#444" }}>
+                                (Office Seal)
+                            </div>
+                            <div style={{ textAlign: "right", fontSize: "11px" }}>
+                                <strong>Signature of the Programme Officer</strong>
+                            </div>
+                        </div>
                     </div>
                 </div>
 

@@ -89,7 +89,7 @@ const AdminAllEvents = ({ subview = false }) => {
     if (loading) return (
         <div style={{ padding: '3rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.75rem', color: 'var(--txt-3)', fontSize: '0.875rem' }}>
             <div style={{ width: 20, height: 20, border: '2px solid var(--border)', borderTop: '2px solid var(--brand-600)', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
-            Loading events...
+            Loading activities...
         </div>
     );
 
@@ -101,7 +101,7 @@ const AdminAllEvents = ({ subview = false }) => {
                     <label style={{ display: 'block', fontSize: '0.7rem', fontWeight: 600, color: 'var(--txt-3)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '0.35rem' }}>Search</label>
                     <div style={{ position: 'relative' }}>
                         <svg style={{ position: 'absolute', left: '0.625rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--txt-3)', pointerEvents: 'none' }} width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-                        <input className="form-input" style={{ paddingLeft: '2rem', fontSize: '0.8125rem', padding: '0.45rem 0.75rem 0.45rem 2rem' }} placeholder="Event name, code, or college..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} />
+                        <input className="form-input" style={{ paddingLeft: '2rem', fontSize: '0.8125rem', padding: '0.45rem 0.75rem 0.45rem 2rem' }} placeholder="Activity name, code, or college..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} />
                     </div>
                 </div>
                 <div style={{ flex: '0 1 180px', minWidth: 0 }}>
@@ -218,13 +218,13 @@ const AdminAllEvents = ({ subview = false }) => {
             {viewMode === 'list' && (
             <div style={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: '0.5rem', overflow: 'hidden' }}>
                 {filteredEvents.length === 0 ? (
-                    <div style={{ padding: '3rem', textAlign: 'center', color: 'var(--txt-3)', fontSize: '0.875rem' }}>No events found matching your criteria.</div>
+                    <div style={{ padding: '3rem', textAlign: 'center', color: 'var(--txt-3)', fontSize: '0.875rem' }}>No activities found matching your criteria.</div>
                 ) : (
                     <div style={{ overflowX: 'auto' }}>
                         <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.8125rem' }}>
                             <thead>
                                 <tr style={{ background: 'var(--bg-2)', borderBottom: '1px solid var(--border)' }}>
-                                    {['Code', 'Event Name', 'Category', 'College', 'Date', 'Status', ''].map(h => (
+                                    {['Code', 'Activity Name', 'Category', 'College', 'Date', 'Status', ''].map(h => (
                                         <th key={h} style={{ padding: '0.625rem 0.875rem', textAlign: 'left', fontSize: '0.675rem', fontWeight: 700, color: 'var(--txt-3)', textTransform: 'uppercase', letterSpacing: '0.07em', whiteSpace: 'nowrap' }}>{h}</th>
                                     ))}
                                 </tr>
@@ -317,7 +317,7 @@ const AdminAllEvents = ({ subview = false }) => {
                         {/* Images */}
                         {selectedEvent.images && selectedEvent.images.length > 0 && (
                             <div style={{ marginBottom: '1rem' }}>
-                                <div style={{ fontSize: '0.65rem', fontWeight: 700, color: 'var(--txt-3)', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: '0.5rem' }}>Event Images</div>
+                                <div style={{ fontSize: '0.65rem', fontWeight: 700, color: 'var(--txt-3)', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: '0.5rem' }}>Activity Images</div>
                                 <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
                                     {selectedEvent.images.map((img, idx) => (
                                         <img key={idx} src={img} alt={`img-${idx}`} style={{ width: 80, height: 80, objectFit: 'cover', borderRadius: '4px', border: '1px solid var(--border)' }} />
@@ -340,7 +340,7 @@ const AdminAllEvents = ({ subview = false }) => {
                         {selectedEvent.report ? (
                             <div style={{ padding: '0.875rem', background: 'var(--success-50)', border: '1px solid #bbf7d0', borderRadius: '0.375rem', borderLeft: '3px solid var(--success-500)' }}>
                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
-                                    <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--success-700)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Event Report Filed</span>
+                                    <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--success-700)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Activity Report Filed</span>
                                     {selectedEvent.report.reportFile && (
                                         <a href={selectedEvent.report.reportFile} target="_blank" rel="noopener noreferrer" style={{ fontSize: '0.72rem', fontWeight: 600, color: 'var(--success-700)', border: '1px solid var(--success-500)', background: '#f0fdf4', padding: '0.25rem 0.5rem', borderRadius: '4px', textDecoration: 'none' }}>
                                             Download PDF

@@ -183,7 +183,7 @@ const CollegeDashboard = () => {
             }
         } catch (err) {
             console.error('Error fetching college events:', err);
-            toast.error('Failed to load events');
+            toast.error('Failed to load activities');
         } finally {
             setLoadingEvents(false);
         }
@@ -318,6 +318,7 @@ const CollegeDashboard = () => {
                 dateOfAppointment: poDateOfAppointment,
                 teachingExperience: poTeachingExperience,
                 qualification: poQualification,
+                address: poAddress,
                 etiCompleted: poEtlTraining ? "Yes" : "No",
                 image: poImage,
                 seminars: poSeminars,
@@ -711,7 +712,7 @@ const CollegeDashboard = () => {
                     </button>
                     <button className={`sidebar-item ${activeTab === 'events' ? 'active' : ''}`} onClick={() => { setActiveTab('events'); setIsSidebarOpen(false); if (!eventsFetched) fetchCollegeEvents(insCode); }}>
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2" /><line x1="16" y1="2" x2="16" y2="6" /><line x1="8" y1="2" x2="8" y2="6" /><line x1="3" y1="10" x2="21" y2="10" /></svg>
-                        Events
+                        Activities
                     </button>
                 </div>
 
@@ -1029,10 +1030,7 @@ const CollegeDashboard = () => {
                                         onChange={(e) => setMemberCommunityFilter(e.target.value)}
                                     >
                                         <option value="">All Communities</option>
-                                        <option value="General">General</option>
                                         <option value="OBC">OBC</option>
-                                        <option value="MBC">MBC</option>
-                                        <option value="BC">BC</option>
                                         <option value="SC">SC</option>
                                         <option value="ST">ST</option>
                                     </select>
@@ -1227,8 +1225,8 @@ const CollegeDashboard = () => {
                         {/* Header */}
                         <div className="flex-between mb-6" style={{ flexWrap: 'wrap', gap: '1rem' }}>
                             <div>
-                                <h1 style={{ fontSize: '1.75rem', fontWeight: 800, margin: 0, color: 'var(--txt-1)' }}>College Events</h1>
-                                <p style={{ margin: 0, color: 'var(--txt-3)', fontSize: '0.9rem' }}>All events conducted by units in this college</p>
+                                <h1 style={{ fontSize: '1.75rem', fontWeight: 800, margin: 0, color: 'var(--txt-1)' }}>College Activities</h1>
+                                <p style={{ margin: 0, color: 'var(--txt-3)', fontSize: '0.9rem' }}>All activities conducted by units in this college</p>
                             </div>
                             <button className="btn btn-secondary" onClick={() => fetchCollegeEvents(insCode)}>
                                 ↻ Refresh
@@ -1238,10 +1236,10 @@ const CollegeDashboard = () => {
                         {/* Tab Filter + Date Range Filter */}
                         <div className="d-flex gap-2 mb-6" style={{ borderBottom: '1px solid var(--border)', paddingTop: '0.5rem', paddingBottom: '1rem', overflowX: 'auto', flexWrap: 'wrap', alignItems: 'center' }}>
                             <button className={`btn btn-sm ${eventsTab === 'college' ? 'btn-primary' : 'btn-secondary'}`} onClick={() => { setEventsTab('college'); setDateFilterType('all'); setSpecificDate(''); setFromDate(''); setToDate(''); }}>
-                                College Events ({collegeEvents.length})
+                                College Activities ({collegeEvents.length})
                             </button>
                             <button className={`btn btn-sm ${eventsTab === 'external' ? 'btn-primary' : 'btn-secondary'}`} onClick={() => { setEventsTab('external'); setDateFilterType('all'); setSpecificDate(''); setFromDate(''); setToDate(''); }}>
-                                External Events ({externalEvents.length})
+                                External Activities ({externalEvents.length})
                             </button>
                             <button className={`btn btn-sm ${eventsTab === 'calendar' ? 'btn-primary' : 'btn-secondary'}`} onClick={() => { setEventsTab('calendar'); setDateFilterType('all'); setSpecificDate(''); setFromDate(''); setToDate(''); }}>
                                 📅 Calendar
@@ -1336,7 +1334,7 @@ const CollegeDashboard = () => {
 
                         {loadingEvents ? (
                             <div className="text-center py-10">
-                                <div style={{ fontSize: '1rem', color: 'var(--txt-3)' }}>Loading events...</div>
+                                <div style={{ fontSize: '1rem', color: 'var(--txt-3)' }}>Loading activities...</div>
                             </div>
                         ) : eventsTab === 'calendar' ? (
                             <div className="card p-5" style={{ background: 'var(--card)' }}>
@@ -1373,9 +1371,9 @@ const CollegeDashboard = () => {
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
                                     {eventsTab === 'college' && (
                                         <div>
-                                            <h3 className="text-lg mb-4" style={{ fontWeight: 700 }}>College Events <span style={{ fontSize: '0.85rem', color: 'var(--txt-3)', fontWeight: 500 }}>({filteredCollege.length})</span></h3>
+                                            <h3 className="text-lg mb-4" style={{ fontWeight: 700 }}>College Activities <span style={{ fontSize: '0.85rem', color: 'var(--txt-3)', fontWeight: 500 }}>({filteredCollege.length})</span></h3>
                                             {filteredCollege.length === 0 ? (
-                                                <div className="card p-6 text-center text-muted" style={{ background: 'var(--card)' }}>No college events{hasFilter ? ' matching the selected date filter' : ''}.</div>
+                                                <div className="card p-6 text-center text-muted" style={{ background: 'var(--card)' }}>No college activities{hasFilter ? ' matching the selected date filter' : ''}.</div>
                                             ) : (
                                                 <div className="grid-cols-3 gap-4">
                                                     {filteredCollege.map(event => renderCollegeEventCard(event))}
@@ -1385,9 +1383,9 @@ const CollegeDashboard = () => {
                                     )}
                                     {eventsTab === 'external' && (
                                         <div>
-                                            <h3 className="text-lg mb-4" style={{ fontWeight: 700 }}>External Events <span style={{ fontSize: '0.85rem', color: 'var(--txt-3)', fontWeight: 500 }}>({filteredExternal.length})</span></h3>
+                                            <h3 className="text-lg mb-4" style={{ fontWeight: 700 }}>External Activities <span style={{ fontSize: '0.85rem', color: 'var(--txt-3)', fontWeight: 500 }}>({filteredExternal.length})</span></h3>
                                             {filteredExternal.length === 0 ? (
-                                                <div className="card p-6 text-center text-muted" style={{ background: 'var(--card)' }}>No external events{hasFilter ? ' in this date range' : ''}.</div>
+                                                <div className="card p-6 text-center text-muted" style={{ background: 'var(--card)' }}>No external activities{hasFilter ? ' in this date range' : ''}.</div>
                                             ) : (
                                                 <div className="grid-cols-3 gap-4">
                                                     {filteredExternal.map(event => renderCollegeEventCard(event))}
@@ -1434,10 +1432,10 @@ const CollegeDashboard = () => {
                         </div>
                         {selectedEvent.images?.length > 0 && (
                             <div className="mt-4">
-                                <div style={{ fontSize: '0.8rem', color: 'var(--txt-3)', marginBottom: '0.5rem' }}>Event Images</div>
+                                <div style={{ fontSize: '0.8rem', color: 'var(--txt-3)', marginBottom: '0.5rem' }}>Activity Images</div>
                                 <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
                                     {selectedEvent.images.map((img, i) => (
-                                        <img key={i} src={img} alt="event" style={{ width: 80, height: 60, objectFit: 'cover', borderRadius: 6 }} />
+                                        <img key={i} src={img} alt="activity" style={{ width: 80, height: 60, objectFit: 'cover', borderRadius: 6 }} />
                                     ))}
                                 </div>
                             </div>
@@ -1567,6 +1565,11 @@ const CollegeDashboard = () => {
                                         <label className="form-label">Qualification <span style={{ color: 'red' }}>*</span></label>
                                         <input className="form-input" type="text" placeholder="e.g. Ph.D" value={poQualification} onChange={(e) => setPoQualification(e.target.value)} required />
                                     </div>
+                                </div>
+
+                                <div className="form-group mb-3">
+                                    <label className="form-label">Address</label>
+                                    <textarea className="form-input" rows="2" placeholder="Residential / Contact Address" value={poAddress} onChange={(e) => setPoAddress(e.target.value)} style={{ resize: 'vertical' }} />
                                 </div>
 
                                 {/* Profile Image upload */}

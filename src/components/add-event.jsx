@@ -44,8 +44,6 @@ const AddEvent = () => {
         resourcePerson: eventToEdit?.resourcePerson || "",
         level: eventToEdit?.level || "College",
         sponsorship: eventToEdit?.sponsorship || "",
-        registeredMeriBharath: eventToEdit?.registeredMeriBharath || "No",
-        meriBharathUrl: eventToEdit?.meriBharathUrl || "",
         images: eventToEdit?.images || [],
         brochure: eventToEdit?.brochure || "",
     });
@@ -214,16 +212,16 @@ const AddEvent = () => {
 
         // Basic validation
         if (!eventForm.name || !eventForm.description || !eventForm.category || !eventForm.venue) {
-            toast.error("Please fill in all required event details.");
+            toast.error("Please fill in all required activity details.");
             return;
         }
 
         if (eventForm.singleDay && !eventForm.date) {
-            toast.error("Please provide a date for the single-day event.");
+            toast.error("Please provide a date for the single-day activity.");
             return;
         }
         if (!eventForm.singleDay && (!eventForm.dateFrom || !eventForm.dateTo)) {
-            toast.error("Please provide 'From' and 'To' dates for the multi-day event.");
+            toast.error("Please provide 'From' and 'To' dates for the multi-day activity.");
             return;
         }
 
@@ -241,8 +239,8 @@ const AddEvent = () => {
             resourcePerson: eventForm.resourcePerson,
             level: eventForm.level,
             sponsorship: eventForm.sponsorship,
-            registeredMeriBharath: eventForm.registeredMeriBharath,
-            meriBharathUrl: eventForm.registeredMeriBharath === "Yes" ? eventForm.meriBharathUrl : "",
+            registeredMeriBharath: "No",
+            meriBharathUrl: "",
             images: eventForm.images,
             brochure: eventForm.brochure,
             unitCode: unitCode,
@@ -251,7 +249,7 @@ const AddEvent = () => {
 
         };
 
-        console.log("Submitting Event Data:", eventData);
+        console.log("Submitting Activity Data:", eventData);
         setSubmitting(true);
 
         try {
@@ -266,18 +264,18 @@ const AddEvent = () => {
                     eventId: eventToEdit._id,
                     eventData: eventData
                 }, config);
-                toast.success('Event updated successfully!');
+                toast.success('Activity updated successfully!');
                 console.log('Backend Response:', response.data);
                 navigate('/explore-events', { state: { unitCode, collegeCode } }); // Go back to explore events
             } else {
                 const response = await axios.post(`${import.meta.env.VITE_API_URL}/addEvent`, { eventData: eventData }, config);
-                toast.success('Event created successfully!');
+                toast.success('Activity created successfully!');
                 console.log('Backend Response:', response.data);
                 navigate('/unit-dashboard');
             }
         } catch (error) {
-            console.error('Error saving event:', error);
-            toast.error('Failed to save event. Please try again.');
+            console.error('Error saving activity:', error);
+            toast.error('Failed to save activity. Please try again.');
             if (error.response) {
                 console.error('Backend Error Details:', error.response.data);
             }
@@ -295,12 +293,12 @@ const AddEvent = () => {
                     <form onSubmit={handleSubmit}>
                         {/* Event Name */}
                         <div className="form-group mb-3">
-                            <label htmlFor="name">Event Name <span className="text-danger">*</span></label>
+                            <label htmlFor="name">Activity Name <span className="text-danger">*</span></label>
                             <input
                                 type="text"
                                 className="form-control"
                                 id="name"
-                                placeholder="Enter event name"
+                                placeholder="Enter activity name"
                                 value={eventForm.name}
                                 onChange={handleChange}
                                 required
@@ -309,7 +307,7 @@ const AddEvent = () => {
 
                         {/* Event Description */}
                         <div className="form-group mb-3">
-                            <label htmlFor="description">Event Description <span className="text-danger">*</span></label>
+                            <label htmlFor="description">Activity Description <span className="text-danger">*</span></label>
                             <textarea
                                 className="form-control"
                                 id="description"
@@ -322,7 +320,7 @@ const AddEvent = () => {
 
                         {/* Event Category */}
                         <div className="form-group mb-3">
-                            <label htmlFor="category">Event Category <span className="text-danger">*</span></label>
+                            <label htmlFor="category">Activity Category <span className="text-danger">*</span></label>
                             <select
                                 className="form-control"
                                 id="category"
@@ -373,7 +371,7 @@ const AddEvent = () => {
                                 checked={eventForm.singleDay}
                                 onChange={handleChange}
                             />
-                            <label className="form-check-label ms-2" htmlFor="singleDay">This is a single-day event</label>
+                            <label className="form-check-label ms-2" htmlFor="singleDay">This is a single-day activity</label>
                         </div>
 
                         {/* Date Fields */}
@@ -447,7 +445,7 @@ const AddEvent = () => {
                                 type="text"
                                 className="form-control"
                                 id="venue"
-                                placeholder="Enter event venue"
+                                placeholder="Enter activity venue"
                                 value={eventForm.venue}
                                 onChange={handleChange}
                                 required
@@ -470,7 +468,7 @@ const AddEvent = () => {
                         {/* Event Level & Sponsorship */}
                         <div className="grid-cols-2 mb-4">
                             <div>
-                                <label htmlFor="level">Level of Event <span className="text-danger">*</span></label>
+                                <label htmlFor="level">Level of Activity <span className="text-danger">*</span></label>
                                 <select
                                     className="form-control"
                                     id="level"
@@ -499,43 +497,13 @@ const AddEvent = () => {
                             </div>
                         </div>
 
-                        {/* Meri Bharath Portal Registration */}
-                        <div className="grid-cols-2 mb-8">
-                            <div>
-                                <label htmlFor="registeredMeriBharath">Registered in May Bharat Portal? <span className="text-danger">*</span></label>
-                                <select
-                                    className="form-control"
-                                    id="registeredMeriBharath"
-                                    value={eventForm.registeredMeriBharath}
-                                    onChange={handleChange}
-                                    required
-                                >
-                                    <option value="No">No</option>
-                                    <option value="Yes">Yes</option>
-                                </select>
-                            </div>
-                            <div>
-                                <label htmlFor="meriBharathUrl">May Bharat Event URL {eventForm.registeredMeriBharath === "Yes" && <span className="text-danger">*</span>}</label>
-                                <input
-                                    type="url"
-                                    className="form-control"
-                                    id="meriBharathUrl"
-                                    placeholder={eventForm.registeredMeriBharath === "Yes" ? "e.g. https://mybharat.gov.in/..." : "Not registered (URL disabled)"}
-                                    value={eventForm.meriBharathUrl}
-                                    onChange={handleChange}
-                                    disabled={eventForm.registeredMeriBharath !== "Yes"}
-                                    required={eventForm.registeredMeriBharath === "Yes"}
-                                />
-                            </div>
-                        </div>
-
                         <div className="form-section-header">
                             <span>🖼️</span> Media & Documents
                         </div>
 
                         {/* Image Upload Section */}
                         <div className="form-group mb-4">
-                            <label>Event Images</label>
+                            <label>Activity Images</label>
                             <div className="input-group evt-imgs">
                                 <input
                                     type="file"
@@ -563,7 +531,7 @@ const AddEvent = () => {
                                     <div key={index} className="position-relative" style={{ width: '100px', height: '100px', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-md)', overflow: 'hidden' }}>
                                         <img
                                             src={imageUrl}
-                                            alt={`Event Image ${index + 1}`}
+                                            alt={`Activity Image ${index + 1}`}
                                             className="img-fluid"
                                             style={{ objectFit: 'cover', width: '100%', height: '100%' }}
                                         />
@@ -599,7 +567,7 @@ const AddEvent = () => {
 
                         {/* Brochure Upload Section */}
                         <div className="form-group mb-4">
-                            <label>Event Brochure (PDF)</label>
+                            <label>Activity Brochure (PDF)</label>
                             <div className="input-group">
                                 <input
                                     type="file"
@@ -665,7 +633,7 @@ const AddEvent = () => {
                                     ))}
                                 </div>
                             )}
-                            <small className="text-muted">Selected units will receive an invitation to collaborate on this event.</small>
+                            <small className="text-muted">Selected units will receive an invitation to collaborate on this activity.</small>
                         </div>
 
                         <div className="flex-between mt-10 pt-8" style={{ borderTop: "1px solid var(--border)" }}>
@@ -673,7 +641,7 @@ const AddEvent = () => {
                                 Cancel
                             </button>
                             <button type="submit" className="btn btn-primary btn-lg" disabled={uploading || uploadingBrochure || submitting} style={{ minWidth: '180px' }}>
-                                {submitting ? (eventToEdit ? "Updating..." : "Creating...") : (eventToEdit ? "Update Event" : "Create Event")}
+                                {submitting ? (eventToEdit ? "Updating..." : "Creating...") : (eventToEdit ? "Update Activity" : "Create Activity")}
                             </button>
                         </div>
         </form>

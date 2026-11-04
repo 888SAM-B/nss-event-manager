@@ -78,10 +78,7 @@ const AdminAllStudents = ({ subview = false }) => {
                     <label style={{ display: 'block', fontSize: '0.7rem', fontWeight: 600, color: 'var(--txt-3)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '0.35rem' }}>Community</label>
                     <select className="form-input" style={{ fontSize: '0.8125rem', padding: '0.45rem 0.75rem' }} value={communityFilter} onChange={e => setCommunityFilter(e.target.value)}>
                         <option value="">All</option>
-                        <option value="General">General</option>
                         <option value="OBC">OBC</option>
-                        <option value="MBC">MBC</option>
-                        <option value="BC">BC</option>
                         <option value="SC">SC</option>
                         <option value="ST">ST</option>
                     </select>

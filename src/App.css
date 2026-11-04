@@ -602,18 +602,40 @@ input[type="checkbox"] {
     .sidebar {
         transform: translateX(-100%);
     }
+
     .sidebar.open {
         transform: translateX(0);
     }
+
     .main-content-pane {
         margin-left: 0;
         padding: 1.5rem;
         padding-top: 5.5rem;
     }
+
     .mobile-nav-header {
         display: flex;
     }
+
     .sidebar-overlay.show {
         display: block;
     }
+}
+
+.activities-layout-container {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 340px;
+    gap: 1.5rem;
+    align-items: start;
+}
+
+@media screen and (max-width: 1024px) {
+    .activities-layout-container {
+        grid-template-columns: 1fr;
+    }
+}
+
+
+.table-height-tbody td {
+    height: 34px !important;
 }

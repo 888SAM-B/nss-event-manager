@@ -914,13 +914,13 @@ const Home = () => {
                 </div>
             </section>
 
-            {/* ── Section 8: Event Gallery ── */}
+            {/* ── Section 8: Activity Gallery ── */}
             {galleryImages.length > 0 && (
                 <section id="gallery" style={{ padding: "5rem 0", background: "var(--card)" }} data-aos="fade-up">
                     <div className="container">
                         <div style={{ textAlign: "center", marginBottom: "4rem" }}>
                             <span style={{ fontSize: "0.75rem", fontWeight: 700, letterSpacing: "0.15em", color: "#2563eb", textTransform: "uppercase" }}>Moment Captures</span>
-                            <h2 style={{ fontSize: "2.25rem", fontWeight: 800, marginTop: "0.5rem" }}>Event Gallery</h2>
+                            <h2 style={{ fontSize: "2.25rem", fontWeight: 800, marginTop: "0.5rem" }}>Activity Gallery</h2>
                             <p style={{ color: "var(--txt-2)", maxWidth: "500px", margin: "0.5rem auto 0" }}>Memorable highlights from regular activities and camping programmes.</p>
                         </div>
 
