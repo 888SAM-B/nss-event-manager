@@ -22,7 +22,7 @@ const AddOrg = () => {
         e.preventDefault();
         setIsLoading(true);
         const formData = new FormData(e.target);
-        
+
         const data = {
             insName: formData.get("insName"),
             code: formData.get("code"),
@@ -51,8 +51,13 @@ const AddOrg = () => {
 
     const handleDownloadTemplate = () => {
         const templateData = [
-            { "College Name": "Example College of Arts and Science", "College Code": "507", "Funding Type": "Funded" },
-            { "College Name": "Another Self Financing College", "College Code": "508", "Funding Type": "Self-Financing" }
+            {
+                "College Name": "",
+                "College Code": "",
+                "Funding Type": "",
+                "College Email (Comma-separated for multiple)": ""
+            },
+
         ];
         const ws = XLSX.utils.json_to_sheet(templateData);
         const wb = XLSX.utils.book_new();
@@ -63,7 +68,7 @@ const AddOrg = () => {
     const handleFileUpload = (e) => {
         const file = e.target.files[0];
         if (!file) return;
-        
+
         const reader = new FileReader();
         reader.onload = (evt) => {
             try {
@@ -72,21 +77,34 @@ const AddOrg = () => {
                 const wsname = wb.SheetNames[0];
                 const ws = wb.Sheets[wsname];
                 const data = XLSX.utils.sheet_to_json(ws);
-                
+
                 // Map the JSON key to schema properties
                 const formatted = data.map(row => {
                     const insName = row["College Name"] || row["collegeName"] || row["insName"];
                     const code = String(row["College Code"] || row["collegeCode"] || row["code"] || "").trim();
                     const collegeType = row["Funding Type"] || row["collegeType"] || row["type"] || "Self-Financing";
-                    return { insName, code, collegeType };
+                    const email = row["College Email (Comma-separated for multiple)"] || row["College Email"] || row["Email ID"] || row["Email"] || row["email"] || row["collegeEmail"] || row["College Mail ID"] || "";
+
+                    const cleanedEmail = String(email)
+                        .split(',')
+                        .map(e => e.trim())
+                        .filter(Boolean)
+                        .join(', ');
+
+                    return {
+                        insName,
+                        code,
+                        collegeType,
+                        email: cleanedEmail
+                    };
                 });
-                
+
                 const valid = formatted.filter(item => item.insName && item.code);
                 if (valid.length === 0) {
                     toast.error("No valid college records found. Please check column headers.");
                     return;
                 }
-                
+
                 setBulkColleges(valid);
                 toast.success(`Successfully parsed ${valid.length} colleges. Click Register to save them.`);
             } catch (err) {
@@ -106,8 +124,8 @@ const AddOrg = () => {
         setIsLoading(true);
         const token = localStorage.getItem("adminToken");
         try {
-            const res = await axios.post(`${import.meta.env.VITE_API_URL}/admin/bulk-add-organizations`, 
-                { colleges: bulkColleges }, 
+            const res = await axios.post(`${import.meta.env.VITE_API_URL}/admin/bulk-add-organizations`,
+                { colleges: bulkColleges },
                 { headers: { Authorization: `Bearer ${token}` } }
             );
             if (res.data.success) {
@@ -205,15 +223,20 @@ const AddOrg = () => {
                         </div>
 
                         <div className="form-group mb-3" style={{ marginBottom: '1rem' }}>
-                            <label className="form-label" style={{ fontWeight: 600, fontSize: '0.75rem', textTransform: 'uppercase', marginBottom: '0.5rem', display: 'block' }}>College Mail ID <span style={{ color: 'red' }}>*</span></label>
+                            <label className="form-label" style={{ fontWeight: 600, fontSize: '0.75rem', textTransform: 'uppercase', marginBottom: '0.5rem', display: 'block' }}>
+                                College Mail ID(s) <span style={{ color: 'red' }}>*</span>
+                            </label>
                             <input
-                                type="email"
+                                type="text"
                                 name="email"
                                 className="form-input"
-                                placeholder="e.g. principal@college.edu / nss@college.edu"
+                                placeholder="e.g. principal@college.edu, nss@college.edu"
                                 required
                                 style={{ width: '100%', padding: '0.65rem 0.85rem', borderRadius: '8px', border: '1px solid var(--border)', outline: 'none' }}
                             />
+                            <small style={{ color: 'var(--txt-3)', fontSize: '0.75rem', marginTop: '0.35rem', display: 'block' }}>
+                                💡 Tip: You can type multiple comma-separated emails. The verification OTP will be sent to all of them!
+                            </small>
                         </div>
 
                         <div className="grid-cols-2" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
@@ -264,6 +287,10 @@ const AddOrg = () => {
                     </form>
                 ) : (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+                        <div style={{ background: 'rgba(37, 99, 235, 0.08)', border: '1px solid rgba(37, 99, 235, 0.2)', padding: '0.75rem 1rem', borderRadius: '8px', fontSize: '0.82rem', color: 'var(--brand-700)', lineHeight: '1.5' }}>
+                            ✉️ <strong>Multiple Email Support:</strong> In the Excel template, you can enter multiple comma-separated emails under <strong>"College Email"</strong> (e.g. <code>principal@college.edu, nss@college.edu</code>). The verification OTP will be sent to all listed emails!
+                        </div>
+
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                             <span style={{ fontSize: '0.85rem', color: 'var(--txt-2)' }}>1. Download the Excel format template:</span>
                             <button
@@ -290,13 +317,14 @@ const AddOrg = () => {
                         {bulkColleges.length > 0 && (
                             <div>
                                 <h3 style={{ fontSize: '0.95rem', fontWeight: 700, marginBottom: '0.5rem' }}>Preview Colleges ({bulkColleges.length})</h3>
-                                <div style={{ maxHeight: '180px', overflowY: 'auto', border: '1px solid var(--border)', borderRadius: '8px' }}>
+                                <div style={{ maxHeight: '220px', overflowY: 'auto', border: '1px solid var(--border)', borderRadius: '8px' }}>
                                     <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.8rem', textAlign: 'left' }}>
                                         <thead>
                                             <tr style={{ background: 'var(--bg-tertiary)', borderBottom: '1px solid var(--border)' }}>
                                                 <th style={{ padding: '0.5rem' }}>Name</th>
                                                 <th style={{ padding: '0.5rem' }}>Code</th>
                                                 <th style={{ padding: '0.5rem' }}>Type</th>
+                                                <th style={{ padding: '0.5rem' }}>Email(s)</th>
                                             </tr>
                                         </thead>
                                         <tbody>
@@ -305,6 +333,9 @@ const AddOrg = () => {
                                                     <td style={{ padding: '0.5rem' }}>{c.insName}</td>
                                                     <td style={{ padding: '0.5rem' }}>{c.code}</td>
                                                     <td style={{ padding: '0.5rem' }}>{c.collegeType}</td>
+                                                    <td style={{ padding: '0.5rem', wordBreak: 'break-word', fontSize: '0.75rem', color: c.email ? 'var(--txt-1)' : 'var(--danger-500)' }}>
+                                                        {c.email || "No email"}
+                                                    </td>
                                                 </tr>
                                             ))}
                                         </tbody>

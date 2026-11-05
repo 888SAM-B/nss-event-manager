@@ -37,7 +37,7 @@ const CollegeRegister = () => {
     const [pincode, setPincode] = useState("");
     const [nearbyPoliceStation, setNearbyPoliceStation] = useState("");
 
-    // ZBSA Details (For Funded only)
+    // ZBSCA Details (Required for all colleges)
     const [accountNo, setAccountNo] = useState("");
     const [bankName, setBankName] = useState("State Bank of India");
     const [branch, setBranch] = useState("");
@@ -89,7 +89,8 @@ const CollegeRegister = () => {
             if (res.data.success) {
                 toast.success("OTP Verified Successfully!");
                 if (res.data.email) {
-                    setCollegeEmail(res.data.email);
+                    const primaryEmail = res.data.email.split(',')[0].trim();
+                    setCollegeEmail(primaryEmail);
                 }
                 setStep(2);
             }
@@ -135,14 +136,16 @@ const CollegeRegister = () => {
             }
         };
 
-        if (collegeInfo.collegeType && collegeInfo.collegeType.toLowerCase().includes("funded")) {
-            data.bankDetails = {
-                accountNo,
-                bankName: "State Bank of India",
-                branch,
-                ifsc: ifsc.toUpperCase()
-            };
+        if (!accountNo.trim() || !branch.trim() || !ifsc.trim()) {
+            return toast.error("Please fill in all ZBSCA bank account details (Account No, Branch, IFSC)");
         }
+
+        data.bankDetails = {
+            accountNo: accountNo.trim(),
+            bankName: "State Bank of India",
+            branch: branch.trim(),
+            ifsc: ifsc.trim().toUpperCase()
+        };
 
         setIsLoading(true);
         try {
@@ -464,31 +467,33 @@ const CollegeRegister = () => {
                             </div>
                         </div>
 
-                        {/* ZBSA Account Details (Funded / Funded & Self-Financing Only) */}
-                        {collegeInfo.collegeType && collegeInfo.collegeType.toLowerCase().includes("funded") && (
-                            <div>
-                                <h3 style={{ fontSize: "1rem", fontWeight: 700, marginBottom: "0.25rem", color: "var(--brand-500)", borderBottom: "1px solid var(--border)", paddingBottom: "0.25rem" }}>5. ZBSA Account Details (Zero Balance Subsidiary Account)</h3>
-                                <p style={{ fontSize: "0.75rem", color: "var(--txt-3)", marginBottom: "0.75rem" }}>Enter official ZBSA Account details for government grant funding.</p>
-                                <div style={{ display: "grid", gridTemplateColumns: "1.2fr 1fr 1fr 1fr", gap: "1rem" }}>
-                                    <div className="form-group">
-                                        <label className="form-label" style={{ fontSize: "0.7rem" }}>ZBSA Account Number <span style={{ color: "red" }}>*</span></label>
-                                        <input type="text" className="form-input" placeholder="Account No" value={accountNo} onChange={(e) => setAccountNo(e.target.value)} required />
-                                    </div>
-                                    <div className="form-group">
-                                        <label className="form-label" style={{ fontSize: "0.7rem" }}>Bank Name</label>
-                                        <input type="text" className="form-input" value="State Bank of India" readOnly disabled style={{ background: "var(--bg-tertiary, rgba(255,255,255,0.05))", cursor: "not-allowed", fontWeight: 600, color: "var(--txt-1)" }} />
-                                    </div>
-                                    <div className="form-group">
-                                        <label className="form-label" style={{ fontSize: "0.7rem" }}>Branch Name <span style={{ color: "red" }}>*</span></label>
-                                        <input type="text" className="form-input" placeholder="Branch" value={branch} onChange={(e) => setBranch(e.target.value)} required />
-                                    </div>
-                                    <div className="form-group">
-                                        <label className="form-label" style={{ fontSize: "0.7rem" }}>IFSC Code <span style={{ color: "red" }}>*</span></label>
-                                        <input type="text" className="form-input" placeholder="e.g. SBIN0001234" value={ifsc} onChange={(e) => setIfsc(e.target.value.toUpperCase())} required />
-                                    </div>
+                        {/* ZBSCA Account Details (Required for All Colleges) */}
+                        <div>
+                            <h3 style={{ fontSize: "1rem", fontWeight: 700, marginBottom: "0.25rem", color: "var(--brand-500)", borderBottom: "1px solid var(--border)", paddingBottom: "0.25rem" }}>
+                                5. ZBSCA Account Details (Zero Balance Subsidiary Account)
+                            </h3>
+                            <p style={{ fontSize: "0.75rem", color: "var(--txt-3)", marginBottom: "0.75rem" }}>
+                                Enter official ZBSCA Account details for grant funding, PFMS allocations, and university transactions.
+                            </p>
+                            <div style={{ display: "grid", gridTemplateColumns: "1.2fr 1fr 1fr 1fr", gap: "1rem" }}>
+                                <div className="form-group">
+                                    <label className="form-label" style={{ fontSize: "0.7rem" }}>ZBSCA Account Number <span style={{ color: "red" }}>*</span></label>
+                                    <input type="text" className="form-input" placeholder="Account No" value={accountNo} onChange={(e) => setAccountNo(e.target.value)} required />
+                                </div>
+                                <div className="form-group">
+                                    <label className="form-label" style={{ fontSize: "0.7rem" }}>Bank Name</label>
+                                    <input type="text" className="form-input" value="State Bank of India" readOnly disabled style={{ background: "var(--bg-tertiary, rgba(255,255,255,0.05))", cursor: "not-allowed", fontWeight: 600, color: "var(--txt-1)" }} />
+                                </div>
+                                <div className="form-group">
+                                    <label className="form-label" style={{ fontSize: "0.7rem" }}>Branch Name <span style={{ color: "red" }}>*</span></label>
+                                    <input type="text" className="form-input" placeholder="Branch" value={branch} onChange={(e) => setBranch(e.target.value)} required />
+                                </div>
+                                <div className="form-group">
+                                    <label className="form-label" style={{ fontSize: "0.7rem" }}>IFSC Code <span style={{ color: "red" }}>*</span></label>
+                                    <input type="text" className="form-input" placeholder="e.g. SBIN0001234" value={ifsc} onChange={(e) => setIfsc(e.target.value.toUpperCase())} required />
                                 </div>
                             </div>
-                        )}
+                        </div>
 
                         {/* Actions */}
                         <div style={{ display: "flex", gap: "1rem", marginTop: "1rem", borderTop: "1px solid var(--border)", paddingTop: "1.25rem" }}>

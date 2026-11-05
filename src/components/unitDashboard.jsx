@@ -10,6 +10,7 @@ import ProgramOfficerModal from "./ProgramOfficerModal";
 import EventsCalendar from "./EventsCalendar";
 import CircularBellNotification from "./CircularBellNotification";
 import UserCircularsView from "./UserCircularsView";
+import ActivityReportModal from "./ActivityReportModal";
 
 const UnitDashboard = () => {
     const navigate = useNavigate();
@@ -52,6 +53,31 @@ const UnitDashboard = () => {
     const [loadingEvents, setLoadingEvents] = useState(false);
     const [selectedEvent, setSelectedEvent] = useState(null);
     const [showDetailModal, setShowDetailModal] = useState(false);
+
+    // Activity Type Selection Choice Modal ('upcoming' | 'completed')
+    const [showActivityTypeChoiceModal, setShowActivityTypeChoiceModal] = useState(false);
+    const [targetIsExternal, setTargetIsExternal] = useState(false);
+    const [activityMode, setActivityMode] = useState("upcoming"); // 'upcoming' | 'completed'
+
+    // Printable Official Report Modal
+    const [showPrintableReportModal, setShowPrintableReportModal] = useState(false);
+    const [printableReportEvent, setPrintableReportEvent] = useState(null);
+
+    // State for embedded report fields in Completed Activity Form
+    const [completedReportForm, setCompletedReportForm] = useState({
+        conductedOnDate: true,
+        participantsCount: "",
+        beneficiariesCount: "",
+        collegesCount: "1",
+        outcome: "",
+        guests: [""],
+        treesPlanted: "",
+        bloodUnitsCollected: "",
+        rallyDistance: ""
+    });
+    const [completedReportFiles, setCompletedReportFiles] = useState([]);
+    const [completedReportPreviews, setCompletedReportPreviews] = useState([]);
+    const [isSavingCompletedEvent, setIsSavingCompletedEvent] = useState(false);
 
     // Add/Edit Event Form State
     const [showEventFormModal, setShowEventFormModal] = useState(false);
@@ -858,6 +884,20 @@ const UnitDashboard = () => {
                                 {event.report?.submittedAt ? 'Edit Report' : 'Submit Report'}
                             </button>
                         )}
+                        {event.report?.submittedAt && (
+                            <button
+                                className="btn btn-outline-primary btn-sm"
+                                style={{ padding: '0.375rem 0.55rem', whiteSpace: 'nowrap', display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}
+                                title="Print / Download Official Report Document"
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    setPrintableReportEvent({ ...event, collegeId: college, unitId: unit });
+                                    setShowPrintableReportModal(true);
+                                }}
+                            >
+                                📄 Report Doc
+                            </button>
+                        )}
                         {(isMyEvent || isExternalEvent) && !isCompleted && (
                             <div className="d-flex gap-1">
                                 <button
@@ -884,9 +924,17 @@ const UnitDashboard = () => {
         );
     };
 
-    const handleOpenEventForm = (isEdit, event = null, isExternal = false) => {
+    const handleStartAddActivity = (isExternal = false) => {
+        setTargetIsExternal(isExternal);
+        setShowActivityTypeChoiceModal(true);
+    };
+
+    const handleOpenEventForm = (isEdit, event = null, isExternal = false, mode = "upcoming") => {
         setIsEditingEvent(isEdit ? event : null);
         setIsExternalEventForm(isEdit && event ? !!event.isExternal : isExternal);
+        const resolvedMode = isEdit ? (event?.report?.submittedAt ? "completed" : "upcoming") : mode;
+        setActivityMode(resolvedMode);
+
         if (isEdit && event) {
             setEventForm({
                 name: event.name || "",
@@ -915,7 +963,7 @@ const UnitDashboard = () => {
                 category: "Blood Donation",
                 otherCategory: "",
                 singleDay: true,
-                date: "",
+                date: resolvedMode === "completed" ? new Date().toISOString().split("T")[0] : "",
                 dateFrom: "",
                 dateTo: "",
                 timeFrom: "",
@@ -929,12 +977,32 @@ const UnitDashboard = () => {
                 attendees: []
             });
             setCollaborators([]);
+            setCompletedReportForm({
+                conductedOnDate: true,
+                participantsCount: "",
+                beneficiariesCount: "",
+                collegesCount: "1",
+                outcome: "",
+                guests: [""],
+                treesPlanted: "",
+                bloodUnitsCollected: "",
+                rallyDistance: ""
+            });
+            setCompletedReportFiles([]);
+            setCompletedReportPreviews([]);
         }
         setSelectedFiles([]);
         setBrochureFile(null);
         setSelectedCollaborator("");
         setVolunteerSearch("");
         setShowEventFormModal(true);
+    };
+
+    const handleCompletedReportFileChange = (e) => {
+        const files = Array.from(e.target.files).slice(0, 5);
+        setCompletedReportFiles(files);
+        const previews = files.map(file => URL.createObjectURL(file));
+        setCompletedReportPreviews(previews);
     };
 
     const handleOpenReportModal = (event, e) => {
@@ -1033,6 +1101,9 @@ const UnitDashboard = () => {
                 toast.success("Report submitted successfully!", { id: toastId });
                 fetchDashboardEvents();
                 setShowReportModal(false);
+                // Immediately open printable report document modal
+                setPrintableReportEvent({ ...reportingEvent, report: finalReportData, collegeId: college, unitId: unit });
+                setShowPrintableReportModal(true);
             }
         } catch (err) {
             console.error("Report submission error:", err);
@@ -1136,6 +1207,29 @@ const UnitDashboard = () => {
             return;
         }
 
+        if (activityMode === "completed" && !isEditingEvent) {
+            if (!completedReportForm.participantsCount || Number(completedReportForm.participantsCount) <= 0) {
+                toast.error("Please enter the number of volunteers who participated.");
+                return;
+            }
+            if (!completedReportForm.outcome || completedReportForm.outcome.trim() === "") {
+                toast.error("Please enter the outcome and impact of the activity.");
+                return;
+            }
+            if (completedReportFiles.length === 0) {
+                toast.error("Please upload at least one photograph of the completed activity.");
+                return;
+            }
+            if (categoryValue === 'Tree Plantation' && (!completedReportForm.treesPlanted || Number(completedReportForm.treesPlanted) <= 0)) {
+                toast.error("Please enter the number of trees planted.");
+                return;
+            }
+            if (categoryValue === 'Blood Donation' && (!completedReportForm.bloodUnitsCollected || Number(completedReportForm.bloodUnitsCollected) <= 0)) {
+                toast.error("Please enter the units of blood donated.");
+                return;
+            }
+        }
+
         const token = localStorage.getItem("unitToken") || localStorage.getItem("nsstoken");
         const unitCode = localStorage.getItem("nssunitCode");
         const collegeCode = localStorage.getItem("nsscollegeCode");
@@ -1153,8 +1247,43 @@ const UnitDashboard = () => {
             delete payload.attendees;
         }
 
-        const toastId = toast.loading("Saving activity...");
+        setIsSavingCompletedEvent(true);
+        const toastId = toast.loading(activityMode === "completed" && !isEditingEvent ? "Uploading photos & recording completed activity..." : "Saving activity...");
         try {
+            let finalReportData = null;
+            if (activityMode === "completed" && !isEditingEvent) {
+                let uploadedPhotoUrls = [];
+                if (completedReportFiles.length > 0) {
+                    uploadedPhotoUrls = await Promise.all(
+                        completedReportFiles.map(file => uploadToCloudinary(file, 'image', false))
+                    );
+                }
+
+                const guestsList = eventForm.resourcePerson
+                    ? eventForm.resourcePerson.split(",").map(g => g.trim()).filter(Boolean)
+                    : [];
+
+                finalReportData = {
+                    conductedOnDate: true,
+                    participantsCount: Number(completedReportForm.participantsCount) || 0,
+                    volunteersParticipated: Number(completedReportForm.participantsCount) || 0,
+                    beneficiariesCount: completedReportForm.beneficiariesCount ? Number(completedReportForm.beneficiariesCount) : undefined,
+                    collegesCount: Number(completedReportForm.collegesCount) || 1,
+                    outcome: completedReportForm.outcome,
+                    guests: guestsList,
+                    reportPhotos: uploadedPhotoUrls,
+                    submittedAt: new Date(),
+                    ...(categoryValue === 'Tree Plantation' && completedReportForm.treesPlanted !== "" && { treesPlanted: Number(completedReportForm.treesPlanted) }),
+                    ...(categoryValue === 'Blood Donation' && completedReportForm.bloodUnitsCollected !== "" && { bloodUnitsCollected: Number(completedReportForm.bloodUnitsCollected) }),
+                    ...(['Cleanliness Rally', 'Road Safety Awareness'].includes(categoryValue) && completedReportForm.rallyDistance !== "" && { rallyDistance: Number(completedReportForm.rallyDistance) })
+                };
+
+                payload.report = finalReportData;
+                if (uploadedPhotoUrls.length > 0) {
+                    payload.images = uploadedPhotoUrls;
+                }
+            }
+
             let res;
             if (isEditingEvent) {
                 res = await axios.put(`${import.meta.env.VITE_API_URL}/updateEvent`, {
@@ -1172,13 +1301,28 @@ const UnitDashboard = () => {
             }
 
             if (res.data.success) {
-                toast.success(isEditingEvent ? "Activity updated successfully!" : "Activity created successfully!", { id: toastId });
+                toast.success(
+                    isEditingEvent
+                        ? "Activity updated successfully!"
+                        : activityMode === "completed"
+                            ? "Activity recorded & report generated successfully!"
+                            : "Upcoming activity scheduled successfully!",
+                    { id: toastId }
+                );
                 setShowEventFormModal(false);
                 fetchDashboardEvents();
+
+                if (activityMode === "completed" && !isEditingEvent) {
+                    const savedEvt = res.data.event || { ...payload, _id: res.data._id || Date.now().toString() };
+                    setPrintableReportEvent({ ...savedEvt, report: finalReportData, collegeId: college, unitId: unit });
+                    setShowPrintableReportModal(true);
+                }
             }
         } catch (err) {
             console.error(err);
             toast.error(err.response?.data?.message || "Failed to save activity", { id: toastId });
+        } finally {
+            setIsSavingCompletedEvent(false);
         }
     };
 
@@ -1556,10 +1700,10 @@ const UnitDashboard = () => {
                                 <p style={{ margin: 0, color: 'var(--txt-3)', fontSize: '0.9rem' }}>Manage activities and track student volunteer participation</p>
                             </div>
                             <div className="d-flex gap-2">
-                                <button className="btn btn-outline-primary" onClick={() => handleOpenEventForm(false, null, true)}>
+                                <button className="btn btn-outline-primary" onClick={() => handleStartAddActivity(true)}>
                                     + Add External Activity
                                 </button>
-                                <button className="btn btn-primary" onClick={() => handleOpenEventForm(false, null, false)}>
+                                <button className="btn btn-primary" onClick={() => handleStartAddActivity(false)}>
                                     + Add Unit Activity
                                 </button>
                             </div>
@@ -1713,7 +1857,7 @@ const UnitDashboard = () => {
                                                 <div className="flex-between mb-4">
                                                     <h3 className="text-lg mb-0" style={{ fontWeight: 700 }}>Unit Activities <span style={{ fontSize: '0.85rem', color: 'var(--txt-3)', fontWeight: 500 }}>({filteredUnit.length})</span></h3>
                                                     {eventsTab === 'my' && (
-                                                        <button className="btn btn-primary btn-sm" onClick={() => handleOpenEventForm(false, null, false)}>
+                                                        <button className="btn btn-primary btn-sm" onClick={() => handleStartAddActivity(false)}>
                                                             + Add Activity
                                                         </button>
                                                     )}
@@ -1734,7 +1878,7 @@ const UnitDashboard = () => {
                                                 <div className="flex-between mb-4">
                                                     <h3 className="text-lg mb-0" style={{ fontWeight: 700 }}>External Activities Participated <span style={{ fontSize: '0.85rem', color: 'var(--txt-3)', fontWeight: 500 }}>({filteredExternal.length})</span></h3>
                                                     {eventsTab === 'external' && (
-                                                        <button className="btn btn-primary btn-sm" onClick={() => handleOpenEventForm(false, null, true)}>
+                                                        <button className="btn btn-primary btn-sm" onClick={() => handleStartAddActivity(true)}>
                                                             + Add External Activity
                                                         </button>
                                                     )}
@@ -2765,8 +2909,21 @@ const UnitDashboard = () => {
                                 </div>
                             )}
 
-                            <div className="pt-4" style={{ borderTop: '1px solid var(--border)' }}>
-                                <button className="btn btn-secondary w-100" onClick={() => setSelectedEvent(null)}>Close</button>
+                            <div className="pt-4 d-flex gap-2" style={{ borderTop: '1px solid var(--border)' }}>
+                                {selectedEvent.report?.submittedAt && (
+                                    <button
+                                        type="button"
+                                        className="btn btn-primary flex-grow-1"
+                                        style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem' }}
+                                        onClick={() => {
+                                            setPrintableReportEvent({ ...selectedEvent, collegeId: college, unitId: unit });
+                                            setShowPrintableReportModal(true);
+                                        }}
+                                    >
+                                        📄 View / Print Official Report
+                                    </button>
+                                )}
+                                <button className="btn btn-secondary flex-grow-1" onClick={() => setSelectedEvent(null)}>Close</button>
                             </div>
                         </div>
                     </div>
@@ -2779,11 +2936,32 @@ const UnitDashboard = () => {
                     <div className="modal-overlay">
                         <div className="modal-content" style={{ maxWidth: '800px', width: '95%', maxHeight: '90vh', overflowY: 'auto' }}>
                             <div className="flex-between mb-4">
-                                <h2 className="mb-0" style={{ fontSize: '1.5rem', fontWeight: 800 }}>
-                                    {isEditingEvent ? "Edit" : "Create"} {isExternalEventForm ? "External Activity" : "Activity"}
-                                </h2>
+                                <div>
+                                    <h2 className="mb-0" style={{ fontSize: '1.4rem', fontWeight: 800 }}>
+                                        {isEditingEvent
+                                            ? "Edit Activity"
+                                            : activityMode === "completed"
+                                                ? "Log Completed Activity & Report"
+                                                : "Schedule Upcoming Activity"
+                                        }
+                                    </h2>
+                                    <span style={{ fontSize: '0.8rem', color: 'var(--txt-3)' }}>
+                                        {isExternalEventForm ? "External Activity" : "Unit Activity"} • {activityMode === "completed" ? "Conducted Activity" : "Upcoming Activity"}
+                                    </span>
+                                </div>
                                 <button className="btn btn-sm btn-secondary" onClick={() => setShowEventFormModal(false)}>&times;</button>
                             </div>
+
+                            {activityMode === 'completed' && !isEditingEvent && (
+                                <div style={{ background: 'rgba(22, 163, 74, 0.08)', border: '1px solid rgba(22, 163, 74, 0.25)', padding: '0.75rem 1rem', borderRadius: '8px', marginBottom: '1.25rem' }}>
+                                    <div style={{ fontWeight: 700, color: 'var(--success-700)', fontSize: '0.85rem' }}>
+                                        ✅ Conducted Activity Entry
+                                    </div>
+                                    <p style={{ margin: '3px 0 0', fontSize: '0.8rem', color: 'var(--txt-2)' }}>
+                                        Fill in the activity details along with the participation statistics and photos. An official printable report document will be generated immediately upon submission.
+                                    </p>
+                                </div>
+                            )}
 
                             <form onSubmit={handleSaveEvent}>
                                 <div className="form-group mb-3">
@@ -2936,13 +3114,15 @@ const UnitDashboard = () => {
 
                                 <div className="grid-cols-2 gap-3 mb-3">
                                     <div className="form-group">
-                                        <label className="form-label">Resource Person / Guest</label>
+                                        <label className="form-label">
+                                            {activityMode === 'completed' ? "Resource Person(s) / Chief Guest(s)" : "Resource Person / Guest"}
+                                        </label>
                                         <input
                                             type="text"
                                             className="form-control"
                                             value={eventForm.resourcePerson}
                                             onChange={(e) => setEventForm({ ...eventForm, resourcePerson: e.target.value })}
-                                            placeholder="e.g. Dr. John Doe"
+                                            placeholder={activityMode === 'completed' ? "e.g. Dr. K. Raman (Professor), Thiru S. Kumar" : "e.g. Dr. John Doe"}
                                         />
                                     </div>
                                     <div className="form-group">
@@ -3044,60 +3224,230 @@ const UnitDashboard = () => {
                                     </div>
                                 )}
 
-                                {/* Images and Brochure Upload */}
-                                <div className="grid-cols-2 gap-3 mb-4">
-                                    <div className="form-group">
-                                        <label className="form-label">Upload Activity Photos (Max 250KB each)</label>
-                                        <div className="d-flex gap-2">
+                                {/* Images and Brochure Upload - Only for Upcoming Activity or Edit Mode */}
+                                {(activityMode !== 'completed' || isEditingEvent) && (
+                                    <div className="grid-cols-2 gap-3 mb-4">
+                                        <div className="form-group">
+                                            <label className="form-label">Upload Activity Photos (Max 250KB each)</label>
+                                            <div className="d-flex gap-2">
+                                                <input
+                                                    type="file"
+                                                    className="form-control"
+                                                    accept="image/*"
+                                                    multiple
+                                                    onChange={handleEventFileChange}
+                                                />
+                                                <button
+                                                    type="button"
+                                                    className="btn btn-secondary btn-sm"
+                                                    disabled={uploading || selectedFiles.length === 0}
+                                                    onClick={handleUploadEventImages}
+                                                >
+                                                    {uploading ? "..." : "Upload"}
+                                                </button>
+                                            </div>
+                                            {eventForm.images && eventForm.images.length > 0 && (
+                                                <small className="text-success d-block mt-1">✓ {eventForm.images.length} photos uploaded</small>
+                                            )}
+                                        </div>
+
+                                        <div className="form-group">
+                                            <label className="form-label">Upload Circular / Brochure (PDF)</label>
+                                            <div className="d-flex gap-2">
+                                                <input
+                                                    type="file"
+                                                    className="form-control"
+                                                    accept="application/pdf"
+                                                    onChange={(e) => setBrochureFile(e.target.files[0])}
+                                                />
+                                                <button
+                                                    type="button"
+                                                    className="btn btn-secondary btn-sm"
+                                                    disabled={uploadingBrochure || !brochureFile}
+                                                    onClick={handleUploadEventBrochure}
+                                                >
+                                                    {uploadingBrochure ? "..." : "Upload"}
+                                                </button>
+                                            </div>
+                                            {eventForm.brochure && (
+                                                <small className="text-success d-block mt-1">✓ Circular / Brochure uploaded</small>
+                                            )}
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* Embedded Completion Report Section for Completed Activity Mode */}
+                                {activityMode === 'completed' && !isEditingEvent && (
+                                    <div style={{ marginTop: '1.5rem', paddingTop: '1.5rem', borderTop: '2px solid var(--border)' }}>
+                                        <div style={{ background: 'rgba(22, 163, 74, 0.08)', border: '1px solid rgba(22, 163, 74, 0.25)', padding: '0.85rem 1rem', borderRadius: '8px', marginBottom: '1.25rem' }}>
+                                            <h4 style={{ margin: 0, fontSize: '0.95rem', fontWeight: 800, color: 'var(--success-700)', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                                                📋 Activity Completion Report & Evidence
+                                            </h4>
+                                            <p style={{ margin: '4px 0 0', fontSize: '0.8rem', color: 'var(--txt-2)' }}>
+                                                Please provide participation statistics, impact outcomes, and attach activity photos to immediately generate the official printable report.
+                                            </p>
+                                        </div>
+
+                                        <div className="grid-cols-3 gap-3 mb-3">
+                                            <div className="form-group">
+                                                <label className="form-label">Total Volunteers Participated *</label>
+                                                <input
+                                                    type="number"
+                                                    className="form-control"
+                                                    value={completedReportForm.participantsCount}
+                                                    onChange={(e) => setCompletedReportForm({ ...completedReportForm, participantsCount: e.target.value })}
+                                                    required
+                                                    min="1"
+                                                    placeholder="e.g. 50"
+                                                />
+                                            </div>
+                                            <div className="form-group">
+                                                <label className="form-label">Community Beneficiaries</label>
+                                                <input
+                                                    type="number"
+                                                    className="form-control"
+                                                    value={completedReportForm.beneficiariesCount}
+                                                    onChange={(e) => setCompletedReportForm({ ...completedReportForm, beneficiariesCount: e.target.value })}
+                                                    min="0"
+                                                    placeholder="e.g. 200"
+                                                />
+                                            </div>
+                                            <div className="form-group">
+                                                <label className="form-label">Colleges Participated</label>
+                                                <input
+                                                    type="number"
+                                                    className="form-control"
+                                                    value={completedReportForm.collegesCount}
+                                                    onChange={(e) => setCompletedReportForm({ ...completedReportForm, collegesCount: e.target.value })}
+                                                    min="1"
+                                                    placeholder="e.g. 1"
+                                                />
+                                            </div>
+                                        </div>
+
+                                        {/* Dynamic Category Specific Metrics */}
+                                        {eventForm.category === 'Tree Plantation' && (
+                                            <div className="form-group mb-3 p-3" style={{ background: 'rgba(22,163,74,0.07)', border: '1px solid rgba(22,163,74,0.2)', borderRadius: '8px' }}>
+                                                <label className="form-label" style={{ color: 'var(--success-600)', fontWeight: 700 }}>
+                                                    🌱 Number of Trees Planted *
+                                                </label>
+                                                <input
+                                                    type="number"
+                                                    className="form-control"
+                                                    value={completedReportForm.treesPlanted}
+                                                    onChange={(e) => setCompletedReportForm({ ...completedReportForm, treesPlanted: e.target.value })}
+                                                    required
+                                                    min="1"
+                                                    placeholder="e.g. 100"
+                                                />
+                                            </div>
+                                        )}
+
+                                        {eventForm.category === 'Blood Donation' && (
+                                            <div className="form-group mb-3 p-3" style={{ background: 'rgba(220,38,38,0.06)', border: '1px solid rgba(220,38,38,0.2)', borderRadius: '8px' }}>
+                                                <label className="form-label" style={{ color: 'var(--danger-600)', fontWeight: 700 }}>
+                                                    🩸 Units of Blood Donated *
+                                                </label>
+                                                <input
+                                                    type="number"
+                                                    className="form-control"
+                                                    value={completedReportForm.bloodUnitsCollected}
+                                                    onChange={(e) => setCompletedReportForm({ ...completedReportForm, bloodUnitsCollected: e.target.value })}
+                                                    required
+                                                    min="1"
+                                                    placeholder="e.g. 25"
+                                                />
+                                            </div>
+                                        )}
+
+                                        {['Cleanliness Rally', 'Road Safety Awareness'].includes(eventForm.category) && (
+                                            <div className="form-group mb-3 p-3" style={{ background: 'rgba(245,158,11,0.06)', border: '1px solid rgba(245,158,11,0.2)', borderRadius: '8px' }}>
+                                                <label className="form-label" style={{ color: 'var(--warning-600)', fontWeight: 700 }}>
+                                                    📍 Rally Distance (km)
+                                                </label>
+                                                <input
+                                                    type="number"
+                                                    className="form-control"
+                                                    value={completedReportForm.rallyDistance}
+                                                    onChange={(e) => setCompletedReportForm({ ...completedReportForm, rallyDistance: e.target.value })}
+                                                    min="0"
+                                                    step="0.1"
+                                                    placeholder="e.g. 3.5"
+                                                />
+                                            </div>
+                                        )}
+
+                                        {/* Outcome of Activity */}
+                                        <div className="form-group mb-3">
+                                            <label className="form-label">Outcome & Impact of the Activity *</label>
+                                            <textarea
+                                                className="form-control"
+                                                rows="3"
+                                                value={completedReportForm.outcome}
+                                                onChange={(e) => setCompletedReportForm({ ...completedReportForm, outcome: e.target.value })}
+                                                required
+                                                placeholder="Describe key achievements, student learning, and community impact..."
+                                            ></textarea>
+                                        </div>
+
+                                        {/* Upload Activity Photos */}
+                                        <div className="form-group mb-4">
+                                            <label className="form-label">
+                                                Upload Activity Photographs (Newspaper Cuttings / Invitation / Certificate / Session Photos) *
+                                            </label>
+                                            <div style={{ background: 'rgba(245,158,11,0.08)', border: '1px solid rgba(245,158,11,0.25)', color: 'var(--warning-700)', padding: '0.75rem', borderRadius: '6px', fontSize: '0.8rem', marginBottom: '0.75rem' }}>
+                                                ⚠️ <strong>Required:</strong> Please select at least one photo (Max: 5 photos in total).
+                                            </div>
                                             <input
                                                 type="file"
-                                                className="form-control"
                                                 accept="image/*"
                                                 multiple
-                                                onChange={handleEventFileChange}
-                                            />
-                                            <button
-                                                type="button"
-                                                className="btn btn-secondary btn-sm"
-                                                disabled={uploading || selectedFiles.length === 0}
-                                                onClick={handleUploadEventImages}
-                                            >
-                                                {uploading ? "..." : "Upload"}
-                                            </button>
-                                        </div>
-                                        {eventForm.images && eventForm.images.length > 0 && (
-                                            <small className="text-success d-block mt-1">✓ {eventForm.images.length} photos uploaded</small>
-                                        )}
-                                    </div>
-
-                                    <div className="form-group">
-                                        <label className="form-label">Upload Circular / Brochure (PDF)</label>
-                                        <div className="d-flex gap-2">
-                                            <input
-                                                type="file"
                                                 className="form-control"
-                                                accept="application/pdf"
-                                                onChange={(e) => setBrochureFile(e.target.files[0])}
+                                                onChange={handleCompletedReportFileChange}
                                             />
-                                            <button
-                                                type="button"
-                                                className="btn btn-secondary btn-sm"
-                                                disabled={uploadingBrochure || !brochureFile}
-                                                onClick={handleUploadEventBrochure}
-                                            >
-                                                {uploadingBrochure ? "..." : "Upload"}
-                                            </button>
+
+                                            {/* Live photo previews */}
+                                            {completedReportPreviews.length > 0 && (
+                                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(90px, 1fr))', gap: '0.5rem', marginTop: '0.75rem' }}>
+                                                    {completedReportPreviews.map((url, idx) => (
+                                                        <div key={idx} style={{ position: 'relative', height: '80px', borderRadius: '6px', overflow: 'hidden', border: '1px solid var(--border)' }}>
+                                                            <img src={url} alt={`Preview ${idx + 1}`} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => {
+                                                                    const nextFiles = completedReportFiles.filter((_, i) => i !== idx);
+                                                                    const nextPreviews = completedReportPreviews.filter((_, i) => i !== idx);
+                                                                    setCompletedReportFiles(nextFiles);
+                                                                    setCompletedReportPreviews(nextPreviews);
+                                                                }}
+                                                                style={{
+                                                                    position: 'absolute', top: 2, right: 2, background: 'rgba(0,0,0,0.65)',
+                                                                    color: '#fff', border: 'none', borderRadius: '50%', width: '20px',
+                                                                    height: '20px', cursor: 'pointer', fontSize: '11px', display: 'flex',
+                                                                    alignItems: 'center', justifyContent: 'center'
+                                                                }}
+                                                            >
+                                                                ✕
+                                                            </button>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            )}
                                         </div>
-                                        {eventForm.brochure && (
-                                            <small className="text-success d-block mt-1">✓ Circular / Brochure uploaded</small>
-                                        )}
                                     </div>
-                                </div>
+                                )}
 
                                 <div className="flex-between pt-4" style={{ borderTop: '1px solid var(--border)' }}>
-                                    <button type="button" className="btn btn-secondary" onClick={() => setShowEventFormModal(false)}>Cancel</button>
-                                    <button type="submit" className="btn btn-primary">
-                                        {isEditingEvent ? "Update Activity" : "Create Activity"}
+                                    <button type="button" className="btn btn-secondary" onClick={() => setShowEventFormModal(false)} disabled={isSavingCompletedEvent}>Cancel</button>
+                                    <button type="submit" className="btn btn-primary" disabled={isSavingCompletedEvent}>
+                                        {isSavingCompletedEvent
+                                            ? "Saving & Generating Report..."
+                                            : isEditingEvent
+                                                ? "Update Activity"
+                                                : activityMode === "completed"
+                                                    ? "Save Activity & Submit Report"
+                                                    : "Post Upcoming Activity"
+                                        }
                                     </button>
                                 </div>
                             </form>
@@ -3429,6 +3779,136 @@ const UnitDashboard = () => {
                     </div>
                 )
             }
+
+            {/* Activity Type Selection Choice Modal */}
+            {
+                showActivityTypeChoiceModal && (
+                    <div className="modal-overlay" style={{ zIndex: 1100 }}>
+                        <div className="modal-content" style={{ maxWidth: '580px', width: '92%', borderRadius: '16px', padding: '2rem' }}>
+                            <div className="flex-between mb-4">
+                                <div>
+                                    <h2 style={{ fontSize: '1.4rem', fontWeight: 800, margin: 0, color: 'var(--txt-1)' }}>
+                                        Choose Activity Type
+                                    </h2>
+                                    <p style={{ margin: '4px 0 0', color: 'var(--txt-3)', fontSize: '0.85rem' }}>
+                                        Select whether you are scheduling a future event or recording a completed event
+                                    </p>
+                                </div>
+                                <button className="btn btn-sm btn-secondary" onClick={() => setShowActivityTypeChoiceModal(false)}>&times;</button>
+                            </div>
+
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '1rem' }}>
+                                {/* Option 1: Upcoming Activity */}
+                                <div
+                                    onClick={() => {
+                                        setShowActivityTypeChoiceModal(false);
+                                        setActivityMode("upcoming");
+                                        handleOpenEventForm(false, null, targetIsExternal, "upcoming");
+                                    }}
+                                    style={{
+                                        border: '2px solid var(--border)',
+                                        borderRadius: '12px',
+                                        padding: '1.25rem',
+                                        cursor: 'pointer',
+                                        display: 'flex',
+                                        gap: '1rem',
+                                        alignItems: 'flex-start',
+                                        transition: 'all 0.2s',
+                                        background: 'var(--card)'
+                                    }}
+                                    onMouseEnter={e => { e.currentTarget.style.borderColor = '#2563eb'; e.currentTarget.style.background = 'rgba(37,99,235,0.04)'; }}
+                                    onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.background = 'var(--card)'; }}
+                                >
+                                    <div style={{
+                                        width: '48px',
+                                        height: '48px',
+                                        borderRadius: '10px',
+                                        background: 'rgba(37, 99, 235, 0.12)',
+                                        color: '#2563eb',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        fontSize: '1.4rem',
+                                        flexShrink: 0
+                                    }}>
+                                        📅
+                                    </div>
+                                    <div style={{ flex: 1 }}>
+                                        <div className="flex-between">
+                                            <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 700, color: 'var(--txt-1)' }}>Upcoming Activity</h3>
+                                            <span className="badge badge-primary" style={{ fontSize: '0.65rem' }}>Scheduled</span>
+                                        </div>
+                                        <p style={{ margin: '6px 0 0', fontSize: '0.82rem', color: 'var(--txt-2)', lineHeight: 1.45 }}>
+                                            Schedule a future activity or awareness program. Once conducted, you can upload and submit the completion report after the activity date.
+                                        </p>
+                                    </div>
+                                </div>
+
+                                {/* Option 2: Completed Activity */}
+                                <div
+                                    onClick={() => {
+                                        setShowActivityTypeChoiceModal(false);
+                                        setActivityMode("completed");
+                                        handleOpenEventForm(false, null, targetIsExternal, "completed");
+                                    }}
+                                    style={{
+                                        border: '2px solid var(--border)',
+                                        borderRadius: '12px',
+                                        padding: '1.25rem',
+                                        cursor: 'pointer',
+                                        display: 'flex',
+                                        gap: '1rem',
+                                        alignItems: 'flex-start',
+                                        transition: 'all 0.2s',
+                                        background: 'var(--card)'
+                                    }}
+                                    onMouseEnter={e => { e.currentTarget.style.borderColor = '#16a34a'; e.currentTarget.style.background = 'rgba(22,163,74,0.04)'; }}
+                                    onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.background = 'var(--card)'; }}
+                                >
+                                    <div style={{
+                                        width: '48px',
+                                        height: '48px',
+                                        borderRadius: '10px',
+                                        background: 'rgba(22, 163, 74, 0.12)',
+                                        color: '#16a34a',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        fontSize: '1.4rem',
+                                        flexShrink: 0
+                                    }}>
+                                        ✅
+                                    </div>
+                                    <div style={{ flex: 1 }}>
+                                        <div className="flex-between">
+                                            <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 700, color: 'var(--txt-1)' }}>Completed Activity</h3>
+                                            <span className="badge badge-success" style={{ fontSize: '0.65rem' }}>Conducted</span>
+                                        </div>
+                                        <p style={{ margin: '6px 0 0', fontSize: '0.82rem', color: 'var(--txt-2)', lineHeight: 1.45 }}>
+                                            Log an activity that has already taken place. Enter particulars, participants, impact outcomes, and attach photos in one single form. Generates a printable report document immediately!
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="text-end mt-4 pt-3" style={{ borderTop: '1px solid var(--border)' }}>
+                                <button type="button" className="btn btn-secondary btn-sm" onClick={() => setShowActivityTypeChoiceModal(false)}>
+                                    Cancel
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                )
+            }
+
+            {/* Official Printable Activity Completion Report Modal */}
+            <ActivityReportModal
+                isOpen={showPrintableReportModal}
+                onClose={() => setShowPrintableReportModal(false)}
+                event={printableReportEvent}
+                collegeData={college}
+                unitData={unit}
+            />
         </div >
     );
 };
