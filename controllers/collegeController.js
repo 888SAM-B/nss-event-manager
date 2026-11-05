@@ -22,7 +22,11 @@ const addOrganization = async (req, res) => {
             return res.status(400).json({ success: false, message: "College code already exists" });
         }
 
-        const collegeEmail = email ? email.trim() : `temp_${code}@nss.org`;
+        const collegeEmail = email 
+            ? email.split(',').map(e => e.trim()).filter(Boolean).join(', ')
+            : `temp_${code}@nss.org`;
+
+        const primaryEmail = collegeEmail.split(',')[0].trim();
 
         const newCollege = new User({
             insName,
@@ -30,7 +34,7 @@ const addOrganization = async (req, res) => {
             collegeType,
             email: collegeEmail,
             isRegistered: false,
-            userName: collegeEmail,
+            userName: primaryEmail,
             password: `temp_${code}`,
             collegeDetails: {
                 email: collegeEmail
@@ -49,12 +53,16 @@ const addOrganization = async (req, res) => {
     }
 };
 
-// Helper function to mask email for UI feedback
-const maskEmail = (email) => {
-    if (!email || !email.includes('@')) return email || "";
-    const [name, domain] = email.split('@');
-    const maskedName = name.length > 2 ? name.substring(0, 2) + '****' : name + '****';
-    return `${maskedName}@${domain}`;
+// Helper function to mask email for UI feedback (supports comma-separated emails)
+const maskEmail = (emailStr) => {
+    if (!emailStr) return "";
+    const emails = emailStr.split(',').map(e => e.trim()).filter(Boolean);
+    return emails.map(email => {
+        if (!email.includes('@')) return email;
+        const [name, domain] = email.split('@');
+        const maskedName = name.length > 2 ? name.substring(0, 2) + '****' : name + '****';
+        return `${maskedName}@${domain}`;
+    }).join(', ');
 };
 
 // Validate college code & Send OTP for self-registration
@@ -86,16 +94,29 @@ const sendCollegeOtp = async (req, res) => {
             });
         }
 
+        // Support multiple comma-separated emails
+        const recipientEmails = targetEmail
+            .split(',')
+            .map(e => e.trim())
+            .filter(e => e && e.includes('@'));
+
+        if (recipientEmails.length === 0) {
+            return res.status(400).json({
+                success: false,
+                message: "No valid college email registered. Please contact administrator to initialize your college email."
+            });
+        }
+
         // Generate 6-digit OTP
         const otp = String(Math.floor(100000 + Math.random() * 900000));
         college.otp = otp;
         college.otpExpiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes expiry
         await college.save();
 
-        // Send OTP email via Brevo
+        // Send OTP email via Brevo to all recipient emails
         try {
             await sendEmailViaBrevo({
-                to: targetEmail,
+                to: recipientEmails,
                 subject: `NSS Portal - Registration Verification OTP`,
                 html: `
                     <div style="font-family: Arial, sans-serif; padding: 20px; line-height: 1.6; color: #333;">
@@ -117,7 +138,7 @@ const sendCollegeOtp = async (req, res) => {
 
         res.json({
             success: true,
-            message: `OTP sent to college email (${maskEmail(targetEmail)})`,
+            message: `OTP sent to college email: ${maskEmail(targetEmail)}`,
             emailMasked: maskEmail(targetEmail),
             insName: college.insName,
             collegeType: college.collegeType
@@ -220,15 +241,15 @@ const registerCollege = async (req, res) => {
         college.pincode = collegeLocation.pincode;
         college.location = collegeLocation.address;
 
-        const isFunded = college.collegeType && college.collegeType.toLowerCase().includes('funded');
-        if (isFunded && bankDetails) {
+        // ZBSCA bank details saved for ALL colleges irrespective of college type
+        if (bankDetails) {
             const rawAccountNo = bankDetails.accountNo || bankDetails.accountNumber || "";
             const rawBankName = bankDetails.bankName || bankDetails.bank || "State Bank of India";
             const rawBranch = bankDetails.branch || "";
             const rawIfsc = bankDetails.ifsc || "";
             const rawAccountHolder = bankDetails.accountHolder || college.insName || "";
 
-            // Encrypt all sensitive ZBSA bank details before saving to database
+            // Encrypt all sensitive ZBSCA bank details before saving to database
             college.bankDetails = encryptCollegeBankDetails({
                 accountNumber: rawAccountNo,
                 bank: rawBankName,
@@ -240,18 +261,25 @@ const registerCollege = async (req, res) => {
 
         await college.save();
 
-        // Send Email via Brevo
+        // Send Email via Brevo to all registered college emails + newly specified office email
         try {
-            await sendEmailViaBrevo({
-                to: collegeDetails.email,
-                subject: `NSS Portal V2 - Registration Complete`,
-                html: `
-                    <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
-                        <h2 style="color: #1e3a8a;">NSS College Registration Successful</h2>
-                        <p>Dear Principal & NSS Coordinator,</p>
-                        <p>Your college <strong>${college.insName}</strong> (Code: ${code}) has completed V2 registration.</p>
-                        <p>Below are your login credentials:</p>
-                        <table style="border-collapse: collapse; width: 100%; margin-top: 15px; margin-bottom: 15px;">
+            const allEmails = [
+                ...(college.email ? college.email.split(',').map(e => e.trim()) : []),
+                collegeDetails.email
+            ].filter(e => e && e.includes('@'));
+            const uniqueRecipients = [...new Set(allEmails)];
+
+            if (uniqueRecipients.length > 0) {
+                await sendEmailViaBrevo({
+                    to: uniqueRecipients,
+                    subject: `NSS Portal V2 - Registration Complete`,
+                    html: `
+                        <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
+                            <h2 style="color: #1e3a8a;">NSS College Registration Successful</h2>
+                            <p>Dear Principal & NSS Coordinator,</p>
+                            <p>Your college <strong>${college.insName}</strong> (Code: ${code}) has completed V2 registration.</p>
+                            <p>Below are your login credentials:</p>
+                            <table style="border-collapse: collapse; width: 100%; margin-top: 15px; margin-bottom: 15px;">
                             <tr>
                                 <td style="padding: 8px; border: 1px solid #ddd; font-weight: bold;">Login Username:</td>
                                 <td style="padding: 8px; border: 1px solid #ddd;">${collegeDetails.email}</td>
@@ -262,7 +290,8 @@ const registerCollege = async (req, res) => {
                         <p>NSS Cell, Periyar University</p>
                     </div>
                 `
-            });
+                });
+            }
         } catch (emailError) {
             console.error("Failed to send registration email:", emailError.message);
         }
@@ -423,7 +452,7 @@ const bulkAddOrganizations = async (req, res) => {
         const duplicates = [];
 
         for (const col of colleges) {
-            const { insName, code, collegeType } = col;
+            const { insName, code, collegeType, email } = col;
             if (!insName || !code || !collegeType) {
                 continue; // Skip invalid rows
             }
@@ -443,13 +472,23 @@ const bulkAddOrganizations = async (req, res) => {
                 normalizedType = 'Self-Financing';
             }
 
+            const collegeEmail = email 
+                ? String(email).split(',').map(e => e.trim()).filter(Boolean).join(', ')
+                : `temp_${code}@nss.org`;
+
+            const primaryEmail = collegeEmail.split(',')[0].trim();
+
             const newCollege = new User({
                 insName,
                 code,
                 collegeType: normalizedType,
+                email: collegeEmail,
                 isRegistered: false,
-                userName: `temp_${code}@nss.org`,
-                password: `temp_${code}`
+                userName: primaryEmail,
+                password: `temp_${code}`,
+                collegeDetails: {
+                    email: collegeEmail
+                }
             });
 
             await newCollege.save();

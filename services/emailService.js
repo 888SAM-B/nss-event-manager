@@ -9,8 +9,24 @@ const sendEmailViaBrevo = async ({ from, to, subject, html, bcc }) => {
         return { email };
     };
 
-    const toArr = Array.isArray(to) ? to.map(formatEmail) : (to ? [{ email: to }] : []);
-    const bccArr = Array.isArray(bcc) ? bcc.map(formatEmail) : (bcc ? [{ email: bcc }] : []);
+    const normalizeEmailList = (input) => {
+        if (!input) return [];
+        if (Array.isArray(input)) {
+            return input.flatMap(item => {
+                if (typeof item === 'string' && item.includes(',')) {
+                    return item.split(',').map(s => s.trim()).filter(Boolean);
+                }
+                return item;
+            });
+        }
+        if (typeof input === 'string') {
+            return input.split(',').map(s => s.trim()).filter(Boolean);
+        }
+        return [input];
+    };
+
+    const toArr = normalizeEmailList(to).map(formatEmail);
+    const bccArr = normalizeEmailList(bcc).map(formatEmail);
 
     const payload = {
         sender: formatEmail(from || process.env.EMAIL_USER || 'noreply@example.com'),
