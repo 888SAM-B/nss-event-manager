@@ -49,7 +49,7 @@ const getAdminStats = async (req, res) => {
                 .populate('collegeId', 'insName code')
                 .populate('unitId', 'name unitNumber');
 
-            colleges = await User.find({ _id: { $in: collegeIds } }, 'insName code events userName collegeType units isRegistered')
+            colleges = await User.find({ _id: { $in: collegeIds } }, 'insName code events userName collegeType email units isRegistered location district taluk collegeDetails principalDetails collegeLocation')
                 .populate('units', 'unitNumber name');
         } else {
             // Admin Full
@@ -65,7 +65,7 @@ const getAdminStats = async (req, res) => {
                 .populate('collegeId', 'insName code')
                 .populate('unitId', 'name unitNumber');
 
-            colleges = await User.find({}, 'insName code events userName collegeType units isRegistered')
+            colleges = await User.find({}, 'insName code events userName collegeType email units isRegistered location district taluk collegeDetails principalDetails collegeLocation')
                 .populate('units', 'unitNumber name');
         }
 
@@ -157,6 +157,132 @@ const deleteOrganization = async (req, res) => {
     } catch (error) {
         console.error("Error deleting organization:", error);
         res.status(500).json({ success: false, message: "Internal Server Error" });
+    }
+};
+
+const updateOrganization = async (req, res) => {
+    if (req.user.role !== 'admin') {
+        return res.status(403).json({ success: false, message: "Forbidden: Admin access required" });
+    }
+
+    const collegeId = req.params.id || req.body.collegeId || req.body._id;
+    if (!collegeId) {
+        return res.status(400).json({ success: false, message: "College ID is required" });
+    }
+
+    const {
+        insName,
+        code,
+        collegeType,
+        email,
+        isRegistered,
+        phone,
+        website,
+        principalName,
+        principalEmail,
+        principalMobile,
+        address,
+        district,
+        taluk,
+        pincode
+    } = req.body;
+
+    try {
+        const college = await User.findById(collegeId);
+        if (!college) {
+            return res.status(404).json({ success: false, message: "College not found" });
+        }
+
+        // If code is changed, check uniqueness
+        if (code && code.trim() !== college.code) {
+            const trimmedCode = code.trim();
+            const existingCode = await User.findOne({ code: trimmedCode, _id: { $ne: collegeId } });
+            if (existingCode) {
+                return res.status(400).json({ success: false, message: `College code "${trimmedCode}" is already in use by another college.` });
+            }
+            college.code = trimmedCode;
+        }
+
+        if (insName && insName.trim()) {
+            college.insName = insName.trim();
+        }
+
+        if (collegeType) {
+            college.collegeType = collegeType;
+        }
+
+        if (email !== undefined) {
+            const cleanedEmail = String(email)
+                .split(',')
+                .map(e => e.trim())
+                .filter(Boolean)
+                .join(', ');
+            college.email = cleanedEmail;
+
+            if (!college.collegeDetails) college.collegeDetails = {};
+            college.collegeDetails.email = cleanedEmail;
+
+            // If college has not completed registration yet, sync userName with primary email
+            if (!college.isRegistered && cleanedEmail) {
+                const primaryEmail = cleanedEmail.split(',')[0].trim();
+                college.userName = primaryEmail;
+            }
+        }
+
+        if (typeof isRegistered === 'boolean') {
+            college.isRegistered = isRegistered;
+        }
+
+        // Principal details
+        if (principalName !== undefined || principalEmail !== undefined || principalMobile !== undefined) {
+            if (!college.principalDetails) college.principalDetails = {};
+            if (principalName !== undefined) college.principalDetails.name = principalName;
+            if (principalEmail !== undefined) college.principalDetails.email = principalEmail;
+            if (principalMobile !== undefined) college.principalDetails.mobile = principalMobile;
+        }
+
+        // College details (phone, website)
+        if (phone !== undefined || website !== undefined) {
+            if (!college.collegeDetails) college.collegeDetails = {};
+            if (phone !== undefined) college.collegeDetails.phone = phone;
+            if (website !== undefined) college.collegeDetails.website = website;
+        }
+
+        // College location / address
+        if (address !== undefined || district !== undefined || taluk !== undefined || pincode !== undefined) {
+            if (!college.collegeLocation) college.collegeLocation = {};
+            if (address !== undefined) {
+                college.collegeLocation.address = address;
+                college.location = address;
+            }
+            if (district !== undefined) {
+                college.collegeLocation.district = district;
+                college.district = district;
+            }
+            if (taluk !== undefined) {
+                college.collegeLocation.taluk = taluk;
+                college.taluk = taluk;
+            }
+            if (pincode !== undefined) {
+                college.collegeLocation.pincode = pincode;
+                college.pincode = pincode;
+            }
+        }
+
+        await college.save();
+
+        const updatedCollege = await User.findById(collegeId)
+            .select('insName code events userName collegeType email units isRegistered location district taluk collegeDetails principalDetails collegeLocation')
+            .populate('units', 'unitNumber name');
+
+        res.json({
+            success: true,
+            message: "College details updated successfully",
+            college: updatedCollege
+        });
+    } catch (error) {
+        console.error("Error updating organization:", error);
+        res.status(500).json({ success: false, message: error.message || "Failed to update college details" });
     }
 };
 
@@ -453,6 +579,7 @@ module.exports = {
     getAdminEvents,
     getAdminStudents,
     deleteOrganization,
+    updateOrganization,
     createNodalOfficer,
     getNodalOfficers,
     updateNodalOfficer,

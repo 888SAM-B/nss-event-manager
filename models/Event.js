@@ -24,6 +24,9 @@ const eventSchema = new mongoose.Schema({
     attendees: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Member' }], // Primary Unit Attendees (or legacy combined)
     isExternal: { type: Boolean, default: false },
 
+    // Special Camp Form 1 Proposal Details
+    specialCampDetails: { type: Object, default: null },
+
     // Collaborators list for request flow
     collaborators: [{
         unitId: { type: mongoose.Schema.Types.ObjectId, ref: 'Unit' },

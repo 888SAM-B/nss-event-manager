@@ -373,7 +373,8 @@ const updateEvent = async (req, res) => {
         const updatableFields = [
             'name', 'description', 'category', 'singleDay', 'date', 'dateFrom', 'dateTo',
             'timeFrom', 'timeTo', 'venue', 'resourcePerson', 'level', 'sponsorship',
-            'registeredMeriBharath', 'meriBharathUrl', 'images', 'brochure', 'attendees'
+            'registeredMeriBharath', 'meriBharathUrl', 'images', 'brochure', 'attendees',
+            'specialCampDetails'
         ];
 
         // BUG-17: isExternal should only be changeable by admin or college — not unit users

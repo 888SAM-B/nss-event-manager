@@ -7,6 +7,7 @@ const {
     getAdminEvents,
     getAdminStudents,
     deleteOrganization,
+    updateOrganization,
     createNodalOfficer,
     getNodalOfficers,
     updateNodalOfficer,
@@ -28,6 +29,8 @@ router.get('/admin/events', verifyToken, getAdminEvents);
 router.get('/admin/all-students', verifyToken, getAdminStudents);
 router.get('/admin/all-units', verifyToken, getAdminUnits);
 router.post('/admin/delete-organization', verifyToken, deleteOrganization);
+router.put('/admin/update-organization/:id', verifyToken, updateOrganization);
+router.post('/admin/update-organization', verifyToken, updateOrganization);
 
 // Nodal Officer CRUD (Admin only)
 router.post('/admin/nodal-officer', verifyToken, createNodalOfficer);

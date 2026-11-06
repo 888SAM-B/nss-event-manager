@@ -18,10 +18,30 @@ const periodicalReportSchema = new mongoose.Schema({
         district: { type: String, default: '' }
     },
     activities: {
+        special_camp: {
+            programmes: { type: Number, default: 0 },
+            volunteers: { type: Number, default: 0 },
+            beneficiaries: { type: Number, default: 0 }
+        },
         blood_donation: {
             programmes: { type: Number, default: 0 },
             volunteers: { type: Number, default: 0 },
             bloodUnits: { type: Number, default: 0 }
+        },
+        tree_plantation: {
+            programmes: { type: Number, default: 0 },
+            volunteers: { type: Number, default: 0 },
+            saplings: { type: Number, default: 0 }
+        },
+        cleanliness_drive: {
+            programmes: { type: Number, default: 0 },
+            volunteers: { type: Number, default: 0 },
+            beneficiaries: { type: Number, default: 0 }
+        },
+        awareness_programme: {
+            programmes: { type: Number, default: 0 },
+            volunteers: { type: Number, default: 0 },
+            beneficiaries: { type: Number, default: 0 }
         },
         health_camps: {
             programmes: { type: Number, default: 0 },
@@ -48,10 +68,11 @@ const periodicalReportSchema = new mongoose.Schema({
             volunteers: { type: Number, default: 0 },
             beneficiaries: { type: Number, default: 0 }
         },
-        tree_plantation: {
+        rallies: {
             programmes: { type: Number, default: 0 },
             volunteers: { type: Number, default: 0 },
-            saplings: { type: Number, default: 0 }
+            date: { type: String, default: '' },
+            distance: { type: Number, default: 0 }
         },
         important_days: {
             programmes: { type: Number, default: 0 },
@@ -62,15 +83,54 @@ const periodicalReportSchema = new mongoose.Schema({
             programmes: { type: Number, default: 0 },
             volunteers: { type: Number, default: 0 }
         },
-        rallies: {
-            programmes: { type: Number, default: 0 },
-            volunteers: { type: Number, default: 0 },
-            date: { type: String, default: '' },
-            distance: { type: Number, default: 0 }
-        },
         hosted_meetings: {
             programmes: { type: Number, default: 0 },
             guestName: { type: String, default: '' },
+            volunteers: { type: Number, default: 0 },
+            beneficiaries: { type: Number, default: 0 }
+        },
+        conference: {
+            programmes: { type: Number, default: 0 },
+            volunteers: { type: Number, default: 0 },
+            beneficiaries: { type: Number, default: 0 }
+        },
+        seminar: {
+            programmes: { type: Number, default: 0 },
+            volunteers: { type: Number, default: 0 },
+            beneficiaries: { type: Number, default: 0 }
+        },
+        workshop: {
+            programmes: { type: Number, default: 0 },
+            volunteers: { type: Number, default: 0 },
+            beneficiaries: { type: Number, default: 0 }
+        },
+        sports: {
+            programmes: { type: Number, default: 0 },
+            volunteers: { type: Number, default: 0 },
+            beneficiaries: { type: Number, default: 0 }
+        },
+        cultural: {
+            programmes: { type: Number, default: 0 },
+            volunteers: { type: Number, default: 0 },
+            beneficiaries: { type: Number, default: 0 }
+        },
+        environmental: {
+            programmes: { type: Number, default: 0 },
+            volunteers: { type: Number, default: 0 },
+            beneficiaries: { type: Number, default: 0 }
+        },
+        social: {
+            programmes: { type: Number, default: 0 },
+            volunteers: { type: Number, default: 0 },
+            beneficiaries: { type: Number, default: 0 }
+        },
+        exhibition: {
+            programmes: { type: Number, default: 0 },
+            volunteers: { type: Number, default: 0 },
+            beneficiaries: { type: Number, default: 0 }
+        },
+        creation_of_assets: {
+            programmes: { type: Number, default: 0 },
             volunteers: { type: Number, default: 0 },
             beneficiaries: { type: Number, default: 0 }
         },

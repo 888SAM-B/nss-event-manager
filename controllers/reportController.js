@@ -149,77 +149,140 @@ const getUnitPeriodicalReportPrefill = async (req, res) => {
             const name = (event.name || '').toLowerCase();
             const desc = (event.description || '').toLowerCase();
 
-            if (category === 'blood donation' || name.includes('blood donation') || name.includes('blood camp')) {
+            if (category === 'special camp' || name.includes('special camp')) {
+                return 'special_camp';
+            }
+            if (category === 'blood donation' || category === 'blood donation camps' || name.includes('blood donation') || name.includes('blood camp')) {
                 return 'blood_donation';
-            }
-            if (category === 'health' || category === 'health care' || name.includes('health camp') || name.includes('medical camp') || name.includes('health care')) {
-                return 'health_camps';
-            }
-            if (category.includes('drug') || name.includes('anti drug') || name.includes('anti-drug') || desc.includes('anti drug') || desc.includes('anti-drug') || name.includes('narcotics')) {
-                return 'anti_drug';
-            }
-            // BUG-29: voter_sir mapping — require both voter/election context AND the specific acronym 'SIR'
-            // (Systematic Inclusivity in Registration). Use word-boundary check to avoid false positives
-            // e.g. "Sir Syed Day", "Senior sir" should NOT match.
-            if ((name.includes('voter') || name.includes('elect')) && /\bsir\b/.test(name)) {
-                return 'voter_sir';
-            }
-            if ((name.includes('voter') || name.includes('elect') || name.includes('sveep')) && (name.includes('sveep') || desc.includes('sveep'))) {
-                return 'voter_sveep';
-            }
-            if (category === 'road safety' || name.includes('road safety') || name.includes('traffic awareness') || name.includes('road safety patrol')) {
-                return 'road_safety';
             }
             if (category === 'tree plantation' || name.includes('tree plantation') || name.includes('sapling') || name.includes('plantation')) {
                 return 'tree_plantation';
             }
-            if (category === 'important days' || name.includes('important day') || name.includes('celebration') || name.includes('anniversary') || name.includes('national youth day') || name.includes('nss day')) {
-                return 'important_days';
+            if (category === 'cleanliness drive' || name.includes('cleanliness') || name.includes('swachh bharat') || name.includes('swachh')) {
+                return 'cleanliness_drive';
             }
-            if (category === 'pledge' || name.includes('pledge') || name.includes('oath')) {
-                return 'pledge';
+            if (category === 'health' || category === 'health care' || category === 'health camps' || category.includes('health') || name.includes('health camp') || name.includes('medical camp') || name.includes('health care')) {
+                return 'health_camps';
+            }
+            if (category === 'anti-drug campaign' || category.includes('drug') || name.includes('anti drug') || name.includes('anti-drug') || desc.includes('anti drug') || desc.includes('anti-drug') || name.includes('narcotics')) {
+                return 'anti_drug';
+            }
+            // voter_sir mapping
+            if (category === 'voter awareness - sir' || ((name.includes('voter') || name.includes('elect')) && /\bsir\b/.test(name))) {
+                return 'voter_sir';
+            }
+            // voter_sveep mapping
+            if (category === 'voter awareness - sveep' || ((name.includes('voter') || name.includes('elect') || name.includes('sveep')) && (name.includes('sveep') || desc.includes('sveep')))) {
+                return 'voter_sveep';
+            }
+            if (category === 'road safety' || category === 'road safety awareness' || name.includes('road safety') || name.includes('traffic awareness') || name.includes('road safety patrol')) {
+                return 'road_safety';
             }
             if (category === 'rallies' || category === 'rally' || name.includes('rally') || name.includes('rallies')) {
                 return 'rallies';
             }
-            if (category === 'conference' || category === 'seminar' || category === 'workshop' || name.includes('meeting') || name.includes('seminar') || name.includes('workshop')) {
+            if (category === 'important days celebrations' || category === 'important days' || name.includes('important day') || name.includes('celebration') || name.includes('anniversary') || name.includes('national youth day') || name.includes('nss day')) {
+                return 'important_days';
+            }
+            if (category === 'pledge taken' || category === 'pledge' || name.includes('pledge') || name.includes('oath')) {
+                return 'pledge';
+            }
+            if (category === 'conference' || name.includes('conference')) {
+                return 'conference';
+            }
+            if (category === 'seminar' || name.includes('seminar')) {
+                return 'seminar';
+            }
+            if (category === 'workshop' || name.includes('workshop')) {
+                return 'workshop';
+            }
+            if (category === 'hosted meetings' || name.includes('hosted meeting') || name.includes('meeting')) {
                 return 'hosted_meetings';
+            }
+            if (category === 'sports' || name.includes('sports') || name.includes('tournament')) {
+                return 'sports';
+            }
+            if (category === 'cultural' || name.includes('cultural') || name.includes('arts')) {
+                return 'cultural';
+            }
+            if (category === 'environmental' || name.includes('environment') || name.includes('pollution') || name.includes('eco')) {
+                return 'environmental';
+            }
+            if (category === 'social' || category === 'social service' || name.includes('social service')) {
+                return 'social';
+            }
+            if (category === 'exhibition' || name.includes('exhibition')) {
+                return 'exhibition';
+            }
+            if (category === 'creation of assets' || name.includes('asset creation') || name.includes('creation of assets')) {
+                return 'creation_of_assets';
+            }
+            if (category === 'awareness programme' || name.includes('awareness')) {
+                return 'awareness_programme';
             }
 
             return 'any_other';
         };
 
         const activities = {
+            special_camp: { programmes: 0, volunteers: 0, beneficiaries: 0 },
             blood_donation: { programmes: 0, volunteers: 0, bloodUnits: 0 },
+            tree_plantation: { programmes: 0, volunteers: 0, saplings: 0 },
+            cleanliness_drive: { programmes: 0, volunteers: 0, beneficiaries: 0 },
+            awareness_programme: { programmes: 0, volunteers: 0, beneficiaries: 0 },
             health_camps: { programmes: 0, volunteers: 0, beneficiaries: 0 },
             anti_drug: { programmes: 0, volunteers: 0, beneficiaries: 0 },
             voter_sir: { programmes: 0, volunteers: 0, beneficiaries: 0 },
             voter_sveep: { programmes: 0, volunteers: 0, beneficiaries: 0 },
             road_safety: { programmes: 0, volunteers: 0, beneficiaries: 0 },
-            tree_plantation: { programmes: 0, volunteers: 0, saplings: 0 },
+            rallies: { programmes: 0, volunteers: 0, date: "", distance: 0 },
             important_days: { programmes: 0, volunteers: 0, date: "" },
             pledge: { programmes: 0, volunteers: 0 },
-            rallies: { programmes: 0, volunteers: 0, date: "", distance: 0 },
             hosted_meetings: { programmes: 0, guestName: "", volunteers: 0, beneficiaries: 0 },
+            conference: { programmes: 0, volunteers: 0, beneficiaries: 0 },
+            seminar: { programmes: 0, volunteers: 0, beneficiaries: 0 },
+            workshop: { programmes: 0, volunteers: 0, beneficiaries: 0 },
+            sports: { programmes: 0, volunteers: 0, beneficiaries: 0 },
+            cultural: { programmes: 0, volunteers: 0, beneficiaries: 0 },
+            environmental: { programmes: 0, volunteers: 0, beneficiaries: 0 },
+            social: { programmes: 0, volunteers: 0, beneficiaries: 0 },
+            exhibition: { programmes: 0, volunteers: 0, beneficiaries: 0 },
+            creation_of_assets: { programmes: 0, volunteers: 0, beneficiaries: 0 },
             any_other: { programmes: 0, colleges: 0, volunteers: 0, beneficiaries: 0, remarks: "" }
         };
-
-        // BUG-28: Removed debug console.log statements that leaked internal data to server logs
 
         events.forEach(evt => {
             const act = mapEventToActivity(evt);
             const reportData = evt.report || {};
             
-            // volunteersParticipated is set = participantsCount on every report submit (no separate UI field)
-            // Use participantsCount as primary source; volunteersParticipated as fallback for old records
             const volunteers = Number(reportData.participantsCount) || Number(reportData.volunteersParticipated) || 0;
             const beneficiaries = Number(reportData.beneficiariesCount) || 0;
             
             switch(act) {
+                case 'special_camp':
+                    activities.special_camp.programmes += 1;
+                    activities.special_camp.volunteers += volunteers;
+                    activities.special_camp.beneficiaries += beneficiaries;
+                    break;
                 case 'blood_donation':
                     activities.blood_donation.programmes += 1;
                     activities.blood_donation.volunteers += volunteers;
                     activities.blood_donation.bloodUnits += Number(reportData.bloodUnitsCollected) || 0;
+                    break;
+                case 'tree_plantation':
+                    activities.tree_plantation.programmes += 1;
+                    activities.tree_plantation.volunteers += volunteers;
+                    activities.tree_plantation.saplings += Number(reportData.treesPlanted) || 0;
+                    break;
+                case 'cleanliness_drive':
+                    activities.cleanliness_drive.programmes += 1;
+                    activities.cleanliness_drive.volunteers += volunteers;
+                    activities.cleanliness_drive.beneficiaries += beneficiaries;
+                    break;
+                case 'awareness_programme':
+                    activities.awareness_programme.programmes += 1;
+                    activities.awareness_programme.volunteers += volunteers;
+                    activities.awareness_programme.beneficiaries += beneficiaries;
                     break;
                 case 'health_camps':
                     activities.health_camps.programmes += 1;
@@ -246,11 +309,6 @@ const getUnitPeriodicalReportPrefill = async (req, res) => {
                     activities.road_safety.volunteers += volunteers;
                     activities.road_safety.beneficiaries += beneficiaries;
                     break;
-                case 'tree_plantation':
-                    activities.tree_plantation.programmes += 1;
-                    activities.tree_plantation.volunteers += volunteers;
-                    activities.tree_plantation.saplings += Number(reportData.treesPlanted) || 0;
-                    break;
                 case 'important_days':
                     activities.important_days.programmes += 1;
                     activities.important_days.volunteers += volunteers;
@@ -268,7 +326,6 @@ const getUnitPeriodicalReportPrefill = async (req, res) => {
                     if (!activities.rallies.date) {
                         activities.rallies.date = evt.singleDay ? evt.date : evt.dateFrom;
                     }
-                    // Use explicit rallyDistance field, fall back to regex on description
                     if (reportData.rallyDistance) {
                         activities.rallies.distance += Number(reportData.rallyDistance);
                     } else if (activities.rallies.distance === 0) {
@@ -290,6 +347,51 @@ const getUnitPeriodicalReportPrefill = async (req, res) => {
                                 : guestList;
                         }
                     }
+                    break;
+                case 'conference':
+                    activities.conference.programmes += 1;
+                    activities.conference.volunteers += volunteers;
+                    activities.conference.beneficiaries += beneficiaries;
+                    break;
+                case 'seminar':
+                    activities.seminar.programmes += 1;
+                    activities.seminar.volunteers += volunteers;
+                    activities.seminar.beneficiaries += beneficiaries;
+                    break;
+                case 'workshop':
+                    activities.workshop.programmes += 1;
+                    activities.workshop.volunteers += volunteers;
+                    activities.workshop.beneficiaries += beneficiaries;
+                    break;
+                case 'sports':
+                    activities.sports.programmes += 1;
+                    activities.sports.volunteers += volunteers;
+                    activities.sports.beneficiaries += beneficiaries;
+                    break;
+                case 'cultural':
+                    activities.cultural.programmes += 1;
+                    activities.cultural.volunteers += volunteers;
+                    activities.cultural.beneficiaries += beneficiaries;
+                    break;
+                case 'environmental':
+                    activities.environmental.programmes += 1;
+                    activities.environmental.volunteers += volunteers;
+                    activities.environmental.beneficiaries += beneficiaries;
+                    break;
+                case 'social':
+                    activities.social.programmes += 1;
+                    activities.social.volunteers += volunteers;
+                    activities.social.beneficiaries += beneficiaries;
+                    break;
+                case 'exhibition':
+                    activities.exhibition.programmes += 1;
+                    activities.exhibition.volunteers += volunteers;
+                    activities.exhibition.beneficiaries += beneficiaries;
+                    break;
+                case 'creation_of_assets':
+                    activities.creation_of_assets.programmes += 1;
+                    activities.creation_of_assets.volunteers += volunteers;
+                    activities.creation_of_assets.beneficiaries += beneficiaries;
                     break;
                 default:
                     activities.any_other.programmes += 1;

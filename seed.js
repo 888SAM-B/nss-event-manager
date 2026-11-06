@@ -80,7 +80,7 @@ async function seedDatabase() {
             "Sample Institute of Management",
             "Sample Polytechnic College"
         ];
-        
+
         const colleges = [];
         for (let i = 0; i < 5; i++) {
             const colIndex = i + 1;
@@ -143,7 +143,7 @@ async function seedDatabase() {
         console.log("Seeding 12 Units and Program Officers...");
         const units = [];
         const programOfficers = [];
-        
+
         let unitCounter = 1;
         // Distribution of units: [2, 3, 2, 2, 3] for the 5 colleges
         const unitsPerCollege = [2, 3, 2, 2, 3];
@@ -157,7 +157,7 @@ async function seedDatabase() {
                 const poIndex = unitCounter;
                 const collegeSequence = String(u + 1).padStart(2, '0');
                 const unitNumber = `NSS-${college.code}-${collegeSequence}`;
-                
+
                 // Create Program Officer if not exists
                 let po = await ProgramOfficer.findOne({ email: `po${poIndex}@example.com` });
                 if (!po) {
@@ -251,23 +251,23 @@ async function seedDatabase() {
 
         // 8. Seed 25 Events (with various states, categories, and assignments)
         console.log("Seeding 25 Events...");
-        
+
         const categories = [
             "Special Camp",
-            "Blood Donation", 
-            "Tree Plantation", 
-            "Cleanliness Rally", 
+            "Blood Donation",
+            "Tree Plantation",
+            "Cleanliness Rally",
             "Health & Hygiene Awareness",
-            "Disaster Management Training", 
-            "Digital Literacy Workshop", 
+            "Disaster Management Training",
+            "Digital Literacy Workshop",
             "Road Safety Awareness"
         ];
 
         const venues = [
-            "College Auditorium", 
-            "Campus Ground", 
-            "Adopted Village Square", 
-            "Local Primary School", 
+            "College Auditorium",
+            "Campus Ground",
+            "Adopted Village Square",
+            "Local Primary School",
             "Government Hospital Seminar Room"
         ];
 
@@ -299,7 +299,7 @@ async function seedDatabase() {
             const isExternal = e > 20; // 5 external events (events 21-25)
             const category = categories[e % categories.length];
             const venue = venues[e % venues.length];
-            
+
             // Generate distinct Event Code
             const eventCode = `NSSEVT-${unit.unitNumber}-${String(e).padStart(3, '0')}`;
 
@@ -366,7 +366,7 @@ async function seedDatabase() {
                     // Select 2 volunteers to participate in the external event
                     eventObj.attendees = [unitVolunteers[0]?._id, unitVolunteers[1]?._id].filter(Boolean);
                 }
-                
+
                 if (isCompleted && !isExternal) {
                     // Add Report details
                     eventObj.report = {

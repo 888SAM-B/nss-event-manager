@@ -5,7 +5,7 @@ const insLoginScheme = new mongoose.Schema({
     password: { type: String, default: "" }, // Hashed password
     insName: { type: String, required: true },
     code: { type: String, required: true, unique: true },
-    collegeType: { type: String, enum: ['Funded', 'Self-Financed', 'Self-Financing', 'Funded & Self-Financing', 'Funded + Self-Financing'], default: 'Self-Financing' },
+    collegeType: { type: String, enum: ['Funded', 'Self-Financed', 'Self-Financing', 'Funded & Self-Financing', 'Funded + Self-Financing', 'Government', 'Aided', 'Constituent', 'University Constituent'], default: 'Self-Financing' },
     isRegistered: { type: Boolean, default: false },
     passkey: { type: String, default: "" }, // Hashed passkey
     email: { type: String, default: "" }, // College Email initialized by admin
