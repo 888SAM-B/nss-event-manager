@@ -337,6 +337,27 @@ const AdminDashboard = () => {
     const [deleteError, setDeleteError] = useState("");
     const [isDeleting, setIsDeleting] = useState(false);
 
+    // College Edit & Search States
+    const [editingCollege, setEditingCollege] = useState(null);
+    const [editCollegeForm, setEditCollegeForm] = useState({
+        insName: "",
+        code: "",
+        collegeType: "Self-Financing",
+        email: "",
+        phone: "",
+        website: "",
+        principalName: "",
+        principalEmail: "",
+        principalMobile: "",
+        address: "",
+        district: "",
+        taluk: "",
+        pincode: "",
+        isRegistered: false
+    });
+    const [isUpdatingCollege, setIsUpdatingCollege] = useState(false);
+    const [collegeSearch, setCollegeSearch] = useState("");
+
     // Sidebar & Navigation States
     const [activeTab, setActiveTab] = useState("overview");
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -756,6 +777,59 @@ const AdminDashboard = () => {
         }
     };
 
+    const handleOpenEditCollege = (college) => {
+        setEditingCollege(college);
+        setEditCollegeForm({
+            insName: college.insName || "",
+            code: college.code || "",
+            collegeType: college.collegeType || "Self-Financing",
+            email: college.email || college.collegeDetails?.email || (college.userName && !college.userName.startsWith("temp_") ? college.userName : ""),
+            phone: college.collegeDetails?.phone || "",
+            website: college.collegeDetails?.website || "",
+            principalName: college.principalDetails?.name || "",
+            principalEmail: college.principalDetails?.email || "",
+            principalMobile: college.principalDetails?.mobile || "",
+            address: college.collegeLocation?.address || college.location || "",
+            district: college.collegeLocation?.district || college.district || "",
+            taluk: college.collegeLocation?.taluk || college.taluk || "",
+            pincode: college.collegeLocation?.pincode || college.pincode || "",
+            isRegistered: !!college.isRegistered
+        });
+    };
+
+    const handleSaveCollegeEdit = async (e) => {
+        e.preventDefault();
+        if (!editingCollege) return;
+        setIsUpdatingCollege(true);
+        const toastId = toast.loading("Updating college details...");
+
+        try {
+            const token = localStorage.getItem("adminToken");
+            const res = await axios.put(`${import.meta.env.VITE_API_URL}/admin/update-organization/${editingCollege._id}`, editCollegeForm, {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+
+            if (res.data.success) {
+                toast.dismiss(toastId);
+                toast.success("College details updated successfully!");
+
+                const updated = res.data.college;
+                setStats(prev => ({
+                    ...prev,
+                    colleges: prev.colleges.map(c => c._id === editingCollege._id ? { ...c, ...updated } : c)
+                }));
+
+                setEditingCollege(null);
+            }
+        } catch (err) {
+            console.error("Error updating college:", err);
+            toast.dismiss(toastId);
+            toast.error(err.response?.data?.message || "Failed to update college details");
+        } finally {
+            setIsUpdatingCollege(false);
+        }
+    };
+
 
     const upcomingCount = stats.allEvents?.filter(e => {
         const d = new Date(e.singleDay ? e.date : e.dateFrom);
@@ -1083,72 +1157,184 @@ const AdminDashboard = () => {
                     </div>
                 )}
 
-                {activeTab === "colleges" && (
-                    <div>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', flexWrap: 'wrap', gap: '0.75rem' }}>
-                            <div>
-                                <h2 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 700, color: 'var(--txt-1)' }}>Registered Colleges</h2>
-                                <p style={{ margin: '0.2rem 0 0', color: 'var(--txt-3)', fontSize: '0.78rem' }}>List of all registered colleges and their status</p>
+                {activeTab === "colleges" && (() => {
+                    const filteredColleges = (stats.colleges || []).filter(c => {
+                        if (!collegeSearch.trim()) return true;
+                        const q = collegeSearch.toLowerCase();
+                        const name = (c.insName || "").toLowerCase();
+                        const code = (c.code || "").toLowerCase();
+                        const type = (c.collegeType || "").toLowerCase();
+                        const email = (c.email || c.collegeDetails?.email || "").toLowerCase();
+                        const dist = (c.collegeLocation?.district || c.district || "").toLowerCase();
+                        return name.includes(q) || code.includes(q) || type.includes(q) || email.includes(q) || dist.includes(q);
+                    });
+
+                    return (
+                        <div>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', flexWrap: 'wrap', gap: '0.75rem' }}>
+                                <div>
+                                    <h2 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 700, color: 'var(--txt-1)' }}>Registered Colleges</h2>
+                                    <p style={{ margin: '0.2rem 0 0', color: 'var(--txt-3)', fontSize: '0.78rem' }}>List of all registered colleges, contact details, and their status</p>
+                                </div>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                                    {userRole === 'admin' && (
+                                        <button className="btn btn-primary btn-sm" onClick={handleAddOrg}>+ Register College</button>
+                                    )}
+                                    <span style={{ fontSize: '0.72rem', fontWeight: 600, background: 'var(--brand-50)', color: 'var(--brand-700)', border: '1px solid var(--brand-200)', padding: '0.25rem 0.625rem', borderRadius: '3px' }}>
+                                        {filteredColleges.length} of {stats.colleges.length} colleges
+                                    </span>
+                                </div>
                             </div>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                                {userRole === 'admin' && (
-                                    <button className="btn btn-primary btn-sm" onClick={handleAddOrg}>+ Register College</button>
-                                )}
-                                <span style={{ fontSize: '0.72rem', fontWeight: 600, background: 'var(--brand-50)', color: 'var(--brand-700)', border: '1px solid var(--brand-200)', padding: '0.25rem 0.625rem', borderRadius: '3px' }}>{stats.colleges.length} colleges</span>
+
+                            {/* Search Bar */}
+                            <div style={{ marginBottom: '1rem', display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
+                                <div style={{ position: 'relative', flex: 1, maxWidth: '400px' }}>
+                                    <input
+                                        type="text"
+                                        className="form-input"
+                                        placeholder="Search by name, code, type, email, district..."
+                                        value={collegeSearch}
+                                        onChange={(e) => setCollegeSearch(e.target.value)}
+                                        style={{ fontSize: '0.8rem', padding: '0.45rem 0.75rem 0.45rem 2.2rem', width: '100%' }}
+                                    />
+                                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
+                                        style={{ position: 'absolute', left: '0.75rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--txt-3)' }}>
+                                        <circle cx="11" cy="11" r="8"></circle>
+                                        <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                                    </svg>
+                                    {collegeSearch && (
+                                        <button
+                                            type="button"
+                                            onClick={() => setCollegeSearch("")}
+                                            style={{ position: 'absolute', right: '0.65rem', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', color: 'var(--txt-3)', cursor: 'pointer', fontSize: '0.85rem' }}
+                                        >✕</button>
+                                    )}
+                                </div>
                             </div>
-                        </div>
-                        <div style={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: '0.5rem', overflow: 'hidden' }}>
-                            <div style={{ overflowX: 'auto' }}>
-                                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.8125rem' }}>
-                                    <thead>
-                                        <tr style={{ background: 'var(--bg-2)', borderBottom: '1px solid var(--border)' }}>
-                                            {['Code', 'Institution Name', 'Status', 'Units', 'Activities', userRole === 'admin' ? 'Actions' : ''].map(h => (
-                                                h && <th key={h} style={{ padding: '0.625rem 0.875rem', textAlign: h === 'Actions' ? 'right' : 'left', fontSize: '0.675rem', fontWeight: 700, color: 'var(--txt-3)', textTransform: 'uppercase', letterSpacing: '0.07em', whiteSpace: 'nowrap' }}>{h}</th>
-                                            ))}
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {stats.colleges.map((college, i) => (
-                                            <tr key={college._id}
-                                                style={{ borderBottom: '1px solid var(--border)', cursor: 'default', background: i % 2 === 0 ? 'transparent' : 'var(--bg)' }}
-                                                onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-2)'}
-                                                onMouseLeave={e => e.currentTarget.style.background = i % 2 === 0 ? 'transparent' : 'var(--bg)'}
-                                            >
-                                                <td style={{ padding: '0.625rem 0.875rem' }}>
-                                                    <span style={{ fontFamily: 'var(--font-mono)', fontSize: '0.7rem', background: 'var(--brand-50)', color: 'var(--brand-700)', border: '1px solid var(--brand-200)', padding: '0.15rem 0.4rem', borderRadius: '3px' }}>{college.code}</span>
-                                                </td>
-                                                <td style={{ padding: '0.625rem 0.875rem', fontWeight: 600, color: 'var(--txt-1)' }}>{college.insName}</td>
-                                                <td style={{ padding: '0.625rem 0.875rem' }}>
-                                                    {college.isRegistered ? (
-                                                        <span style={{ fontSize: '0.65rem', fontWeight: 700, padding: '0.15rem 0.5rem', borderRadius: '9999px', background: 'var(--badge-success-bg)', color: 'var(--badge-success-clr)' }}>Done</span>
-                                                    ) : (
-                                                        <span style={{ fontSize: '0.65rem', fontWeight: 700, padding: '0.15rem 0.5rem', borderRadius: '9999px', background: 'var(--badge-secondary-bg)', color: 'var(--badge-secondary-clr)' }}>Pending</span>
-                                                    )}
-                                                </td>
-                                                <td style={{ padding: '0.625rem 0.875rem' }}>
-                                                    <span style={{ fontWeight: 700, color: 'var(--brand-600)', fontSize: '0.875rem' }}>{college.units.length}</span>
-                                                </td>
-                                                <td style={{ padding: '0.625rem 0.875rem' }}>
-                                                    <span style={{ fontWeight: 700, color: 'var(--success-600)', fontSize: '0.875rem' }}>{college.events.length}</span>
-                                                </td>
-                                                {userRole === 'admin' ? (
-                                                    <td style={{ padding: '0.625rem 0.875rem', textAlign: 'right', display: 'flex', justifyContent: 'flex-end', gap: '0.5rem', alignItems: 'center' }}>
-                                                        <button style={{ fontSize: '0.72rem', fontWeight: 600, padding: '0.3rem 0.625rem', borderRadius: '4px', border: '1px solid var(--danger-400)', background: 'var(--danger-50)', color: 'var(--danger-600)', cursor: 'pointer' }}
-                                                            onClick={e => { e.stopPropagation(); setCollegeToDelete(college); }}
-                                                        >Remove</button>
-                                                    </td>
-                                                ) : (
-                                                    <td style={{ padding: '0.625rem 0.875rem', textAlign: 'right' }}>
-                                                    </td>
-                                                )}
+
+                            <div style={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: '0.5rem', overflow: 'hidden' }}>
+                                <div style={{ overflowX: 'auto' }}>
+                                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.8125rem' }}>
+                                        <thead>
+                                            <tr style={{ background: 'var(--bg-2)', borderBottom: '1px solid var(--border)' }}>
+                                                {['Code', 'Institution Name', 'Type', 'Email(s)', 'Status', 'Units', 'Activities', userRole === 'admin' ? 'Actions' : ''].map(h => (
+                                                    h && <th key={h} style={{ padding: '0.625rem 0.875rem', textAlign: h === 'Actions' ? 'right' : 'left', fontSize: '0.675rem', fontWeight: 700, color: 'var(--txt-3)', textTransform: 'uppercase', letterSpacing: '0.07em', whiteSpace: 'nowrap' }}>{h}</th>
+                                                ))}
                                             </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
+                                        </thead>
+                                        <tbody>
+                                            {filteredColleges.length === 0 ? (
+                                                <tr>
+                                                    <td colSpan={userRole === 'admin' ? 8 : 7} style={{ padding: '2rem', textAlign: 'center', color: 'var(--txt-3)' }}>
+                                                        No colleges found matching "{collegeSearch}".
+                                                    </td>
+                                                </tr>
+                                            ) : (
+                                                filteredColleges.map((college, i) => (
+                                                    <tr key={college._id}
+                                                        style={{ borderBottom: '1px solid var(--border)', cursor: 'default', background: i % 2 === 0 ? 'transparent' : 'var(--bg)' }}
+                                                        onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-2)'}
+                                                        onMouseLeave={e => e.currentTarget.style.background = i % 2 === 0 ? 'transparent' : 'var(--bg)'}
+                                                    >
+                                                        <td style={{ padding: '0.625rem 0.875rem', whiteSpace: 'nowrap' }}>
+                                                            <span style={{ fontFamily: 'var(--font-mono)', fontSize: '0.72rem', fontWeight: 700, background: 'var(--brand-50)', color: 'var(--brand-700)', border: '1px solid var(--brand-200)', padding: '0.15rem 0.45rem', borderRadius: '3px' }}>
+                                                                {college.code}
+                                                            </span>
+                                                        </td>
+                                                        <td style={{ padding: '0.625rem 0.875rem', fontWeight: 600, color: 'var(--txt-1)' }}>
+                                                            <div>{college.insName}</div>
+                                                            {(college.district || college.collegeLocation?.district) && (
+                                                                <div style={{ fontSize: '0.7rem', color: 'var(--txt-3)', fontWeight: 400, marginTop: '2px' }}>
+                                                                    📍 {college.district || college.collegeLocation?.district}
+                                                                </div>
+                                                            )}
+                                                        </td>
+                                                        <td style={{ padding: '0.625rem 0.875rem', whiteSpace: 'nowrap' }}>
+                                                            <span style={{ fontSize: '0.68rem', fontWeight: 600, padding: '0.15rem 0.45rem', borderRadius: '4px', background: 'var(--bg-2)', color: 'var(--txt-2)', border: '1px solid var(--border)' }}>
+                                                                {college.collegeType || 'Self-Financing'}
+                                                            </span>
+                                                        </td>
+                                                        <td style={{ padding: '0.625rem 0.875rem', maxWidth: '240px' }}>
+                                                            {college.email || college.collegeDetails?.email ? (
+                                                                <div style={{ fontSize: '0.72rem', color: 'var(--txt-1)', wordBreak: 'break-word', lineHeight: 1.35 }} title={college.email || college.collegeDetails?.email}>
+                                                                    {college.email || college.collegeDetails?.email}
+                                                                </div>
+                                                            ) : (
+                                                                <span style={{ fontSize: '0.7rem', color: 'var(--danger-500)', fontStyle: 'italic' }}>
+                                                                    No email configured
+                                                                </span>
+                                                            )}
+                                                        </td>
+                                                        <td style={{ padding: '0.625rem 0.875rem', whiteSpace: 'nowrap' }}>
+                                                            {college.isRegistered ? (
+                                                                <span style={{ fontSize: '0.65rem', fontWeight: 700, padding: '0.15rem 0.5rem', borderRadius: '9999px', background: 'var(--badge-success-bg)', color: 'var(--badge-success-clr)' }}>Done</span>
+                                                            ) : (
+                                                                <span style={{ fontSize: '0.65rem', fontWeight: 700, padding: '0.15rem 0.5rem', borderRadius: '9999px', background: 'var(--badge-secondary-bg)', color: 'var(--badge-secondary-clr)' }}>Pending</span>
+                                                            )}
+                                                        </td>
+                                                        <td style={{ padding: '0.625rem 0.875rem' }}>
+                                                            <span style={{ fontWeight: 700, color: 'var(--brand-600)', fontSize: '0.875rem' }}>{college.units?.length || 0}</span>
+                                                        </td>
+                                                        <td style={{ padding: '0.625rem 0.875rem' }}>
+                                                            <span style={{ fontWeight: 700, color: 'var(--success-600)', fontSize: '0.875rem' }}>{college.events?.length || 0}</span>
+                                                        </td>
+                                                        {userRole === 'admin' ? (
+                                                            <td style={{ padding: '0.625rem 0.875rem', textAlign: 'right', whiteSpace: 'nowrap' }}>
+                                                                <div style={{ display: 'inline-flex', gap: '0.4rem', alignItems: 'center' }}>
+                                                                    <button
+                                                                        type="button"
+                                                                        style={{
+                                                                            fontSize: '0.72rem',
+                                                                            fontWeight: 600,
+                                                                            padding: '0.3rem 0.6rem',
+                                                                            borderRadius: '4px',
+                                                                            border: '1px solid var(--brand-300)',
+                                                                            background: 'var(--brand-50)',
+                                                                            color: 'var(--brand-700)',
+                                                                            cursor: 'pointer',
+                                                                            display: 'inline-flex',
+                                                                            alignItems: 'center',
+                                                                            gap: '0.25rem'
+                                                                        }}
+                                                                        onClick={(e) => { e.stopPropagation(); handleOpenEditCollege(college); }}
+                                                                        title="Edit College Information"
+                                                                    >
+                                                                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+                                                                        Edit
+                                                                    </button>
+                                                                    <button
+                                                                        type="button"
+                                                                        style={{
+                                                                            fontSize: '0.72rem',
+                                                                            fontWeight: 600,
+                                                                            padding: '0.3rem 0.6rem',
+                                                                            borderRadius: '4px',
+                                                                            border: '1px solid var(--danger-400)',
+                                                                            background: 'var(--danger-50)',
+                                                                            color: 'var(--danger-600)',
+                                                                            cursor: 'pointer'
+                                                                        }}
+                                                                        onClick={e => { e.stopPropagation(); setCollegeToDelete(college); }}
+                                                                        title="Remove College"
+                                                                    >
+                                                                        Remove
+                                                                    </button>
+                                                                </div>
+                                                            </td>
+                                                        ) : (
+                                                            <td style={{ padding: '0.625rem 0.875rem', textAlign: 'right' }}>
+                                                            </td>
+                                                        )}
+                                                    </tr>
+                                                ))
+                                            )}
+                                        </tbody>
+                                    </table>
+                                </div>
                             </div>
                         </div>
-                    </div>
-                )}
+                    );
+                })()}
 
                 {activeTab === "events" && (
                     <div>
@@ -1512,6 +1698,258 @@ const AdminDashboard = () => {
                                 </button>
                                 <button type="submit" className="btn btn-danger" disabled={isDeleting}>
                                     {isDeleting ? <span className="flex-center" style={{ gap: '0.5rem' }}><span className="loading" />Deleting...</span> : 'Confirm Delete'}
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
+
+            {/* Edit College Modal */}
+            {editingCollege && (
+                <div className="modal-overlay" onClick={() => setEditingCollege(null)}>
+                    <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 640, width: '95%', maxHeight: '90vh', overflowY: 'auto' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border)', paddingBottom: '0.875rem', marginBottom: '1.25rem' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem' }}>
+                                <div style={{
+                                    width: 36, height: 36, borderRadius: '8px',
+                                    background: 'var(--brand-50)', color: 'var(--brand-600)',
+                                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                    border: '1px solid var(--brand-200)'
+                                }}>
+                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+                                </div>
+                                <div>
+                                    <h3 style={{ margin: 0, fontSize: '1.15rem', fontWeight: 700, color: 'var(--txt-1)' }}>Edit College Details</h3>
+                                    <span style={{ fontSize: '0.75rem', color: 'var(--txt-3)' }}>Editing Code: <strong style={{ color: 'var(--brand-600)' }}>{editingCollege.code}</strong></span>
+                                </div>
+                            </div>
+                            <button
+                                type="button"
+                                onClick={() => setEditingCollege(null)}
+                                style={{ background: 'none', border: 'none', fontSize: '1.25rem', color: 'var(--txt-3)', cursor: 'pointer', padding: '0.25rem' }}
+                            >✕</button>
+                        </div>
+
+                        <form onSubmit={handleSaveCollegeEdit}>
+                            {/* Section 1: Institution Details */}
+                            <div style={{ marginBottom: '1.25rem' }}>
+                                <div style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--brand-600)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '0.75rem' }}>
+                                    1. Institution Identity
+                                </div>
+                                <div className="form-group" style={{ marginBottom: '0.875rem' }}>
+                                    <label className="form-label">College / Institution Name *</label>
+                                    <input
+                                        type="text"
+                                        className="form-input"
+                                        value={editCollegeForm.insName}
+                                        onChange={(e) => setEditCollegeForm({ ...editCollegeForm, insName: e.target.value })}
+                                        required
+                                        placeholder="e.g. Government Arts and Science College"
+                                    />
+                                </div>
+
+                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.875rem' }}>
+                                    <div className="form-group">
+                                        <label className="form-label">College Code *</label>
+                                        <input
+                                            type="text"
+                                            className="form-input"
+                                            value={editCollegeForm.code}
+                                            onChange={(e) => setEditCollegeForm({ ...editCollegeForm, code: e.target.value.trim().toUpperCase() })}
+                                            required
+                                            placeholder="e.g. C101"
+                                        />
+                                        <small style={{ fontSize: '0.7rem', color: 'var(--txt-3)', marginTop: '2px', display: 'block' }}>
+                                            Unique identifier in university registry
+                                        </small>
+                                    </div>
+
+                                    <div className="form-group">
+                                        <label className="form-label">College / Funding Type *</label>
+                                        <select
+                                            className="form-input"
+                                            value={editCollegeForm.collegeType}
+                                            onChange={(e) => setEditCollegeForm({ ...editCollegeForm, collegeType: e.target.value })}
+                                            required
+                                        >
+                                            <option value="Self-Financing">Self-Financing</option>
+                                            <option value="Funded">Funded</option>
+                                            <option value="Funded & Self-Financing">Funded & Self-Financing</option>
+                                            <option value="Government">Government</option>
+                                            <option value="Aided">Aided</option>
+                                            <option value="Constituent">Constituent</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Section 2: Emails & Official Contacts */}
+                            <div style={{ marginBottom: '1.25rem', paddingTop: '1rem', borderTop: '1px solid var(--border)' }}>
+                                <div style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--brand-600)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '0.75rem' }}>
+                                    2. Email & Official Contacts
+                                </div>
+                                <div className="form-group" style={{ marginBottom: '0.875rem' }}>
+                                    <label className="form-label">College Email(s) (Comma-separated for multiple) *</label>
+                                    <textarea
+                                        className="form-input"
+                                        rows="2"
+                                        value={editCollegeForm.email}
+                                        onChange={(e) => setEditCollegeForm({ ...editCollegeForm, email: e.target.value })}
+                                        placeholder="principal@college.edu, nss@college.edu, admin@college.edu"
+                                        required
+                                        style={{ fontSize: '0.8125rem', lineHeight: 1.4 }}
+                                    />
+                                    <small style={{ fontSize: '0.72rem', color: 'var(--txt-3)', marginTop: '4px', display: 'block' }}>
+                                        💡 Multiple comma-separated emails supported. Verification OTPs and notices will be sent to all listed emails.
+                                    </small>
+                                </div>
+
+                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.875rem' }}>
+                                    <div className="form-group">
+                                        <label className="form-label">College Phone / Landline</label>
+                                        <input
+                                            type="text"
+                                            className="form-input"
+                                            value={editCollegeForm.phone}
+                                            onChange={(e) => setEditCollegeForm({ ...editCollegeForm, phone: e.target.value })}
+                                            placeholder="e.g. 0427-2345678"
+                                        />
+                                    </div>
+                                    <div className="form-group">
+                                        <label className="form-label">Official Website</label>
+                                        <input
+                                            type="text"
+                                            className="form-input"
+                                            value={editCollegeForm.website}
+                                            onChange={(e) => setEditCollegeForm({ ...editCollegeForm, website: e.target.value })}
+                                            placeholder="e.g. https://college.edu"
+                                        />
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Section 3: Principal / Head Details */}
+                            <div style={{ marginBottom: '1.25rem', paddingTop: '1rem', borderTop: '1px solid var(--border)' }}>
+                                <div style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--brand-600)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '0.75rem' }}>
+                                    3. Principal / Head of Institution
+                                </div>
+                                <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr 1fr', gap: '0.75rem' }}>
+                                    <div className="form-group">
+                                        <label className="form-label">Principal Name</label>
+                                        <input
+                                            type="text"
+                                            className="form-input"
+                                            value={editCollegeForm.principalName}
+                                            onChange={(e) => setEditCollegeForm({ ...editCollegeForm, principalName: e.target.value })}
+                                            placeholder="e.g. Dr. A. Sharma"
+                                        />
+                                    </div>
+                                    <div className="form-group">
+                                        <label className="form-label">Principal Email</label>
+                                        <input
+                                            type="email"
+                                            className="form-input"
+                                            value={editCollegeForm.principalEmail}
+                                            onChange={(e) => setEditCollegeForm({ ...editCollegeForm, principalEmail: e.target.value })}
+                                            placeholder="principal@college.edu"
+                                        />
+                                    </div>
+                                    <div className="form-group">
+                                        <label className="form-label">Principal Mobile</label>
+                                        <input
+                                            type="text"
+                                            className="form-input"
+                                            value={editCollegeForm.principalMobile}
+                                            onChange={(e) => setEditCollegeForm({ ...editCollegeForm, principalMobile: e.target.value })}
+                                            placeholder="e.g. 9876543210"
+                                        />
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Section 4: Location & Status */}
+                            <div style={{ marginBottom: '1.25rem', paddingTop: '1rem', borderTop: '1px solid var(--border)' }}>
+                                <div style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--brand-600)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '0.75rem' }}>
+                                    4. Location & Registration Status
+                                </div>
+                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '0.75rem', marginBottom: '0.75rem' }}>
+                                    <div className="form-group">
+                                        <label className="form-label">District</label>
+                                        <input
+                                            type="text"
+                                            className="form-input"
+                                            value={editCollegeForm.district}
+                                            onChange={(e) => setEditCollegeForm({ ...editCollegeForm, district: e.target.value })}
+                                            placeholder="e.g. Salem"
+                                        />
+                                    </div>
+                                    <div className="form-group">
+                                        <label className="form-label">Taluk</label>
+                                        <input
+                                            type="text"
+                                            className="form-input"
+                                            value={editCollegeForm.taluk}
+                                            onChange={(e) => setEditCollegeForm({ ...editCollegeForm, taluk: e.target.value })}
+                                            placeholder="e.g. Omalur"
+                                        />
+                                    </div>
+                                    <div className="form-group">
+                                        <label className="form-label">Pincode</label>
+                                        <input
+                                            type="text"
+                                            className="form-input"
+                                            value={editCollegeForm.pincode}
+                                            onChange={(e) => setEditCollegeForm({ ...editCollegeForm, pincode: e.target.value })}
+                                            placeholder="e.g. 636011"
+                                        />
+                                    </div>
+                                </div>
+
+                                <div className="form-group" style={{ marginBottom: '0.875rem' }}>
+                                    <label className="form-label">Campus Address</label>
+                                    <input
+                                        type="text"
+                                        className="form-input"
+                                        value={editCollegeForm.address}
+                                        onChange={(e) => setEditCollegeForm({ ...editCollegeForm, address: e.target.value })}
+                                        placeholder="e.g. NH-44, Bangalore Highway, Salem"
+                                    />
+                                </div>
+
+                                <div className="form-group">
+                                    <label className="form-label">Registration Status</label>
+                                    <select
+                                        className="form-input"
+                                        value={editCollegeForm.isRegistered ? "true" : "false"}
+                                        onChange={(e) => setEditCollegeForm({ ...editCollegeForm, isRegistered: e.target.value === "true" })}
+                                    >
+                                        <option value="true">Registered / Active (Onboarding Completed)</option>
+                                        <option value="false">Pending Registration (Shell Created)</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            {/* Modal Action Buttons */}
+                            <div className="flex-between" style={{ paddingTop: '1rem', borderTop: '1px solid var(--border)' }}>
+                                <button
+                                    type="button"
+                                    className="btn btn-secondary"
+                                    onClick={() => setEditingCollege(null)}
+                                    disabled={isUpdatingCollege}
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    type="submit"
+                                    className="btn btn-primary"
+                                    disabled={isUpdatingCollege}
+                                >
+                                    {isUpdatingCollege ? (
+                                        <span className="flex-center" style={{ gap: '0.5rem' }}>
+                                            <span className="loading" /> Saving Changes...
+                                        </span>
+                                    ) : "Save Changes"}
                                 </button>
                             </div>
                         </form>

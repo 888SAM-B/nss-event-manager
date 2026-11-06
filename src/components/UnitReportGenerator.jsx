@@ -5,6 +5,60 @@ import * as XLSX from 'xlsx';
 import { jsPDF } from 'jspdf';
 import html2canvas from 'html2canvas';
 
+const unitActivitiesConfig = [
+    { key: "special_camp", label: "Special Camp", beneficiaryField: "beneficiaries", beneficiaryLabel: "No of Beneficiaries *" },
+    { key: "blood_donation", label: "Blood Donation Camps", beneficiaryField: "bloodUnits", beneficiaryLabel: "No of Units of Blood Donated *" },
+    { key: "tree_plantation", label: "Tree Plantation", beneficiaryField: "saplings", beneficiaryLabel: "No of Saplings Planted *" },
+    { key: "cleanliness_drive", label: "Cleanliness Drive", beneficiaryField: "beneficiaries", beneficiaryLabel: "No of Beneficiaries *" },
+    { key: "awareness_programme", label: "Awareness Programmes", beneficiaryField: "beneficiaries", beneficiaryLabel: "No of Beneficiaries *" },
+    { key: "health_camps", label: "Health Camps / Health Care", beneficiaryField: "beneficiaries", beneficiaryLabel: "No of Beneficiaries *" },
+    { key: "anti_drug", label: "Anti Drug Camps", beneficiaryField: "beneficiaries", beneficiaryLabel: "No of Beneficiaries *" },
+    { key: "voter_sir", label: "Voters Awareness SIR", beneficiaryField: "beneficiaries", beneficiaryLabel: "No of Beneficiaries *" },
+    { key: "voter_sveep", label: "Voters Awareness SVEEP", beneficiaryField: "beneficiaries", beneficiaryLabel: "No of Beneficiaries *" },
+    { key: "road_safety", label: "Road Safety Awareness", beneficiaryField: "beneficiaries", beneficiaryLabel: "No of Beneficiaries *" },
+    { key: "rallies", label: "Rallies conducted", isRally: true },
+    { key: "important_days", label: "Important Days Celebrations", isImportantDay: true },
+    { key: "pledge", label: "Pledges Taken", isPledge: true },
+    { key: "hosted_meetings", label: "Hosted Meetings", isHostedMeeting: true },
+    { key: "conference", label: "Conferences", beneficiaryField: "beneficiaries", beneficiaryLabel: "No of Beneficiaries *" },
+    { key: "seminar", label: "Seminars", beneficiaryField: "beneficiaries", beneficiaryLabel: "No of Beneficiaries *" },
+    { key: "workshop", label: "Workshops", beneficiaryField: "beneficiaries", beneficiaryLabel: "No of Beneficiaries *" },
+    { key: "sports", label: "Sports Events", beneficiaryField: "beneficiaries", beneficiaryLabel: "No of Beneficiaries *" },
+    { key: "cultural", label: "Cultural Programmes", beneficiaryField: "beneficiaries", beneficiaryLabel: "No of Beneficiaries *" },
+    { key: "environmental", label: "Environmental Activities", beneficiaryField: "beneficiaries", beneficiaryLabel: "No of Beneficiaries *" },
+    { key: "social", label: "Social Service", beneficiaryField: "beneficiaries", beneficiaryLabel: "No of Beneficiaries *" },
+    { key: "exhibition", label: "Exhibitions", beneficiaryField: "beneficiaries", beneficiaryLabel: "No of Beneficiaries *" },
+    { key: "creation_of_assets", label: "Creation of Assets", beneficiaryField: "beneficiaries", beneficiaryLabel: "No of Beneficiaries *" },
+    { key: "any_other", label: "Any Other Programmes", isAnyOther: true }
+];
+
+const defaultActivities = {
+    special_camp: { programmes: 0, volunteers: 0, beneficiaries: 0 },
+    blood_donation: { programmes: 0, volunteers: 0, bloodUnits: 0 },
+    tree_plantation: { programmes: 0, volunteers: 0, saplings: 0 },
+    cleanliness_drive: { programmes: 0, volunteers: 0, beneficiaries: 0 },
+    awareness_programme: { programmes: 0, volunteers: 0, beneficiaries: 0 },
+    health_camps: { programmes: 0, volunteers: 0, beneficiaries: 0 },
+    anti_drug: { programmes: 0, volunteers: 0, beneficiaries: 0 },
+    voter_sir: { programmes: 0, volunteers: 0, beneficiaries: 0 },
+    voter_sveep: { programmes: 0, volunteers: 0, beneficiaries: 0 },
+    road_safety: { programmes: 0, volunteers: 0, beneficiaries: 0 },
+    rallies: { programmes: 0, volunteers: 0, date: "", distance: 0 },
+    important_days: { programmes: 0, volunteers: 0, date: "" },
+    pledge: { programmes: 0, volunteers: 0 },
+    hosted_meetings: { programmes: 0, guestName: "", volunteers: 0, beneficiaries: 0 },
+    conference: { programmes: 0, volunteers: 0, beneficiaries: 0 },
+    seminar: { programmes: 0, volunteers: 0, beneficiaries: 0 },
+    workshop: { programmes: 0, volunteers: 0, beneficiaries: 0 },
+    sports: { programmes: 0, volunteers: 0, beneficiaries: 0 },
+    cultural: { programmes: 0, volunteers: 0, beneficiaries: 0 },
+    environmental: { programmes: 0, volunteers: 0, beneficiaries: 0 },
+    social: { programmes: 0, volunteers: 0, beneficiaries: 0 },
+    exhibition: { programmes: 0, volunteers: 0, beneficiaries: 0 },
+    creation_of_assets: { programmes: 0, volunteers: 0, beneficiaries: 0 },
+    any_other: { programmes: 0, colleges: 0, volunteers: 0, beneficiaries: 0, remarks: "" }
+};
+
 const UnitReportGenerator = ({ unit, college }) => {
     const [reportType, setReportType] = useState('Monthly');
     const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1); // 1-12
@@ -19,20 +73,7 @@ const UnitReportGenerator = ({ unit, college }) => {
     const [poEmail, setPoEmail] = useState('');
     const [district, setDistrict] = useState('');
 
-    const [activities, setActivities] = useState({
-        blood_donation: { programmes: 0, volunteers: 0, bloodUnits: 0 },
-        health_camps: { programmes: 0, volunteers: 0, beneficiaries: 0 },
-        anti_drug: { programmes: 0, volunteers: 0, beneficiaries: 0 },
-        voter_sir: { programmes: 0, volunteers: 0, beneficiaries: 0 },
-        voter_sveep: { programmes: 0, volunteers: 0, beneficiaries: 0 },
-        road_safety: { programmes: 0, volunteers: 0, beneficiaries: 0 },
-        tree_plantation: { programmes: 0, volunteers: 0, saplings: 0 },
-        important_days: { programmes: 0, volunteers: 0, date: "" },
-        pledge: { programmes: 0, volunteers: 0 },
-        rallies: { programmes: 0, volunteers: 0, date: "", distance: 0 },
-        hosted_meetings: { programmes: 0, guestName: "", volunteers: 0, beneficiaries: 0 },
-        any_other: { programmes: 0, colleges: 0, volunteers: 0, beneficiaries: 0, remarks: "" }
-    });
+    const [activities, setActivities] = useState(defaultActivities);
 
     const [socialMedia, setSocialMedia] = useState({
         instagram: '',
@@ -160,7 +201,15 @@ const UnitReportGenerator = ({ unit, college }) => {
             });
 
             if (res.data.success) {
-                setActivities(res.data.activities);
+                const merged = { ...defaultActivities };
+                if (res.data.activities) {
+                    Object.keys(defaultActivities).forEach(k => {
+                        if (res.data.activities[k]) {
+                            merged[k] = { ...defaultActivities[k], ...res.data.activities[k] };
+                        }
+                    });
+                }
+                setActivities(merged);
                 toast.success("Aggregated event data pre-filled successfully!");
             }
         } catch (error) {
@@ -176,7 +225,7 @@ const UnitReportGenerator = ({ unit, college }) => {
         setActivities(prev => ({
             ...prev,
             [category]: {
-                ...prev[category],
+                ...(prev[category] || defaultActivities[category] || {}),
                 [field]: parsedValue
             }
         }));
@@ -243,7 +292,16 @@ const UnitReportGenerator = ({ unit, college }) => {
         setPoMobile(rep.poDetails?.mobile || '');
         setPoEmail(rep.poDetails?.email || '');
         setDistrict(rep.collegeDetails?.district || '');
-        setActivities(rep.activities);
+
+        const merged = { ...defaultActivities };
+        if (rep.activities) {
+            Object.keys(defaultActivities).forEach(k => {
+                if (rep.activities[k]) {
+                    merged[k] = { ...defaultActivities[k], ...rep.activities[k] };
+                }
+            });
+        }
+        setActivities(merged);
         setSocialMedia(rep.socialMedia || {
             instagram: '',
             facebook: '',
@@ -276,59 +334,38 @@ const UnitReportGenerator = ({ unit, college }) => {
     };
 
     const exportToExcel = (reportData) => {
-        const act = reportData.activities;
-        const rowData = [
-            { Category: "1. Blood Donation Camps", Detail: "No of Programmes Conducted", Value: act.blood_donation.programmes },
-            { Category: "1. Blood Donation Camps", Detail: "Number of Volunteers Participated", Value: act.blood_donation.volunteers },
-            { Category: "1. Blood Donation Camps", Detail: "No of Units of Blood Donated", Value: act.blood_donation.bloodUnits },
+        const act = reportData.activities || {};
+        const rowData = [];
 
-            { Category: "2. Health Camps", Detail: "No of Programmes Conducted", Value: act.health_camps.programmes },
-            { Category: "2. Health Camps", Detail: "Number of Volunteers Participated", Value: act.health_camps.volunteers },
-            { Category: "2. Health Camps", Detail: "No of Beneficiaries", Value: act.health_camps.beneficiaries },
+        unitActivitiesConfig.forEach((cfg, idx) => {
+            const item = act[cfg.key] || {};
+            const prefix = `${idx + 1}. ${cfg.label}`;
 
-            { Category: "3. Anti Drug Camps", Detail: "No of Programmes Conducted", Value: act.anti_drug.programmes },
-            { Category: "3. Anti Drug Camps", Detail: "Number of Volunteers Participated", Value: act.anti_drug.volunteers },
-            { Category: "3. Anti Drug Camps", Detail: "No of Beneficiaries", Value: act.anti_drug.beneficiaries },
+            rowData.push({ Category: prefix, Detail: "No of Programmes Conducted", Value: item.programmes || 0 });
 
-            { Category: "4. Voters Awareness SIR", Detail: "No of Programmes Conducted", Value: act.voter_sir.programmes },
-            { Category: "4. Voters Awareness SIR", Detail: "Number of Volunteers Participated", Value: act.voter_sir.volunteers },
-            { Category: "4. Voters Awareness SIR", Detail: "No of Beneficiaries", Value: act.voter_sir.beneficiaries },
+            if (cfg.isHostedMeeting) {
+                rowData.push({ Category: prefix, Detail: "Guest Name", Value: item.guestName || "" });
+            }
+            if (cfg.isAnyOther) {
+                rowData.push({ Category: prefix, Detail: "No of Colleges Participated", Value: item.colleges || 0 });
+            }
 
-            { Category: "5. Voters Awareness SVEEP", Detail: "No of Programmes Conducted", Value: act.voter_sveep.programmes },
-            { Category: "5. Voters Awareness SVEEP", Detail: "Number of Volunteers Participated", Value: act.voter_sveep.volunteers },
-            { Category: "5. Voters Awareness SVEEP", Detail: "No of Beneficiaries", Value: act.voter_sveep.beneficiaries },
+            rowData.push({ Category: prefix, Detail: "Number of Volunteers Participated", Value: item.volunteers || 0 });
 
-            { Category: "6. Road Safety", Detail: "No of Programmes Conducted", Value: act.road_safety.programmes },
-            { Category: "6. Road Safety", Detail: "Number of Volunteers Participated", Value: act.road_safety.volunteers },
-            { Category: "6. Road Safety", Detail: "No of Beneficiaries", Value: act.road_safety.beneficiaries },
-
-            { Category: "7. Tree Plantation", Detail: "No of Programmes Conducted", Value: act.tree_plantation.programmes },
-            { Category: "7. Tree Plantation", Detail: "Number of Volunteers Participated", Value: act.tree_plantation.volunteers },
-            { Category: "7. Tree Plantation", Detail: "No of Saplings Planted", Value: act.tree_plantation.saplings },
-
-            { Category: "8. Important Days Celebrations", Detail: "No of Programmes Conducted", Value: act.important_days.programmes },
-            { Category: "8. Important Days Celebrations", Detail: "Number of Volunteers Participated", Value: act.important_days.volunteers },
-            { Category: "8. Important Days Celebrations", Detail: "Date of Conduct", Value: act.important_days.date },
-
-            { Category: "9. Pledge taken", Detail: "No of Programmes Conducted", Value: act.pledge.programmes },
-            { Category: "9. Pledge taken", Detail: "Number of Volunteers Participated", Value: act.pledge.volunteers },
-
-            { Category: "10. Rallies", Detail: "No of Programmes Conducted", Value: act.rallies.programmes },
-            { Category: "10. Rallies", Detail: "Number of Volunteers Participated", Value: act.rallies.volunteers },
-            { Category: "10. Rallies", Detail: "Date of Conduct", Value: act.rallies.date },
-            { Category: "10. Rallies", Detail: "Distance Covered (KM)", Value: act.rallies.distance },
-
-            { Category: "11. Hosted Meetings", Detail: "No of Programmes Conducted", Value: act.hosted_meetings.programmes },
-            { Category: "11. Hosted Meetings", Detail: "Guest Name", Value: act.hosted_meetings.guestName },
-            { Category: "11. Hosted Meetings", Detail: "Number of Volunteers Participated", Value: act.hosted_meetings.volunteers },
-            { Category: "11. Hosted Meetings", Detail: "No of Beneficiaries", Value: act.hosted_meetings.beneficiaries },
-
-            { Category: "12. Any Other Programmes", Detail: "No of Programmes Conducted", Value: act.any_other.programmes },
-            { Category: "12. Any Other Programmes", Detail: "No of Colleges Participated", Value: act.any_other.colleges },
-            { Category: "12. Any Other Programmes", Detail: "Number of Volunteers Participated", Value: act.any_other.volunteers },
-            { Category: "12. Any Other Programmes", Detail: "No of Beneficiaries", Value: act.any_other.beneficiaries },
-            { Category: "12. Any Other Programmes", Detail: "Remarks/Outcome", Value: act.any_other.remarks }
-        ];
+            if (cfg.beneficiaryField) {
+                rowData.push({ Category: prefix, Detail: cfg.beneficiaryLabel ? cfg.beneficiaryLabel.replace(" *", "") : "Beneficiaries", Value: item[cfg.beneficiaryField] || 0 });
+            } else if (cfg.isRally) {
+                rowData.push({ Category: prefix, Detail: "Date of Conduct", Value: item.date || "" });
+                rowData.push({ Category: prefix, Detail: "Distance Covered (KM)", Value: item.distance || 0 });
+            } else if (cfg.isImportantDay) {
+                rowData.push({ Category: prefix, Detail: "Date of Conduct", Value: item.date || "" });
+            } else if (cfg.isHostedMeeting) {
+                rowData.push({ Category: prefix, Detail: "No of Beneficiaries", Value: item.beneficiaries || 0 });
+            } else if (cfg.isAnyOther) {
+                rowData.push({ Category: prefix, Detail: "No of Beneficiaries", Value: item.beneficiaries || 0 });
+                rowData.push({ Category: prefix, Detail: "Remarks/Outcome", Value: item.remarks || "" });
+            }
+        });
 
         const worksheet = XLSX.utils.json_to_sheet(rowData);
         const workbook = XLSX.utils.book_new();
@@ -555,247 +592,121 @@ const UnitReportGenerator = ({ unit, college }) => {
                     <h3 className="mb-6 text-lg" style={{ borderBottom: '1px solid var(--border)', paddingBottom: '0.75rem' }}>4. Activity-wise Report Details</h3>
                     
                     <div className="d-flex flex-column gap-6">
-                        {/* 1. Blood Donation */}
-                        <div className="p-4 rounded" style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border)' }}>
-                            <h4 className="mb-3 text-primary-400">1. Blood Donation Camps</h4>
-                            <div className="grid-cols-3 gap-3">
-                                <div className="form-group">
-                                    <label className="form-label">No of Programmes Conducted *</label>
-                                    <input type="number" className="form-input" value={activities.blood_donation.programmes} onChange={(e) => handleActivityChange('blood_donation', 'programmes', e.target.value)} min={0}/>
+                        {unitActivitiesConfig.map((cfg, index) => {
+                            const data = activities[cfg.key] || defaultActivities[cfg.key] || {};
+                            return (
+                                <div key={cfg.key} className="p-4 rounded" style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border)' }}>
+                                    <h4 className="mb-3 text-primary-400">{index + 1}. {cfg.label}</h4>
+                                    {cfg.isRally ? (
+                                        <div className="grid-cols-4 gap-3">
+                                            <div className="form-group">
+                                                <label className="form-label">No of Programmes Conducted *</label>
+                                                <input type="number" className="form-input" value={data.programmes || 0} onChange={(e) => handleActivityChange(cfg.key, 'programmes', e.target.value)} min={0}/>
+                                            </div>
+                                            <div className="form-group">
+                                                <label className="form-label">Number of Volunteers *</label>
+                                                <input type="number" className="form-input" value={data.volunteers || 0} onChange={(e) => handleActivityChange(cfg.key, 'volunteers', e.target.value)} min={0}/>
+                                            </div>
+                                            <div className="form-group">
+                                                <label className="form-label">Date of Conduct *</label>
+                                                <input type="text" className="form-input" value={data.date || ""} onChange={(e) => handleActivityChange(cfg.key, 'date', e.target.value)} placeholder="YYYY-MM-DD" />
+                                            </div>
+                                            <div className="form-group">
+                                                <label className="form-label">Distance Covered (KM) *</label>
+                                                <input type="number" className="form-input" value={data.distance || 0} onChange={(e) => handleActivityChange(cfg.key, 'distance', e.target.value)} min={0} step="0.1"/>
+                                            </div>
+                                        </div>
+                                    ) : cfg.isImportantDay ? (
+                                        <div className="grid-cols-3 gap-3">
+                                            <div className="form-group">
+                                                <label className="form-label">No of Programmes Conducted *</label>
+                                                <input type="number" className="form-input" value={data.programmes || 0} onChange={(e) => handleActivityChange(cfg.key, 'programmes', e.target.value)} min={0}/>
+                                            </div>
+                                            <div className="form-group">
+                                                <label className="form-label">Number of Volunteers *</label>
+                                                <input type="number" className="form-input" value={data.volunteers || 0} onChange={(e) => handleActivityChange(cfg.key, 'volunteers', e.target.value)} min={0}/>
+                                            </div>
+                                            <div className="form-group">
+                                                <label className="form-label">Date of Conduct *</label>
+                                                <input type="text" className="form-input" value={data.date || ""} onChange={(e) => handleActivityChange(cfg.key, 'date', e.target.value)} placeholder="YYYY-MM-DD" />
+                                            </div>
+                                        </div>
+                                    ) : cfg.isPledge ? (
+                                        <div className="grid-cols-2 gap-3">
+                                            <div className="form-group">
+                                                <label className="form-label">No of Programmes Conducted *</label>
+                                                <input type="number" className="form-input" value={data.programmes || 0} onChange={(e) => handleActivityChange(cfg.key, 'programmes', e.target.value)} min={0}/>
+                                            </div>
+                                            <div className="form-group">
+                                                <label className="form-label">Number of Volunteers *</label>
+                                                <input type="number" className="form-input" value={data.volunteers || 0} onChange={(e) => handleActivityChange(cfg.key, 'volunteers', e.target.value)} min={0}/>
+                                            </div>
+                                        </div>
+                                    ) : cfg.isHostedMeeting ? (
+                                        <div className="grid-cols-4 gap-3">
+                                            <div className="form-group">
+                                                <label className="form-label">No of Programmes Conducted *</label>
+                                                <input type="number" className="form-input" value={data.programmes || 0} onChange={(e) => handleActivityChange(cfg.key, 'programmes', e.target.value)} min={0}/>
+                                            </div>
+                                            <div className="form-group">
+                                                <label className="form-label">Guest Name *</label>
+                                                <input type="text" className="form-input" value={data.guestName || ""} onChange={(e) => handleActivityChange(cfg.key, 'guestName', e.target.value)} placeholder="e.g. Dr. Ramesh Kumar" />
+                                            </div>
+                                            <div className="form-group">
+                                                <label className="form-label">Number of Volunteers *</label>
+                                                <input type="number" className="form-input" value={data.volunteers || 0} onChange={(e) => handleActivityChange(cfg.key, 'volunteers', e.target.value)} min={0}/>
+                                            </div>
+                                            <div className="form-group">
+                                                <label className="form-label">No of Beneficiaries *</label>
+                                                <input type="number" className="form-input" value={data.beneficiaries || 0} onChange={(e) => handleActivityChange(cfg.key, 'beneficiaries', e.target.value)} min={0}/>
+                                            </div>
+                                        </div>
+                                    ) : cfg.isAnyOther ? (
+                                        <>
+                                            <div className="grid-cols-3 gap-3 mb-3">
+                                                <div className="form-group">
+                                                    <label className="form-label">No of Programmes Conducted *</label>
+                                                    <input type="number" className="form-input" value={data.programmes || 0} onChange={(e) => handleActivityChange(cfg.key, 'programmes', e.target.value)} min={0}/>
+                                                </div>
+                                                <div className="form-group">
+                                                    <label className="form-label">No of Colleges Participated *</label>
+                                                    <input type="number" className="form-input" value={data.colleges || 0} onChange={(e) => handleActivityChange(cfg.key, 'colleges', e.target.value)} min={0}/>
+                                                </div>
+                                                <div className="form-group">
+                                                    <label className="form-label">Number of Volunteers *</label>
+                                                    <input type="number" className="form-input" value={data.volunteers || 0} onChange={(e) => handleActivityChange(cfg.key, 'volunteers', e.target.value)} min={0}/>
+                                                </div>
+                                            </div>
+                                            <div className="grid-cols-2 gap-3">
+                                                <div className="form-group">
+                                                    <label className="form-label">No of Beneficiaries *</label>
+                                                    <input type="number" className="form-input" value={data.beneficiaries || 0} onChange={(e) => handleActivityChange(cfg.key, 'beneficiaries', e.target.value)} min={0}/>
+                                                </div>
+                                                <div className="form-group">
+                                                    <label className="form-label">Remarks/Outcome *</label>
+                                                    <input type="text" className="form-input" value={data.remarks || ""} onChange={(e) => handleActivityChange(cfg.key, 'remarks', e.target.value)} placeholder="e.g. Conducted a cleaning campaign" />
+                                                </div>
+                                            </div>
+                                        </>
+                                    ) : (
+                                        <div className="grid-cols-3 gap-3">
+                                            <div className="form-group">
+                                                <label className="form-label">No of Programmes Conducted *</label>
+                                                <input type="number" className="form-input" value={data.programmes || 0} onChange={(e) => handleActivityChange(cfg.key, 'programmes', e.target.value)} min={0}/>
+                                            </div>
+                                            <div className="form-group">
+                                                <label className="form-label">Number of Volunteers *</label>
+                                                <input type="number" className="form-input" value={data.volunteers || 0} onChange={(e) => handleActivityChange(cfg.key, 'volunteers', e.target.value)} min={0}/>
+                                            </div>
+                                            <div className="form-group">
+                                                <label className="form-label">{cfg.beneficiaryLabel}</label>
+                                                <input type="number" className="form-input" value={data[cfg.beneficiaryField] || 0} onChange={(e) => handleActivityChange(cfg.key, cfg.beneficiaryField, e.target.value)} min={0}/>
+                                            </div>
+                                        </div>
+                                    )}
                                 </div>
-                                <div className="form-group">
-                                    <label className="form-label">Number of Volunteers *</label>
-                                    <input type="number" className="form-input" value={activities.blood_donation.volunteers} onChange={(e) => handleActivityChange('blood_donation', 'volunteers', e.target.value)} min={0}/>
-                                </div>
-                                <div className="form-group">
-                                    <label className="form-label">No of Units of Blood Donated *</label>
-                                    <input type="number" className="form-input" value={activities.blood_donation.bloodUnits} onChange={(e) => handleActivityChange('blood_donation', 'bloodUnits', e.target.value)} min={0}/>
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* 2. Health Camps */}
-                        <div className="p-4 rounded" style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border)' }}>
-                            <h4 className="mb-3 text-primary-400">2. Health Camps</h4>
-                            <div className="grid-cols-3 gap-3">
-                                <div className="form-group">
-                                    <label className="form-label">No of Programmes Conducted *</label>
-                                    <input type="number" className="form-input" value={activities.health_camps.programmes} onChange={(e) => handleActivityChange('health_camps', 'programmes', e.target.value)} min={0}/>
-                                </div>
-                                <div className="form-group">
-                                    <label className="form-label">Number of Volunteers *</label>
-                                    <input type="number" className="form-input" value={activities.health_camps.volunteers} onChange={(e) => handleActivityChange('health_camps', 'volunteers', e.target.value)} min={0}/>
-                                </div>
-                                <div className="form-group">
-                                    <label className="form-label">No of Beneficiaries *</label>
-                                    <input type="number" className="form-input" value={activities.health_camps.beneficiaries} onChange={(e) => handleActivityChange('health_camps', 'beneficiaries', e.target.value)} min={0}/>
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* 3. Anti Drug Camps */}
-                        <div className="p-4 rounded" style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border)' }}>
-                            <h4 className="mb-3 text-primary-400">3. Anti Drug Camps</h4>
-                            <div className="grid-cols-3 gap-3">
-                                <div className="form-group">
-                                    <label className="form-label">No of Programmes Conducted *</label>
-                                    <input type="number" className="form-input" value={activities.anti_drug.programmes} onChange={(e) => handleActivityChange('anti_drug', 'programmes', e.target.value)} min={0}/>
-                                </div>
-                                <div className="form-group">
-                                    <label className="form-label">Number of Volunteers *</label>
-                                    <input type="number" className="form-input" value={activities.anti_drug.volunteers} onChange={(e) => handleActivityChange('anti_drug', 'volunteers', e.target.value)} min={0}/>
-                                </div>
-                                <div className="form-group">
-                                    <label className="form-label">No of Beneficiaries *</label>
-                                    <input type="number" className="form-input" value={activities.anti_drug.beneficiaries} onChange={(e) => handleActivityChange('anti_drug', 'beneficiaries', e.target.value)} min={0}/>
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* 4. Voters Awareness SIR */}
-                        <div className="p-4 rounded" style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border)' }}>
-                            <h4 className="mb-3 text-primary-400">4. Voters Awareness SIR</h4>
-                            <div className="grid-cols-3 gap-3">
-                                <div className="form-group">
-                                    <label className="form-label">No of Programmes Conducted *</label>
-                                    <input type="number" className="form-input" value={activities.voter_sir.programmes} onChange={(e) => handleActivityChange('voter_sir', 'programmes', e.target.value)} min={0}/>
-                                </div>
-                                <div className="form-group">
-                                    <label className="form-label">Number of Volunteers *</label>
-                                    <input type="number" className="form-input" value={activities.voter_sir.volunteers} onChange={(e) => handleActivityChange('voter_sir', 'volunteers', e.target.value)} min={0}/>
-                                </div>
-                                <div className="form-group">
-                                    <label className="form-label">No of Beneficiaries *</label>
-                                    <input type="number" className="form-input" value={activities.voter_sir.beneficiaries} onChange={(e) => handleActivityChange('voter_sir', 'beneficiaries', e.target.value)} min={0}/>
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* 5. Voters Awareness SVEEP */}
-                        <div className="p-4 rounded" style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border)' }}>
-                            <h4 className="mb-3 text-primary-400">5. Voters Awareness SVEEP</h4>
-                            <div className="grid-cols-3 gap-3">
-                                <div className="form-group">
-                                    <label className="form-label">No of Programmes Conducted *</label>
-                                    <input type="number" className="form-input" value={activities.voter_sveep.programmes} onChange={(e) => handleActivityChange('voter_sveep', 'programmes', e.target.value)} min={0}/>
-                                </div>
-                                <div className="form-group">
-                                    <label className="form-label">Number of Volunteers *</label>
-                                    <input type="number" className="form-input" value={activities.voter_sveep.volunteers} onChange={(e) => handleActivityChange('voter_sveep', 'volunteers', e.target.value)} min={0}/>
-                                </div>
-                                <div className="form-group">
-                                    <label className="form-label">No of Beneficiaries *</label>
-                                    <input type="number" className="form-input" value={activities.voter_sveep.beneficiaries} onChange={(e) => handleActivityChange('voter_sveep', 'beneficiaries', e.target.value)} min={0}/>
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* 6. Road Safety */}
-                        <div className="p-4 rounded" style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border)' }}>
-                            <h4 className="mb-3 text-primary-400">6. Road Safety</h4>
-                            <div className="grid-cols-3 gap-3">
-                                <div className="form-group">
-                                    <label className="form-label">No of Programmes Conducted *</label>
-                                    <input type="number" className="form-input" value={activities.road_safety.programmes} onChange={(e) => handleActivityChange('road_safety', 'programmes', e.target.value)} min={0}/>
-                                </div>
-                                <div className="form-group">
-                                    <label className="form-label">Number of Volunteers *</label>
-                                    <input type="number" className="form-input" value={activities.road_safety.volunteers} onChange={(e) => handleActivityChange('road_safety', 'volunteers', e.target.value)} min={0}/>
-                                </div>
-                                <div className="form-group">
-                                    <label className="form-label">No of Beneficiaries *</label>
-                                    <input type="number" className="form-input" value={activities.road_safety.beneficiaries} onChange={(e) => handleActivityChange('road_safety', 'beneficiaries', e.target.value)} min={0}/>
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* 7. Tree Plantation */}
-                        <div className="p-4 rounded" style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border)' }}>
-                            <h4 className="mb-3 text-primary-400">7. Tree Plantation</h4>
-                            <div className="grid-cols-3 gap-3">
-                                <div className="form-group">
-                                    <label className="form-label">No of Programmes Conducted *</label>
-                                    <input type="number" className="form-input" value={activities.tree_plantation.programmes} onChange={(e) => handleActivityChange('tree_plantation', 'programmes', e.target.value)} min={0}/>
-                                </div>
-                                <div className="form-group">
-                                    <label className="form-label">Number of Volunteers *</label>
-                                    <input type="number" className="form-input" value={activities.tree_plantation.volunteers} onChange={(e) => handleActivityChange('tree_plantation', 'volunteers', e.target.value)} min={0}/>
-                                </div>
-                                <div className="form-group">
-                                    <label className="form-label">No of Saplings Planted *</label>
-                                    <input type="number" className="form-input" value={activities.tree_plantation.saplings} onChange={(e) => handleActivityChange('tree_plantation', 'saplings', e.target.value)} min={0}/>
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* 8. Important Days */}
-                        <div className="p-4 rounded" style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border)' }}>
-                            <h4 className="mb-3 text-primary-400">8. Important Days Celebrations</h4>
-                            <div className="grid-cols-3 gap-3">
-                                <div className="form-group">
-                                    <label className="form-label">No of Programmes Conducted *</label>
-                                    <input type="number" className="form-input" value={activities.important_days.programmes} onChange={(e) => handleActivityChange('important_days', 'programmes', e.target.value)} min={0}/>
-                                </div>
-                                <div className="form-group">
-                                    <label className="form-label">Number of Volunteers *</label>
-                                    <input type="number" className="form-input" value={activities.important_days.volunteers} onChange={(e) => handleActivityChange('important_days', 'volunteers', e.target.value)} min={0}/>
-                                </div>
-                                <div className="form-group">
-                                    <label className="form-label">Date of Conduct *</label>
-                                    <input type="text" className="form-input" value={activities.important_days.date} onChange={(e) => handleActivityChange('important_days', 'date', e.target.value)} placeholder="YYYY-MM-DD" />
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* 9. Pledge */}
-                        <div className="p-4 rounded" style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border)' }}>
-                            <h4 className="mb-3 text-primary-400">9. Pledge Taken</h4>
-                            <div className="grid-cols-2 gap-3">
-                                <div className="form-group">
-                                    <label className="form-label">No of Programmes Conducted *</label>
-                                    <input type="number" className="form-input" value={activities.pledge.programmes} onChange={(e) => handleActivityChange('pledge', 'programmes', e.target.value)} min={0}/>
-                                </div>
-                                <div className="form-group">
-                                    <label className="form-label">Number of Volunteers *</label>
-                                    <input type="number" className="form-input" value={activities.pledge.volunteers} onChange={(e) => handleActivityChange('pledge', 'volunteers', e.target.value)} min={0}/>
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* 10. Rallies */}
-                        <div className="p-4 rounded" style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border)' }}>
-                            <h4 className="mb-3 text-primary-400">10. Rallies</h4>
-                            <div className="grid-cols-4 gap-3">
-                                <div className="form-group">
-                                    <label className="form-label">No of Programmes Conducted *</label>
-                                    <input type="number" className="form-input" value={activities.rallies.programmes} onChange={(e) => handleActivityChange('rallies', 'programmes', e.target.value)} min={0}/>
-                                </div>
-                                <div className="form-group">
-                                    <label className="form-label">Number of Volunteers *</label>
-                                    <input type="number" className="form-input" value={activities.rallies.volunteers} onChange={(e) => handleActivityChange('rallies', 'volunteers', e.target.value)} min={0}/>
-                                </div>
-                                <div className="form-group">
-                                    <label className="form-label">Date of Conduct *</label>
-                                    <input type="text" className="form-input" value={activities.rallies.date} onChange={(e) => handleActivityChange('rallies', 'date', e.target.value)} placeholder="YYYY-MM-DD" />
-                                </div>
-                                <div className="form-group">
-                                    <label className="form-label">Distance Covered (KM) *</label>
-                                    <input type="number" className="form-input" value={activities.rallies.distance} onChange={(e) => handleActivityChange('rallies', 'distance', e.target.value)} min={0} step="0.1"/>
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* 11. Hosted Meetings */}
-                        <div className="p-4 rounded" style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border)' }}>
-                            <h4 className="mb-3 text-primary-400">11. Hosted Meetings</h4>
-                            <div className="grid-cols-4 gap-3">
-                                <div className="form-group">
-                                    <label className="form-label">No of Programmes Conducted *</label>
-                                    <input type="number" className="form-input" value={activities.hosted_meetings.programmes} onChange={(e) => handleActivityChange('hosted_meetings', 'programmes', e.target.value)} min={0}/>
-                                </div>
-                                <div className="form-group">
-                                    <label className="form-label">Guest Name *</label>
-                                    <input type="text" className="form-input" value={activities.hosted_meetings.guestName} onChange={(e) => handleActivityChange('hosted_meetings', 'guestName', e.target.value)} placeholder="e.g. Dr. Ramesh Kumar" />
-                                </div>
-                                <div className="form-group">
-                                    <label className="form-label">Number of Volunteers *</label>
-                                    <input type="number" className="form-input" value={activities.hosted_meetings.volunteers} onChange={(e) => handleActivityChange('hosted_meetings', 'volunteers', e.target.value)} min={0}/>
-                                </div>
-                                <div className="form-group">
-                                    <label className="form-label">No of Beneficiaries *</label>
-                                    <input type="number" className="form-input" value={activities.hosted_meetings.beneficiaries} onChange={(e) => handleActivityChange('hosted_meetings', 'beneficiaries', e.target.value)} min={0}/>
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* 12. Any Other */}
-                        <div className="p-4 rounded" style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border)' }}>
-                            <h4 className="mb-3 text-primary-400">12. Any Other Programmes</h4>
-                            <div className="grid-cols-3 gap-3 mb-3">
-                                <div className="form-group">
-                                    <label className="form-label">No of Programmes Conducted *</label>
-                                    <input type="number" className="form-input" value={activities.any_other.programmes} onChange={(e) => handleActivityChange('any_other', 'programmes', e.target.value)} min={0}/>
-                                </div>
-                                <div className="form-group">
-                                    <label className="form-label">No of Colleges Participated *</label>
-                                    <input type="number" className="form-input" value={activities.any_other.colleges} onChange={(e) => handleActivityChange('any_other', 'colleges', e.target.value)} min={0}/>
-                                </div>
-                                <div className="form-group">
-                                    <label className="form-label">Number of Volunteers *</label>
-                                    <input type="number" className="form-input" value={activities.any_other.volunteers} onChange={(e) => handleActivityChange('any_other', 'volunteers', e.target.value)} min={0}/>
-                                </div>
-                            </div>
-                            <div className="grid-cols-2 gap-3">
-                                <div className="form-group">
-                                    <label className="form-label">No of Beneficiaries *</label>
-                                    <input type="number" className="form-input" value={activities.any_other.beneficiaries} onChange={(e) => handleActivityChange('any_other', 'beneficiaries', e.target.value)} min={0}/>
-                                </div>
-                                <div className="form-group">
-                                    <label className="form-label">Remarks/Outcome *</label>
-                                    <input type="text" className="form-input" value={activities.any_other.remarks} onChange={(e) => handleActivityChange('any_other', 'remarks', e.target.value)} placeholder="e.g. Conducted a cleaning campaign" />
-                                </div>
-                            </div>
-                        </div>
+                            );
+                        })}
                     </div>
                 </div>
 
@@ -834,20 +745,7 @@ const UnitReportGenerator = ({ unit, college }) => {
                             className="btn btn-secondary" 
                             onClick={() => {
                                 setIsEditingReportId(null);
-                                setActivities({
-                                    blood_donation: { programmes: 0, volunteers: 0, bloodUnits: 0 },
-                                    health_camps: { programmes: 0, volunteers: 0, beneficiaries: 0 },
-                                    anti_drug: { programmes: 0, volunteers: 0, beneficiaries: 0 },
-                                    voter_sir: { programmes: 0, volunteers: 0, beneficiaries: 0 },
-                                    voter_sveep: { programmes: 0, volunteers: 0, beneficiaries: 0 },
-                                    road_safety: { programmes: 0, volunteers: 0, beneficiaries: 0 },
-                                    tree_plantation: { programmes: 0, volunteers: 0, saplings: 0 },
-                                    important_days: { programmes: 0, volunteers: 0, date: "" },
-                                    pledge: { programmes: 0, volunteers: 0 },
-                                    rallies: { programmes: 0, volunteers: 0, date: "", distance: 0 },
-                                    hosted_meetings: { programmes: 0, guestName: "", volunteers: 0, beneficiaries: 0 },
-                                    any_other: { programmes: 0, colleges: 0, volunteers: 0, beneficiaries: 0, remarks: "" }
-                                });
+                                setActivities(defaultActivities);
                             }}
                         >
                             Cancel Edit
@@ -955,7 +853,7 @@ const UnitReportGenerator = ({ unit, college }) => {
                                                 <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px' }}>
                                                     <thead>
                                                         <tr style={{ background: '#f5f5f5' }}>
-                                                            <th style={{ border: '1px solid #000', padding: '8px', textAlign: 'left', width: '5%' }}>S.No</th>
+                                                            <th style={{ border: '1px solid #000', padding: '8px', textAlign: 'center', width: '5%' }}>S.No</th>
                                                             <th style={{ border: '1px solid #000', padding: '8px', textAlign: 'left', width: '35%' }}>Activity / Event Scope</th>
                                                             <th style={{ border: '1px solid #000', padding: '8px', textAlign: 'center', width: '15%' }}>Programmes</th>
                                                             <th style={{ border: '1px solid #000', padding: '8px', textAlign: 'center', width: '15%' }}>Volunteers</th>
@@ -963,102 +861,35 @@ const UnitReportGenerator = ({ unit, college }) => {
                                                         </tr>
                                                     </thead>
                                                     <tbody>
-                                                        {/* Blood Donation */}
-                                                        <tr>
-                                                            <td style={{ border: '1px solid #000', padding: '8px', textAlign: 'center' }}>1</td>
-                                                            <td style={{ border: '1px solid #000', padding: '8px', fontWeight: 'bold' }}>Blood Donation Camps</td>
-                                                            <td style={{ border: '1px solid #000', padding: '8px', textAlign: 'center' }}>{rep.activities?.blood_donation?.programmes || 0}</td>
-                                                            <td style={{ border: '1px solid #000', padding: '8px', textAlign: 'center' }}>{rep.activities?.blood_donation?.volunteers || 0}</td>
-                                                            <td style={{ border: '1px solid #000', padding: '8px' }}>Units Donated: {rep.activities?.blood_donation?.bloodUnits || 0}</td>
-                                                        </tr>
-                                                        {/* Health Camps */}
-                                                        <tr>
-                                                            <td style={{ border: '1px solid #000', padding: '8px', textAlign: 'center' }}>2</td>
-                                                            <td style={{ border: '1px solid #000', padding: '8px', fontWeight: 'bold' }}>Health Camps</td>
-                                                            <td style={{ border: '1px solid #000', padding: '8px', textAlign: 'center' }}>{rep.activities?.health_camps?.programmes || 0}</td>
-                                                            <td style={{ border: '1px solid #000', padding: '8px', textAlign: 'center' }}>{rep.activities?.health_camps?.volunteers || 0}</td>
-                                                            <td style={{ border: '1px solid #000', padding: '8px' }}>Beneficiaries: {rep.activities?.health_camps?.beneficiaries || 0}</td>
-                                                        </tr>
-                                                        {/* Anti Drug */}
-                                                        <tr>
-                                                            <td style={{ border: '1px solid #000', padding: '8px', textAlign: 'center' }}>3</td>
-                                                            <td style={{ border: '1px solid #000', padding: '8px', fontWeight: 'bold' }}>Anti Drug Camps</td>
-                                                            <td style={{ border: '1px solid #000', padding: '8px', textAlign: 'center' }}>{rep.activities?.anti_drug?.programmes || 0}</td>
-                                                            <td style={{ border: '1px solid #000', padding: '8px', textAlign: 'center' }}>{rep.activities?.anti_drug?.volunteers || 0}</td>
-                                                            <td style={{ border: '1px solid #000', padding: '8px' }}>Beneficiaries: {rep.activities?.anti_drug?.beneficiaries || 0}</td>
-                                                        </tr>
-                                                        {/* Voter SIR */}
-                                                        <tr>
-                                                            <td style={{ border: '1px solid #000', padding: '8px', textAlign: 'center' }}>4</td>
-                                                            <td style={{ border: '1px solid #000', padding: '8px', fontWeight: 'bold' }}>Voters Awareness SIR</td>
-                                                            <td style={{ border: '1px solid #000', padding: '8px', textAlign: 'center' }}>{rep.activities?.voter_sir?.programmes || 0}</td>
-                                                            <td style={{ border: '1px solid #000', padding: '8px', textAlign: 'center' }}>{rep.activities?.voter_sir?.volunteers || 0}</td>
-                                                            <td style={{ border: '1px solid #000', padding: '8px' }}>Beneficiaries: {rep.activities?.voter_sir?.beneficiaries || 0}</td>
-                                                        </tr>
-                                                        {/* Voter SVEEP */}
-                                                        <tr>
-                                                            <td style={{ border: '1px solid #000', padding: '8px', textAlign: 'center' }}>5</td>
-                                                            <td style={{ border: '1px solid #000', padding: '8px', fontWeight: 'bold' }}>Voters Awareness SVEEP</td>
-                                                            <td style={{ border: '1px solid #000', padding: '8px', textAlign: 'center' }}>{rep.activities?.voter_sveep?.programmes || 0}</td>
-                                                            <td style={{ border: '1px solid #000', padding: '8px', textAlign: 'center' }}>{rep.activities?.voter_sveep?.volunteers || 0}</td>
-                                                            <td style={{ border: '1px solid #000', padding: '8px' }}>Beneficiaries: {rep.activities?.voter_sveep?.beneficiaries || 0}</td>
-                                                        </tr>
-                                                        {/* Road Safety */}
-                                                        <tr>
-                                                            <td style={{ border: '1px solid #000', padding: '8px', textAlign: 'center' }}>6</td>
-                                                            <td style={{ border: '1px solid #000', padding: '8px', fontWeight: 'bold' }}>Road Safety Awareness</td>
-                                                            <td style={{ border: '1px solid #000', padding: '8px', textAlign: 'center' }}>{rep.activities?.road_safety?.programmes || 0}</td>
-                                                            <td style={{ border: '1px solid #000', padding: '8px', textAlign: 'center' }}>{rep.activities?.road_safety?.volunteers || 0}</td>
-                                                            <td style={{ border: '1px solid #000', padding: '8px' }}>Beneficiaries: {rep.activities?.road_safety?.beneficiaries || 0}</td>
-                                                        </tr>
-                                                        {/* Tree Plantation */}
-                                                        <tr>
-                                                            <td style={{ border: '1px solid #000', padding: '8px', textAlign: 'center' }}>7</td>
-                                                            <td style={{ border: '1px solid #000', padding: '8px', fontWeight: 'bold' }}>Tree Plantation</td>
-                                                            <td style={{ border: '1px solid #000', padding: '8px', textAlign: 'center' }}>{rep.activities?.tree_plantation?.programmes || 0}</td>
-                                                            <td style={{ border: '1px solid #000', padding: '8px', textAlign: 'center' }}>{rep.activities?.tree_plantation?.volunteers || 0}</td>
-                                                            <td style={{ border: '1px solid #000', padding: '8px' }}>Saplings Planted: {rep.activities?.tree_plantation?.saplings || 0}</td>
-                                                        </tr>
-                                                        {/* Important Days */}
-                                                        <tr>
-                                                            <td style={{ border: '1px solid #000', padding: '8px', textAlign: 'center' }}>8</td>
-                                                            <td style={{ border: '1px solid #000', padding: '8px', fontWeight: 'bold' }}>Important Days Celebrations</td>
-                                                            <td style={{ border: '1px solid #000', padding: '8px', textAlign: 'center' }}>{rep.activities?.important_days?.programmes || 0}</td>
-                                                            <td style={{ border: '1px solid #000', padding: '8px', textAlign: 'center' }}>{rep.activities?.important_days?.volunteers || 0}</td>
-                                                            <td style={{ border: '1px solid #000', padding: '8px' }}>Date: {rep.activities?.important_days?.date || 'N/A'}</td>
-                                                        </tr>
-                                                        {/* Pledge */}
-                                                        <tr>
-                                                            <td style={{ border: '1px solid #000', padding: '8px', textAlign: 'center' }}>9</td>
-                                                            <td style={{ border: '1px solid #000', padding: '8px', fontWeight: 'bold' }}>Pledges Taken</td>
-                                                            <td style={{ border: '1px solid #000', padding: '8px', textAlign: 'center' }}>{rep.activities?.pledge?.programmes || 0}</td>
-                                                            <td style={{ border: '1px solid #000', padding: '8px', textAlign: 'center' }}>{rep.activities?.pledge?.volunteers || 0}</td>
-                                                            <td style={{ border: '1px solid #000', padding: '8px' }}>-</td>
-                                                        </tr>
-                                                        {/* Rallies */}
-                                                        <tr>
-                                                            <td style={{ border: '1px solid #000', padding: '8px', textAlign: 'center' }}>10</td>
-                                                            <td style={{ border: '1px solid #000', padding: '8px', fontWeight: 'bold' }}>Rallies conducted</td>
-                                                            <td style={{ border: '1px solid #000', padding: '8px', textAlign: 'center' }}>{rep.activities?.rallies?.programmes || 0}</td>
-                                                            <td style={{ border: '1px solid #000', padding: '8px', textAlign: 'center' }}>{rep.activities?.rallies?.volunteers || 0}</td>
-                                                            <td style={{ border: '1px solid #000', padding: '8px' }}>Date: {rep.activities?.rallies?.date || 'N/A'} | Dist: {rep.activities?.rallies?.distance || 0} KM</td>
-                                                        </tr>
-                                                        {/* Hosted Meetings */}
-                                                        <tr>
-                                                            <td style={{ border: '1px solid #000', padding: '8px', textAlign: 'center' }}>11</td>
-                                                            <td style={{ border: '1px solid #000', padding: '8px', fontWeight: 'bold' }}>Hosted Meetings</td>
-                                                            <td style={{ border: '1px solid #000', padding: '8px', textAlign: 'center' }}>{rep.activities?.hosted_meetings?.programmes || 0}</td>
-                                                            <td style={{ border: '1px solid #000', padding: '8px', textAlign: 'center' }}>{rep.activities?.hosted_meetings?.volunteers || 0}</td>
-                                                            <td style={{ border: '1px solid #000', padding: '8px' }}>Guests: {rep.activities?.hosted_meetings?.guestName || 'None'} | Benefic: {rep.activities?.hosted_meetings?.beneficiaries || 0}</td>
-                                                        </tr>
-                                                        {/* Any Other */}
-                                                        <tr>
-                                                            <td style={{ border: '1px solid #000', padding: '8px', textAlign: 'center' }}>12</td>
-                                                            <td style={{ border: '1px solid #000', padding: '8px', fontWeight: 'bold' }}>Any Other Programmes</td>
-                                                            <td style={{ border: '1px solid #000', padding: '8px', textAlign: 'center' }}>{rep.activities?.any_other?.programmes || 0}</td>
-                                                            <td style={{ border: '1px solid #000', padding: '8px', textAlign: 'center' }}>{rep.activities?.any_other?.volunteers || 0}</td>
-                                                            <td style={{ border: '1px solid #000', padding: '8px' }}>Colleges: {rep.activities?.any_other?.colleges || 0} | Remarks: {rep.activities?.any_other?.remarks || 'N/A'}</td>
-                                                        </tr>
+                                                        {unitActivitiesConfig.map((cfg, idx) => {
+                                                            const item = rep.activities?.[cfg.key] || {};
+                                                            let metricDetail = "-";
+                                                            if (cfg.isRally) {
+                                                                metricDetail = `Date: ${item.date || 'N/A'} | Dist: ${item.distance || 0} KM`;
+                                                            } else if (cfg.isImportantDay) {
+                                                                metricDetail = `Date: ${item.date || 'N/A'}`;
+                                                            } else if (cfg.isHostedMeeting) {
+                                                                metricDetail = `Guests: ${item.guestName || 'None'} | Benefic: ${item.beneficiaries || 0}`;
+                                                            } else if (cfg.isAnyOther) {
+                                                                metricDetail = `Colleges: ${item.colleges || 0} | Remarks: ${item.remarks || 'N/A'}`;
+                                                            } else if (cfg.key === 'blood_donation') {
+                                                                metricDetail = `Units Donated: ${item.bloodUnits || 0}`;
+                                                            } else if (cfg.key === 'tree_plantation') {
+                                                                metricDetail = `Saplings Planted: ${item.saplings || 0}`;
+                                                            } else if (cfg.beneficiaryField) {
+                                                                metricDetail = `Beneficiaries: ${item[cfg.beneficiaryField] || 0}`;
+                                                            }
+
+                                                            return (
+                                                                <tr key={cfg.key}>
+                                                                    <td style={{ border: '1px solid #000', padding: '6px 8px', textAlign: 'center' }}>{idx + 1}</td>
+                                                                    <td style={{ border: '1px solid #000', padding: '6px 8px', fontWeight: 'bold' }}>{cfg.label}</td>
+                                                                    <td style={{ border: '1px solid #000', padding: '6px 8px', textAlign: 'center' }}>{item.programmes || 0}</td>
+                                                                    <td style={{ border: '1px solid #000', padding: '6px 8px', textAlign: 'center' }}>{item.volunteers || 0}</td>
+                                                                    <td style={{ border: '1px solid #000', padding: '6px 8px' }}>{metricDetail}</td>
+                                                                </tr>
+                                                            );
+                                                        })}
                                                     </tbody>
                                                 </table>
 

@@ -11,6 +11,8 @@ import EventsCalendar from "./EventsCalendar";
 import CircularBellNotification from "./CircularBellNotification";
 import UserCircularsView from "./UserCircularsView";
 import ActivityReportModal from "./ActivityReportModal";
+import SpecialCampProposalModal from "./SpecialCampProposalModal";
+import SpecialCampFormSection, { getInitialSpecialCampDetails } from "./SpecialCampFormSection";
 
 const UnitDashboard = () => {
     const navigate = useNavigate();
@@ -62,6 +64,12 @@ const UnitDashboard = () => {
     // Printable Official Report Modal
     const [showPrintableReportModal, setShowPrintableReportModal] = useState(false);
     const [printableReportEvent, setPrintableReportEvent] = useState(null);
+
+    // Special Camp Form 1 Proposal Modal States
+    const [showSpecialCampProposalModal, setShowSpecialCampProposalModal] = useState(false);
+    const [specialCampEventForModal, setSpecialCampEventForModal] = useState(null);
+    const [specialCampDetails, setSpecialCampDetails] = useState(null);
+    const [isEventModalExpanded, setIsEventModalExpanded] = useState(false);
 
     // State for embedded report fields in Completed Activity Form
     const [completedReportForm, setCompletedReportForm] = useState({
@@ -750,9 +758,30 @@ const UnitDashboard = () => {
     const CLOUDINARY_PDF_UPLOAD_PRESET = import.meta.env.VITE_PDF_UPLOAD_PRESET;
 
     const standardCategories = [
-        "Special Camp", "Blood Donation", "Tree Plantation", "Cleanliness Drive", "Awareness Programme",
-        "Conference", "Seminar", "Workshop", "Sports", "Cultural", "Health",
-        "Environmental", "Social", "Exhibition", "Health care", "Creation of Assets"
+        "Special Camp",
+        "Blood Donation",
+        "Tree Plantation",
+        "Cleanliness Drive",
+        "Awareness Programme",
+        "Health",
+        "Health care",
+        "Anti-Drug Campaign",
+        "Voter Awareness - SIR",
+        "Voter Awareness - SVEEP",
+        "Road Safety Awareness",
+        "Rallies",
+        "Important Days Celebrations",
+        "Pledge Taken",
+        "Hosted Meetings",
+        "Conference",
+        "Seminar",
+        "Workshop",
+        "Sports",
+        "Cultural",
+        "Environmental",
+        "Social",
+        "Exhibition",
+        "Creation of Assets"
     ];
 
     const [eventsTab, setEventsTab] = useState("all"); // "all" | "my" | "college" | "external" | "calendar"
@@ -898,6 +927,20 @@ const UnitDashboard = () => {
                                 📄 Report Doc
                             </button>
                         )}
+                        {(event.category === 'Special Camp' || event.specialCampDetails) && (
+                            <button
+                                className="btn btn-outline-info btn-sm"
+                                style={{ padding: '0.375rem 0.55rem', whiteSpace: 'nowrap', display: 'inline-flex', alignItems: 'center', gap: '0.25rem', color: '#0284c7', borderColor: '#0284c7' }}
+                                title="View & Download Special Camp Proposal (Form 1 PDF)"
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    setSpecialCampEventForModal({ ...event, collegeId: college, unitId: unit });
+                                    setShowSpecialCampProposalModal(true);
+                                }}
+                            >
+                                🏕️ Form 1
+                            </button>
+                        )}
                         {(isMyEvent || isExternalEvent) && !isCompleted && (
                             <div className="d-flex gap-1">
                                 <button
@@ -956,7 +999,17 @@ const UnitDashboard = () => {
                 attendees: event.attendees ? event.attendees.map(a => typeof a === 'object' ? a._id : a) : []
             });
             setCollaborators(event.collaborators || []);
+            if (event.category === 'Special Camp' || event.specialCampDetails) {
+                setSpecialCampDetails(event.specialCampDetails || getInitialSpecialCampDetails(college, unit, {
+                    dateFrom: event.dateFrom,
+                    dateTo: event.dateTo,
+                    date: event.date
+                }));
+            } else {
+                setSpecialCampDetails(null);
+            }
         } else {
+            setSpecialCampDetails(null);
             setEventForm({
                 name: "",
                 description: "",
@@ -1245,6 +1298,14 @@ const UnitDashboard = () => {
 
         if (!isExternalEventForm) {
             delete payload.attendees;
+        }
+
+        if (categoryValue === 'Special Camp') {
+            payload.specialCampDetails = specialCampDetails || getInitialSpecialCampDetails(college, unit, {
+                dateFrom: eventForm.dateFrom,
+                dateTo: eventForm.dateTo,
+                date: eventForm.date
+            });
         }
 
         setIsSavingCompletedEvent(true);
@@ -2923,6 +2984,19 @@ const UnitDashboard = () => {
                                         📄 View / Print Official Report
                                     </button>
                                 )}
+                                {(selectedEvent.category === 'Special Camp' || selectedEvent.specialCampDetails) && (
+                                    <button
+                                        type="button"
+                                        className="btn btn-outline-primary flex-grow-1"
+                                        style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem', borderColor: '#2563eb' }}
+                                        onClick={() => {
+                                            setSpecialCampEventForModal({ ...selectedEvent, collegeId: college, unitId: unit });
+                                            setShowSpecialCampProposalModal(true);
+                                        }}
+                                    >
+                                        🏕️ View / Print Form 1 Proposal
+                                    </button>
+                                )}
                                 <button className="btn btn-secondary flex-grow-1" onClick={() => setSelectedEvent(null)}>Close</button>
                             </div>
                         </div>
@@ -2934,983 +3008,1063 @@ const UnitDashboard = () => {
             {
                 showEventFormModal && (
                     <div className="modal-overlay">
-                        <div className="modal-content" style={{ maxWidth: '800px', width: '95%', maxHeight: '90vh', overflowY: 'auto' }}>
-                            <div className="flex-between mb-4">
-                                <div>
-                                    <h2 className="mb-0" style={{ fontSize: '1.4rem', fontWeight: 800 }}>
-                                        {isEditingEvent
-                                            ? "Edit Activity"
-                                            : activityMode === "completed"
-                                                ? "Log Completed Activity & Report"
-                                                : "Schedule Upcoming Activity"
-                                        }
-                                    </h2>
-                                    <span style={{ fontSize: '0.8rem', color: 'var(--txt-3)' }}>
-                                        {isExternalEventForm ? "External Activity" : "Unit Activity"} • {activityMode === "completed" ? "Conducted Activity" : "Upcoming Activity"}
-                                    </span>
-                                </div>
-                                <button className="btn btn-sm btn-secondary" onClick={() => setShowEventFormModal(false)}>&times;</button>
-                            </div>
-
-                            {activityMode === 'completed' && !isEditingEvent && (
-                                <div style={{ background: 'rgba(22, 163, 74, 0.08)', border: '1px solid rgba(22, 163, 74, 0.25)', padding: '0.75rem 1rem', borderRadius: '8px', marginBottom: '1.25rem' }}>
-                                    <div style={{ fontWeight: 700, color: 'var(--success-700)', fontSize: '0.85rem' }}>
-                                        ✅ Conducted Activity Entry
-                                    </div>
-                                    <p style={{ margin: '3px 0 0', fontSize: '0.8rem', color: 'var(--txt-2)' }}>
-                                        Fill in the activity details along with the participation statistics and photos. An official printable report document will be generated immediately upon submission.
-                                    </p>
-                                </div>
-                            )}
-
-                            <form onSubmit={handleSaveEvent}>
-                                <div className="form-group mb-3">
-                                    <label className="form-label">Activity Name *</label>
-                                    <input
-                                        type="text"
-                                        className="form-control"
-                                        value={eventForm.name}
-                                        onChange={(e) => setEventForm({ ...eventForm, name: e.target.value })}
-                                        required
-                                        placeholder="e.g. Blood Donation Drive 2026"
-                                    />
-                                </div>
-
-                                <div className="form-group mb-3">
-                                    <label className="form-label">Description *</label>
-                                    <textarea
-                                        className="form-control"
-                                        rows="3"
-                                        value={eventForm.description}
-                                        onChange={(e) => setEventForm({ ...eventForm, description: e.target.value })}
-                                        required
-                                        placeholder="Briefly describe the objectives and details of the activity..."
-                                    ></textarea>
-                                </div>
-
-                                <div className="grid-cols-2 gap-3 mb-3">
-                                    <div className="form-group">
-                                        <label className="form-label">Category *</label>
-                                        <select
-                                            className="form-control"
-                                            value={eventForm.category}
-                                            onChange={(e) => setEventForm({ ...eventForm, category: e.target.value })}
-                                        >
-                                            {standardCategories.map((cat, i) => (
-                                                <option key={i} value={cat}>{cat}</option>
-                                            ))}
-                                            <option value="Other">Other</option>
-                                        </select>
-                                    </div>
-                                    <div className="form-group">
-                                        <label className="form-label">Activity Level *</label>
-                                        <select
-                                            className="form-control"
-                                            value={eventForm.level}
-                                            onChange={(e) => setEventForm({ ...eventForm, level: e.target.value })}
-                                        >
-                                            <option value="College">College Level</option>
-                                            <option value="District">District Level</option>
-                                            <option value="University">University Level</option>
-                                            <option value="State">State Level</option>
-                                            <option value="National">National Level</option>
-                                        </select>
-                                    </div>
-                                </div>
-
-                                {eventForm.category === "Other" && (
-                                    <div className="form-group mb-3">
-                                        <label className="form-label">Enter Category Name *</label>
-                                        <input
-                                            type="text"
-                                            className="form-control"
-                                            value={eventForm.otherCategory}
-                                            onChange={(e) => setEventForm({ ...eventForm, otherCategory: e.target.value })}
-                                            required
-                                        />
-                                    </div>
-                                )}
-
-                                <div className="form-group mb-3">
-                                    <label className="d-flex align-items-center cursor-pointer" style={{ textTransform: 'none' }}>
-                                        <input
-                                            type="checkbox"
-                                            checked={eventForm.singleDay}
-                                            onChange={(e) => setEventForm({ ...eventForm, singleDay: e.target.checked })}
-                                            className="form-check-input me-2"
-                                        />
-                                        <span>Is this a single day activity?</span>
-                                    </label>
-                                </div>
-
-                                {eventForm.singleDay ? (
-                                    <div className="form-group mb-3">
-                                        <label className="form-label">Activity Date *</label>
-                                        <input
-                                            type="date"
-                                            className="form-control"
-                                            value={eventForm.date}
-                                            onChange={(e) => setEventForm({ ...eventForm, date: e.target.value })}
-                                            required
-                                        />
-                                    </div>
-                                ) : (
-                                    <div className="grid-cols-2 gap-3 mb-3">
-                                        <div className="form-group">
-                                            <label className="form-label">Start Date *</label>
-                                            <input
-                                                type="date"
-                                                className="form-control"
-                                                value={eventForm.dateFrom}
-                                                onChange={(e) => setEventForm({ ...eventForm, dateFrom: e.target.value })}
-                                                required
-                                            />
+                                <div
+                                    className="modal-content"
+                                    style={{
+                                        maxWidth: isEventModalExpanded ? '96vw' : (eventForm.category === 'Special Camp' ? '1100px' : '820px'),
+                                        width: isEventModalExpanded ? '96vw' : '95%',
+                                        maxHeight: isEventModalExpanded ? '96vh' : '90vh',
+                                        height: isEventModalExpanded ? '96vh' : 'auto',
+                                        overflowY: 'auto',
+                                        transition: 'all 0.25s ease-in-out'
+                                    }}
+                                >
+                                    <div className="flex-between mb-4" style={{ alignItems: 'flex-start' }}>
+                                        <div>
+                                            <h2 className="mb-0" style={{ fontSize: '1.4rem', fontWeight: 800 }}>
+                                                {isEditingEvent
+                                                    ? "Edit Activity"
+                                                    : activityMode === "completed"
+                                                        ? "Log Completed Activity & Report"
+                                                        : "Schedule Upcoming Activity"
+                                                }
+                                            </h2>
+                                            <span style={{ fontSize: '0.8rem', color: 'var(--txt-3)' }}>
+                                                {isExternalEventForm ? "External Activity" : "Unit Activity"} • {activityMode === "completed" ? "Conducted Activity" : "Upcoming Activity"}
+                                            </span>
                                         </div>
-                                        <div className="form-group">
-                                            <label className="form-label">End Date *</label>
-                                            <input
-                                                type="date"
-                                                className="form-control"
-                                                value={eventForm.dateTo}
-                                                onChange={(e) => setEventForm({ ...eventForm, dateTo: e.target.value })}
-                                                required
-                                            />
-                                        </div>
-                                    </div>
-                                )}
-
-                                <div className="grid-cols-2 gap-3 mb-3">
-                                    <div className="form-group">
-                                        <label className="form-label">Start Time</label>
-                                        <input
-                                            type="time"
-                                            className="form-control"
-                                            value={eventForm.timeFrom}
-                                            onChange={(e) => setEventForm({ ...eventForm, timeFrom: e.target.value })}
-                                        />
-                                    </div>
-                                    <div className="form-group">
-                                        <label className="form-label">End Time</label>
-                                        <input
-                                            type="time"
-                                            className="form-control"
-                                            value={eventForm.timeTo}
-                                            onChange={(e) => setEventForm({ ...eventForm, timeTo: e.target.value })}
-                                        />
-                                    </div>
-                                </div>
-
-                                <div className="form-group mb-3">
-                                    <label className="form-label">Venue *</label>
-                                    <input
-                                        type="text"
-                                        className="form-control"
-                                        value={eventForm.venue}
-                                        onChange={(e) => setEventForm({ ...eventForm, venue: e.target.value })}
-                                        required
-                                        placeholder="e.g. College Seminar Hall"
-                                    />
-                                </div>
-
-                                <div className="grid-cols-2 gap-3 mb-3">
-                                    <div className="form-group">
-                                        <label className="form-label">
-                                            {activityMode === 'completed' ? "Resource Person(s) / Chief Guest(s)" : "Resource Person / Guest"}
-                                        </label>
-                                        <input
-                                            type="text"
-                                            className="form-control"
-                                            value={eventForm.resourcePerson}
-                                            onChange={(e) => setEventForm({ ...eventForm, resourcePerson: e.target.value })}
-                                            placeholder={activityMode === 'completed' ? "e.g. Dr. K. Raman (Professor), Thiru S. Kumar" : "e.g. Dr. John Doe"}
-                                        />
-                                    </div>
-                                    <div className="form-group">
-                                        <label className="form-label">Sponsorship Details</label>
-                                        <input
-                                            type="text"
-                                            className="form-control"
-                                            value={eventForm.sponsorship}
-                                            onChange={(e) => setEventForm({ ...eventForm, sponsorship: e.target.value })}
-                                            placeholder="e.g. Rotary Club / Self Funded"
-                                        />
-                                    </div>
-                                </div>
-
-                                {/* Volunteer Selection checklist ONLY FOR EXTERNAL EVENTS */}
-                                {isExternalEventForm && (
-                                    <div className="form-group mb-4" style={{ background: 'var(--bg-2)', padding: '15px', borderRadius: '8px', border: '1px solid var(--border)' }}>
-                                        <label className="fw-bold mb-2" style={{ fontSize: '0.8rem', color: 'var(--txt-1)' }}>Select Participating Volunteers *</label>
-                                        <input
-                                            type="text"
-                                            className="form-control mb-3"
-                                            placeholder="Search volunteers by name or register number..."
-                                            value={volunteerSearch}
-                                            onChange={(e) => setVolunteerSearch(e.target.value)}
-                                        />
-                                        <div style={{ maxHeight: '180px', overflowY: 'auto', border: '1px solid var(--border)', borderRadius: '6px', background: 'var(--card)', padding: '10px' }}>
-                                            {unit?.members?.filter(m =>
-                                                m.name?.toLowerCase().includes(volunteerSearch.toLowerCase()) ||
-                                                m.regNo?.toLowerCase().includes(volunteerSearch.toLowerCase())
-                                            ).map(m => {
-                                                const isChecked = eventForm.attendees?.includes(m._id);
-                                                return (
-                                                    <label key={m._id} className="d-flex align-items-center mb-2 cursor-pointer text-sm" style={{ textTransform: 'none' }}>
-                                                        <input
-                                                            type="checkbox"
-                                                            checked={isChecked}
-                                                            onChange={() => {
-                                                                const updated = isChecked
-                                                                    ? eventForm.attendees.filter(id => id !== m._id)
-                                                                    : [...(eventForm.attendees || []), m._id];
-                                                                setEventForm(prev => ({ ...prev, attendees: updated }));
-                                                            }}
-                                                            className="form-check-input me-2"
-                                                        />
-                                                        <span>{m.name} ({m.regNo}) - {m.dept}</span>
-                                                    </label>
-                                                );
-                                            })}
-                                        </div>
-                                        <small className="text-muted d-block mt-2">
-                                            Selected: {eventForm.attendees?.length || 0} volunteer(s)
-                                        </small>
-                                    </div>
-                                )}
-
-                                {/* Collaborations - ONLY FOR NON-EXTERNAL EVENTS */}
-                                {!isExternalEventForm && (
-                                    <div className="form-group mb-4" style={{ background: 'var(--bg-2)', padding: '15px', borderRadius: '8px', border: '1px solid var(--border)' }}>
-                                        <label className="fw-bold mb-2" style={{ fontSize: '0.8rem', color: 'var(--txt-1)' }}>Co-Organizing Units (Collaborations)</label>
-                                        <div className="d-flex gap-2 mb-3">
-                                            <select
-                                                className="form-control"
-                                                value={selectedCollaborator}
-                                                onChange={(e) => setSelectedCollaborator(e.target.value)}
-                                            >
-                                                <option value="">Select College Unit</option>
-                                                {availableUnits.map((u, i) => (
-                                                    <option key={i} value={u.unitNumber}>Unit {u.unitNumber} ({u.name})</option>
-                                                ))}
-                                            </select>
+                                        <button className="btn btn-sm btn-secondary" onClick={() => setShowEventFormModal(false)}>&times;</button>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                                             <button
                                                 type="button"
-                                                className="btn btn-outline-primary"
-                                                onClick={() => {
-                                                    if (selectedCollaborator && !collaborators.includes(selectedCollaborator)) {
-                                                        setCollaborators([...collaborators, selectedCollaborator]);
-                                                        setSelectedCollaborator("");
-                                                    }
-                                                }}
+                                                className="btn btn-sm btn-outline-secondary"
+                                                onClick={() => setIsEventModalExpanded(!isEventModalExpanded)}
+                                                title={isEventModalExpanded ? "Collapse modal to normal view" : "Expand modal to fullscreen / wide view"}
+                                                style={{ fontSize: '0.82rem', padding: '4px 10px', display: 'flex', alignItems: 'center', gap: '5px', fontWeight: 600 }}
                                             >
-                                                Add
+                                                {isEventModalExpanded ? "🗗 Restore View" : "⛶ Expand View"}
+                                            </button>
+                                            <button
+                                                type="button"
+                                                className="btn btn-sm btn-secondary"
+                                                onClick={() => {
+                                                    setShowEventFormModal(false);
+                                                    setIsEventModalExpanded(false);
+                                                }}
+                                                style={{ fontSize: '1.2rem', lineHeight: '1', padding: '4px 10px' }}
+                                            >
+                                                &times;
                                             </button>
                                         </div>
-                                        {collaborators.length > 0 && (
-                                            <div className="d-flex flex-wrap gap-2">
-                                                {collaborators.map((c, idx) => (
-                                                    <span key={idx} className="badge badge-indigo d-flex align-items-center gap-1" style={{ textTransform: 'none' }}>
-                                                        Unit {c}
-                                                        <span
-                                                            style={{ cursor: 'pointer', fontWeight: 'bold' }}
-                                                            onClick={() => setCollaborators(collaborators.filter(item => item !== c))}
-                                                        >
-                                                            ✕
-                                                        </span>
-                                                    </span>
-                                                ))}
-                                            </div>
-                                        )}
                                     </div>
-                                )}
 
-                                {/* Images and Brochure Upload - Only for Upcoming Activity or Edit Mode */}
-                                {(activityMode !== 'completed' || isEditingEvent) && (
-                                    <div className="grid-cols-2 gap-3 mb-4">
-                                        <div className="form-group">
-                                            <label className="form-label">Upload Activity Photos (Max 250KB each)</label>
-                                            <div className="d-flex gap-2">
-                                                <input
-                                                    type="file"
-                                                    className="form-control"
-                                                    accept="image/*"
-                                                    multiple
-                                                    onChange={handleEventFileChange}
-                                                />
-                                                <button
-                                                    type="button"
-                                                    className="btn btn-secondary btn-sm"
-                                                    disabled={uploading || selectedFiles.length === 0}
-                                                    onClick={handleUploadEventImages}
-                                                >
-                                                    {uploading ? "..." : "Upload"}
-                                                </button>
+                                    {activityMode === 'completed' && !isEditingEvent && (
+                                        <div style={{ background: 'rgba(22, 163, 74, 0.08)', border: '1px solid rgba(22, 163, 74, 0.25)', padding: '0.75rem 1rem', borderRadius: '8px', marginBottom: '1.25rem' }}>
+                                            <div style={{ fontWeight: 700, color: 'var(--success-700)', fontSize: '0.85rem' }}>
+                                                ✅ Conducted Activity Entry
                                             </div>
-                                            {eventForm.images && eventForm.images.length > 0 && (
-                                                <small className="text-success d-block mt-1">✓ {eventForm.images.length} photos uploaded</small>
-                                            )}
-                                        </div>
-
-                                        <div className="form-group">
-                                            <label className="form-label">Upload Circular / Brochure (PDF)</label>
-                                            <div className="d-flex gap-2">
-                                                <input
-                                                    type="file"
-                                                    className="form-control"
-                                                    accept="application/pdf"
-                                                    onChange={(e) => setBrochureFile(e.target.files[0])}
-                                                />
-                                                <button
-                                                    type="button"
-                                                    className="btn btn-secondary btn-sm"
-                                                    disabled={uploadingBrochure || !brochureFile}
-                                                    onClick={handleUploadEventBrochure}
-                                                >
-                                                    {uploadingBrochure ? "..." : "Upload"}
-                                                </button>
-                                            </div>
-                                            {eventForm.brochure && (
-                                                <small className="text-success d-block mt-1">✓ Circular / Brochure uploaded</small>
-                                            )}
-                                        </div>
-                                    </div>
-                                )}
-
-                                {/* Embedded Completion Report Section for Completed Activity Mode */}
-                                {activityMode === 'completed' && !isEditingEvent && (
-                                    <div style={{ marginTop: '1.5rem', paddingTop: '1.5rem', borderTop: '2px solid var(--border)' }}>
-                                        <div style={{ background: 'rgba(22, 163, 74, 0.08)', border: '1px solid rgba(22, 163, 74, 0.25)', padding: '0.85rem 1rem', borderRadius: '8px', marginBottom: '1.25rem' }}>
-                                            <h4 style={{ margin: 0, fontSize: '0.95rem', fontWeight: 800, color: 'var(--success-700)', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                                                📋 Activity Completion Report & Evidence
-                                            </h4>
-                                            <p style={{ margin: '4px 0 0', fontSize: '0.8rem', color: 'var(--txt-2)' }}>
-                                                Please provide participation statistics, impact outcomes, and attach activity photos to immediately generate the official printable report.
+                                            <p style={{ margin: '3px 0 0', fontSize: '0.8rem', color: 'var(--txt-2)' }}>
+                                                Fill in the activity details along with the participation statistics and photos. An official printable report document will be generated immediately upon submission.
                                             </p>
                                         </div>
+                                    )}
 
-                                        <div className="grid-cols-3 gap-3 mb-3">
-                                            <div className="form-group">
-                                                <label className="form-label">Total Volunteers Participated *</label>
-                                                <input
-                                                    type="number"
-                                                    className="form-control"
-                                                    value={completedReportForm.participantsCount}
-                                                    onChange={(e) => setCompletedReportForm({ ...completedReportForm, participantsCount: e.target.value })}
-                                                    required
-                                                    min="1"
-                                                    placeholder="e.g. 50"
-                                                />
-                                            </div>
-                                            <div className="form-group">
-                                                <label className="form-label">Community Beneficiaries</label>
-                                                <input
-                                                    type="number"
-                                                    className="form-control"
-                                                    value={completedReportForm.beneficiariesCount}
-                                                    onChange={(e) => setCompletedReportForm({ ...completedReportForm, beneficiariesCount: e.target.value })}
-                                                    min="0"
-                                                    placeholder="e.g. 200"
-                                                />
-                                            </div>
-                                            <div className="form-group">
-                                                <label className="form-label">Colleges Participated</label>
-                                                <input
-                                                    type="number"
-                                                    className="form-control"
-                                                    value={completedReportForm.collegesCount}
-                                                    onChange={(e) => setCompletedReportForm({ ...completedReportForm, collegesCount: e.target.value })}
-                                                    min="1"
-                                                    placeholder="e.g. 1"
-                                                />
-                                            </div>
+                                    <form onSubmit={handleSaveEvent}>
+                                        <div className="form-group mb-3">
+                                            <label className="form-label">Activity Name *</label>
+                                            <input
+                                                type="text"
+                                                className="form-control"
+                                                value={eventForm.name}
+                                                onChange={(e) => setEventForm({ ...eventForm, name: e.target.value })}
+                                                required
+                                                placeholder="e.g. Blood Donation Drive 2026"
+                                            />
                                         </div>
 
-                                        {/* Dynamic Category Specific Metrics */}
-                                        {eventForm.category === 'Tree Plantation' && (
-                                            <div className="form-group mb-3 p-3" style={{ background: 'rgba(22,163,74,0.07)', border: '1px solid rgba(22,163,74,0.2)', borderRadius: '8px' }}>
-                                                <label className="form-label" style={{ color: 'var(--success-600)', fontWeight: 700 }}>
-                                                    🌱 Number of Trees Planted *
-                                                </label>
-                                                <input
-                                                    type="number"
-                                                    className="form-control"
-                                                    value={completedReportForm.treesPlanted}
-                                                    onChange={(e) => setCompletedReportForm({ ...completedReportForm, treesPlanted: e.target.value })}
-                                                    required
-                                                    min="1"
-                                                    placeholder="e.g. 100"
-                                                />
-                                            </div>
-                                        )}
-
-                                        {eventForm.category === 'Blood Donation' && (
-                                            <div className="form-group mb-3 p-3" style={{ background: 'rgba(220,38,38,0.06)', border: '1px solid rgba(220,38,38,0.2)', borderRadius: '8px' }}>
-                                                <label className="form-label" style={{ color: 'var(--danger-600)', fontWeight: 700 }}>
-                                                    🩸 Units of Blood Donated *
-                                                </label>
-                                                <input
-                                                    type="number"
-                                                    className="form-control"
-                                                    value={completedReportForm.bloodUnitsCollected}
-                                                    onChange={(e) => setCompletedReportForm({ ...completedReportForm, bloodUnitsCollected: e.target.value })}
-                                                    required
-                                                    min="1"
-                                                    placeholder="e.g. 25"
-                                                />
-                                            </div>
-                                        )}
-
-                                        {['Cleanliness Rally', 'Road Safety Awareness'].includes(eventForm.category) && (
-                                            <div className="form-group mb-3 p-3" style={{ background: 'rgba(245,158,11,0.06)', border: '1px solid rgba(245,158,11,0.2)', borderRadius: '8px' }}>
-                                                <label className="form-label" style={{ color: 'var(--warning-600)', fontWeight: 700 }}>
-                                                    📍 Rally Distance (km)
-                                                </label>
-                                                <input
-                                                    type="number"
-                                                    className="form-control"
-                                                    value={completedReportForm.rallyDistance}
-                                                    onChange={(e) => setCompletedReportForm({ ...completedReportForm, rallyDistance: e.target.value })}
-                                                    min="0"
-                                                    step="0.1"
-                                                    placeholder="e.g. 3.5"
-                                                />
-                                            </div>
-                                        )}
-
-                                        {/* Outcome of Activity */}
                                         <div className="form-group mb-3">
-                                            <label className="form-label">Outcome & Impact of the Activity *</label>
+                                            <label className="form-label">Description *</label>
                                             <textarea
                                                 className="form-control"
                                                 rows="3"
-                                                value={completedReportForm.outcome}
-                                                onChange={(e) => setCompletedReportForm({ ...completedReportForm, outcome: e.target.value })}
+                                                value={eventForm.description}
+                                                onChange={(e) => setEventForm({ ...eventForm, description: e.target.value })}
                                                 required
-                                                placeholder="Describe key achievements, student learning, and community impact..."
+                                                placeholder="Briefly describe the objectives and details of the activity..."
                                             ></textarea>
                                         </div>
 
-                                        {/* Upload Activity Photos */}
-                                        <div className="form-group mb-4">
-                                            <label className="form-label">
-                                                Upload Activity Photographs (Newspaper Cuttings / Invitation / Certificate / Session Photos) *
-                                            </label>
-                                            <div style={{ background: 'rgba(245,158,11,0.08)', border: '1px solid rgba(245,158,11,0.25)', color: 'var(--warning-700)', padding: '0.75rem', borderRadius: '6px', fontSize: '0.8rem', marginBottom: '0.75rem' }}>
-                                                ⚠️ <strong>Required:</strong> Please select at least one photo (Max: 5 photos in total).
+                                        <div className="grid-cols-2 gap-3 mb-3">
+                                            <div className="form-group">
+                                                <label className="form-label">Category *</label>
+                                                <select
+                                                    className="form-control"
+                                                    value={eventForm.category}
+                                                    onChange={(e) => {
+                                                        const newCat = e.target.value;
+                                                        setEventForm(prev => ({
+                                                            ...prev,
+                                                            category: newCat,
+                                                            singleDay: newCat === "Special Camp" ? false : prev.singleDay
+                                                        }));
+                                                        if (newCat === "Special Camp" && !specialCampDetails) {
+                                                            setSpecialCampDetails(getInitialSpecialCampDetails(college, unit, {
+                                                                dateFrom: eventForm.dateFrom,
+                                                                dateTo: eventForm.dateTo,
+                                                                date: eventForm.date
+                                                            }));
+                                                        }
+                                                    }}
+                                                >
+                                                    {standardCategories.map((cat, i) => (
+                                                        <option key={i} value={cat}>{cat}</option>
+                                                    ))}
+                                                    <option value="Other">Other</option>
+                                                </select>
                                             </div>
-                                            <input
-                                                type="file"
-                                                accept="image/*"
-                                                multiple
-                                                className="form-control"
-                                                onChange={handleCompletedReportFileChange}
-                                            />
+                                            <div className="form-group">
+                                                <label className="form-label">Activity Level *</label>
+                                                <select
+                                                    className="form-control"
+                                                    value={eventForm.level}
+                                                    onChange={(e) => setEventForm({ ...eventForm, level: e.target.value })}
+                                                >
+                                                    <option value="College">College Level</option>
+                                                    <option value="District">District Level</option>
+                                                    <option value="University">University Level</option>
+                                                    <option value="State">State Level</option>
+                                                    <option value="National">National Level</option>
+                                                </select>
+                                            </div>
+                                        </div>
 
-                                            {/* Live photo previews */}
-                                            {completedReportPreviews.length > 0 && (
-                                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(90px, 1fr))', gap: '0.5rem', marginTop: '0.75rem' }}>
-                                                    {completedReportPreviews.map((url, idx) => (
-                                                        <div key={idx} style={{ position: 'relative', height: '80px', borderRadius: '6px', overflow: 'hidden', border: '1px solid var(--border)' }}>
-                                                            <img src={url} alt={`Preview ${idx + 1}`} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                                                            <button
-                                                                type="button"
-                                                                onClick={() => {
-                                                                    const nextFiles = completedReportFiles.filter((_, i) => i !== idx);
-                                                                    const nextPreviews = completedReportPreviews.filter((_, i) => i !== idx);
-                                                                    setCompletedReportFiles(nextFiles);
-                                                                    setCompletedReportPreviews(nextPreviews);
+                                        {eventForm.category === "Other" && (
+                                            <div className="form-group mb-3">
+                                                <label className="form-label">Enter Category Name *</label>
+                                                <input
+                                                    type="text"
+                                                    className="form-control"
+                                                    value={eventForm.otherCategory}
+                                                    onChange={(e) => setEventForm({ ...eventForm, otherCategory: e.target.value })}
+                                                    required
+                                                />
+                                            </div>
+                                        )}
+
+                                        <div className="form-group mb-3">
+                                            <label className="d-flex align-items-center cursor-pointer" style={{ textTransform: 'none' }}>
+                                                <input
+                                                    type="checkbox"
+                                                    checked={eventForm.singleDay}
+                                                    onChange={(e) => setEventForm({ ...eventForm, singleDay: e.target.checked })}
+                                                    className="form-check-input me-2"
+                                                />
+                                                <span>Is this a single day activity?</span>
+                                            </label>
+                                        </div>
+
+                                        {eventForm.singleDay ? (
+                                            <div className="form-group mb-3">
+                                                <label className="form-label">Activity Date *</label>
+                                                <input
+                                                    type="date"
+                                                    className="form-control"
+                                                    value={eventForm.date}
+                                                    onChange={(e) => setEventForm({ ...eventForm, date: e.target.value })}
+                                                    required
+                                                />
+                                            </div>
+                                        ) : (
+                                            <div className="grid-cols-2 gap-3 mb-3">
+                                                <div className="form-group">
+                                                    <label className="form-label">Start Date *</label>
+                                                    <input
+                                                        type="date"
+                                                        className="form-control"
+                                                        value={eventForm.dateFrom}
+                                                        onChange={(e) => setEventForm({ ...eventForm, dateFrom: e.target.value })}
+                                                        required
+                                                    />
+                                                </div>
+                                                <div className="form-group">
+                                                    <label className="form-label">End Date *</label>
+                                                    <input
+                                                        type="date"
+                                                        className="form-control"
+                                                        value={eventForm.dateTo}
+                                                        onChange={(e) => setEventForm({ ...eventForm, dateTo: e.target.value })}
+                                                        required
+                                                    />
+                                                </div>
+                                            </div>
+                                        )}
+
+                                        <div className="grid-cols-2 gap-3 mb-3">
+                                            <div className="form-group">
+                                                <label className="form-label">Start Time</label>
+                                                <input
+                                                    type="time"
+                                                    className="form-control"
+                                                    value={eventForm.timeFrom}
+                                                    onChange={(e) => setEventForm({ ...eventForm, timeFrom: e.target.value })}
+                                                />
+                                            </div>
+                                            <div className="form-group">
+                                                <label className="form-label">End Time</label>
+                                                <input
+                                                    type="time"
+                                                    className="form-control"
+                                                    value={eventForm.timeTo}
+                                                    onChange={(e) => setEventForm({ ...eventForm, timeTo: e.target.value })}
+                                                />
+                                            </div>
+                                        </div>
+
+                                        <div className="form-group mb-3">
+                                            <label className="form-label">Venue *</label>
+                                            <input
+                                                type="text"
+                                                className="form-control"
+                                                value={eventForm.venue}
+                                                onChange={(e) => setEventForm({ ...eventForm, venue: e.target.value })}
+                                                required
+                                                placeholder="e.g. College Seminar Hall"
+                                            />
+                                        </div>
+
+                                        <div className="grid-cols-2 gap-3 mb-3">
+                                            <div className="form-group">
+                                                <label className="form-label">
+                                                    {activityMode === 'completed' ? "Resource Person(s) / Chief Guest(s)" : "Resource Person / Guest"}
+                                                </label>
+                                                <input
+                                                    type="text"
+                                                    className="form-control"
+                                                    value={eventForm.resourcePerson}
+                                                    onChange={(e) => setEventForm({ ...eventForm, resourcePerson: e.target.value })}
+                                                    placeholder={activityMode === 'completed' ? "e.g. Dr. K. Raman (Professor), Thiru S. Kumar" : "e.g. Dr. John Doe"}
+                                                />
+                                            </div>
+                                            <div className="form-group">
+                                                <label className="form-label">Sponsorship Details</label>
+                                                <input
+                                                    type="text"
+                                                    className="form-control"
+                                                    value={eventForm.sponsorship}
+                                                    onChange={(e) => setEventForm({ ...eventForm, sponsorship: e.target.value })}
+                                                    placeholder="e.g. Rotary Club / Self Funded"
+                                                />
+                                            </div>
+                                        </div>
+
+                                        {/* Volunteer Selection checklist ONLY FOR EXTERNAL EVENTS */}
+                                        {isExternalEventForm && (
+                                            <div className="form-group mb-4" style={{ background: 'var(--bg-2)', padding: '15px', borderRadius: '8px', border: '1px solid var(--border)' }}>
+                                                <label className="fw-bold mb-2" style={{ fontSize: '0.8rem', color: 'var(--txt-1)' }}>Select Participating Volunteers *</label>
+                                                <input
+                                                    type="text"
+                                                    className="form-control mb-3"
+                                                    placeholder="Search volunteers by name or register number..."
+                                                    value={volunteerSearch}
+                                                    onChange={(e) => setVolunteerSearch(e.target.value)}
+                                                />
+                                                <div style={{ maxHeight: '180px', overflowY: 'auto', border: '1px solid var(--border)', borderRadius: '6px', background: 'var(--card)', padding: '10px' }}>
+                                                    {unit?.members?.filter(m =>
+                                                        m.name?.toLowerCase().includes(volunteerSearch.toLowerCase()) ||
+                                                        m.regNo?.toLowerCase().includes(volunteerSearch.toLowerCase())
+                                                    ).map(m => {
+                                                        const isChecked = eventForm.attendees?.includes(m._id);
+                                                        return (
+                                                            <label key={m._id} className="d-flex align-items-center mb-2 cursor-pointer text-sm" style={{ textTransform: 'none' }}>
+                                                                <input
+                                                                    type="checkbox"
+                                                                    checked={isChecked}
+                                                                    onChange={() => {
+                                                                        const updated = isChecked
+                                                                            ? eventForm.attendees.filter(id => id !== m._id)
+                                                                            : [...(eventForm.attendees || []), m._id];
+                                                                        setEventForm(prev => ({ ...prev, attendees: updated }));
+                                                                    }}
+                                                                    className="form-check-input me-2"
+                                                                />
+                                                                <span>{m.name} ({m.regNo}) - {m.dept}</span>
+                                                            </label>
+                                                        );
+                                                    })}
+                                                </div>
+                                                <small className="text-muted d-block mt-2">
+                                                    Selected: {eventForm.attendees?.length || 0} volunteer(s)
+                                                </small>
+                                            </div>
+                                        )}
+
+                                        {/* Collaborations - ONLY FOR NON-EXTERNAL EVENTS */}
+                                        {!isExternalEventForm && (
+                                            <div className="form-group mb-4" style={{ background: 'var(--bg-2)', padding: '15px', borderRadius: '8px', border: '1px solid var(--border)' }}>
+                                                <label className="fw-bold mb-2" style={{ fontSize: '0.8rem', color: 'var(--txt-1)' }}>Co-Organizing Units (Collaborations)</label>
+                                                <div className="d-flex gap-2 mb-3">
+                                                    <select
+                                                        className="form-control"
+                                                        value={selectedCollaborator}
+                                                        onChange={(e) => setSelectedCollaborator(e.target.value)}
+                                                    >
+                                                        <option value="">Select College Unit</option>
+                                                        {availableUnits.map((u, i) => (
+                                                            <option key={i} value={u.unitNumber}>Unit {u.unitNumber} ({u.name})</option>
+                                                        ))}
+                                                    </select>
+                                                    <button
+                                                        type="button"
+                                                        className="btn btn-outline-primary"
+                                                        onClick={() => {
+                                                            if (selectedCollaborator && !collaborators.includes(selectedCollaborator)) {
+                                                                setCollaborators([...collaborators, selectedCollaborator]);
+                                                                setSelectedCollaborator("");
+                                                            }
+                                                        }}
+                                                    >
+                                                        Add
+                                                    </button>
+                                                </div>
+                                                {collaborators.length > 0 && (
+                                                    <div className="d-flex flex-wrap gap-2">
+                                                        {collaborators.map((c, idx) => (
+                                                            <span key={idx} className="badge badge-indigo d-flex align-items-center gap-1" style={{ textTransform: 'none' }}>
+                                                                Unit {c}
+                                                                <span
+                                                                    style={{ cursor: 'pointer', fontWeight: 'bold' }}
+                                                                    onClick={() => setCollaborators(collaborators.filter(item => item !== c))}
+                                                                >
+                                                                    ✕
+                                                                </span>
+                                                            </span>
+                                                        ))}
+                                                    </div>
+                                                )}
+                                            </div>
+                                        )}
+
+                                        {/* Images and Brochure Upload - Only for Upcoming Activity or Edit Mode */}
+                                        {(activityMode !== 'completed' || isEditingEvent) && (
+                                            <div className="grid-cols-2 gap-3 mb-4">
+                                                <div className="form-group">
+                                                    <label className="form-label">Upload Activity Photos (Max 250KB each)</label>
+                                                    <div className="d-flex gap-2">
+                                                        <input
+                                                            type="file"
+                                                            className="form-control"
+                                                            accept="image/*"
+                                                            multiple
+                                                            onChange={handleEventFileChange}
+                                                        />
+                                                        <button
+                                                            type="button"
+                                                            className="btn btn-secondary btn-sm"
+                                                            disabled={uploading || selectedFiles.length === 0}
+                                                            onClick={handleUploadEventImages}
+                                                        >
+                                                            {uploading ? "..." : "Upload"}
+                                                        </button>
+                                                    </div>
+                                                    {eventForm.images && eventForm.images.length > 0 && (
+                                                        <small className="text-success d-block mt-1">✓ {eventForm.images.length} photos uploaded</small>
+                                                    )}
+                                                </div>
+
+                                                <div className="form-group">
+                                                    <label className="form-label">Upload Circular / Brochure (PDF)</label>
+                                                    <div className="d-flex gap-2">
+                                                        <input
+                                                            type="file"
+                                                            className="form-control"
+                                                            accept="application/pdf"
+                                                            onChange={(e) => setBrochureFile(e.target.files[0])}
+                                                        />
+                                                        <button
+                                                            type="button"
+                                                            className="btn btn-secondary btn-sm"
+                                                            disabled={uploadingBrochure || !brochureFile}
+                                                            onClick={handleUploadEventBrochure}
+                                                        >
+                                                            {uploadingBrochure ? "..." : "Upload"}
+                                                        </button>
+                                                    </div>
+                                                    {eventForm.brochure && (
+                                                        <small className="text-success d-block mt-1">✓ Circular / Brochure uploaded</small>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        )}
+
+                                        {/* Embedded Completion Report Section for Completed Activity Mode */}
+                                        {activityMode === 'completed' && !isEditingEvent && (
+                                            <div style={{ marginTop: '1.5rem', paddingTop: '1.5rem', borderTop: '2px solid var(--border)' }}>
+                                                <div style={{ background: 'rgba(22, 163, 74, 0.08)', border: '1px solid rgba(22, 163, 74, 0.25)', padding: '0.85rem 1rem', borderRadius: '8px', marginBottom: '1.25rem' }}>
+                                                    <h4 style={{ margin: 0, fontSize: '0.95rem', fontWeight: 800, color: 'var(--success-700)', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                                                        📋 Activity Completion Report & Evidence
+                                                    </h4>
+                                                    <p style={{ margin: '4px 0 0', fontSize: '0.8rem', color: 'var(--txt-2)' }}>
+                                                        Please provide participation statistics, impact outcomes, and attach activity photos to immediately generate the official printable report.
+                                                    </p>
+                                                </div>
+
+                                                <div className="grid-cols-3 gap-3 mb-3">
+                                                    <div className="form-group">
+                                                        <label className="form-label">Total Volunteers Participated *</label>
+                                                        <input
+                                                            type="number"
+                                                            className="form-control"
+                                                            value={completedReportForm.participantsCount}
+                                                            onChange={(e) => setCompletedReportForm({ ...completedReportForm, participantsCount: e.target.value })}
+                                                            required
+                                                            min="1"
+                                                            placeholder="e.g. 50"
+                                                        />
+                                                    </div>
+                                                    <div className="form-group">
+                                                        <label className="form-label">Community Beneficiaries</label>
+                                                        <input
+                                                            type="number"
+                                                            className="form-control"
+                                                            value={completedReportForm.beneficiariesCount}
+                                                            onChange={(e) => setCompletedReportForm({ ...completedReportForm, beneficiariesCount: e.target.value })}
+                                                            min="0"
+                                                            placeholder="e.g. 200"
+                                                        />
+                                                    </div>
+                                                    <div className="form-group">
+                                                        <label className="form-label">Colleges Participated</label>
+                                                        <input
+                                                            type="number"
+                                                            className="form-control"
+                                                            value={completedReportForm.collegesCount}
+                                                            onChange={(e) => setCompletedReportForm({ ...completedReportForm, collegesCount: e.target.value })}
+                                                            min="1"
+                                                            placeholder="e.g. 1"
+                                                        />
+                                                    </div>
+                                                </div>
+
+                                                {/* Dynamic Category Specific Metrics */}
+                                                {eventForm.category === 'Tree Plantation' && (
+                                                    <div className="form-group mb-3 p-3" style={{ background: 'rgba(22,163,74,0.07)', border: '1px solid rgba(22,163,74,0.2)', borderRadius: '8px' }}>
+                                                        <label className="form-label" style={{ color: 'var(--success-600)', fontWeight: 700 }}>
+                                                            🌱 Number of Trees Planted *
+                                                        </label>
+                                                        <input
+                                                            type="number"
+                                                            className="form-control"
+                                                            value={completedReportForm.treesPlanted}
+                                                            onChange={(e) => setCompletedReportForm({ ...completedReportForm, treesPlanted: e.target.value })}
+                                                            required
+                                                            min="1"
+                                                            placeholder="e.g. 100"
+                                                        />
+                                                    </div>
+                                                )}
+
+                                                {eventForm.category === 'Blood Donation' && (
+                                                    <div className="form-group mb-3 p-3" style={{ background: 'rgba(220,38,38,0.06)', border: '1px solid rgba(220,38,38,0.2)', borderRadius: '8px' }}>
+                                                        <label className="form-label" style={{ color: 'var(--danger-600)', fontWeight: 700 }}>
+                                                            🩸 Units of Blood Donated *
+                                                        </label>
+                                                        <input
+                                                            type="number"
+                                                            className="form-control"
+                                                            value={completedReportForm.bloodUnitsCollected}
+                                                            onChange={(e) => setCompletedReportForm({ ...completedReportForm, bloodUnitsCollected: e.target.value })}
+                                                            required
+                                                            min="1"
+                                                            placeholder="e.g. 25"
+                                                        />
+                                                    </div>
+                                                )}
+
+                                                {['Cleanliness Rally', 'Road Safety Awareness'].includes(eventForm.category) && (
+                                                    <div className="form-group mb-3 p-3" style={{ background: 'rgba(245,158,11,0.06)', border: '1px solid rgba(245,158,11,0.2)', borderRadius: '8px' }}>
+                                                        <label className="form-label" style={{ color: 'var(--warning-600)', fontWeight: 700 }}>
+                                                            📍 Rally Distance (km)
+                                                        </label>
+                                                        <input
+                                                            type="number"
+                                                            className="form-control"
+                                                            value={completedReportForm.rallyDistance}
+                                                            onChange={(e) => setCompletedReportForm({ ...completedReportForm, rallyDistance: e.target.value })}
+                                                            min="0"
+                                                            step="0.1"
+                                                            placeholder="e.g. 3.5"
+                                                        />
+                                                    </div>
+                                                )}
+
+                                                {/* Outcome of Activity */}
+                                                <div className="form-group mb-3">
+                                                    <label className="form-label">Outcome & Impact of the Activity *</label>
+                                                    <textarea
+                                                        className="form-control"
+                                                        rows="3"
+                                                        value={completedReportForm.outcome}
+                                                        onChange={(e) => setCompletedReportForm({ ...completedReportForm, outcome: e.target.value })}
+                                                        required
+                                                        placeholder="Describe key achievements, student learning, and community impact..."
+                                                    ></textarea>
+                                                </div>
+
+                                                {/* Upload Activity Photos */}
+                                                <div className="form-group mb-4">
+                                                    <label className="form-label">
+                                                        Upload Activity Photographs (Newspaper Cuttings / Invitation / Certificate / Session Photos) *
+                                                    </label>
+                                                    <div style={{ background: 'rgba(245,158,11,0.08)', border: '1px solid rgba(245,158,11,0.25)', color: 'var(--warning-700)', padding: '0.75rem', borderRadius: '6px', fontSize: '0.8rem', marginBottom: '0.75rem' }}>
+                                                        ⚠️ <strong>Required:</strong> Please select at least one photo (Max: 5 photos in total).
+                                                    </div>
+                                                    <input
+                                                        type="file"
+                                                        accept="image/*"
+                                                        multiple
+                                                        className="form-control"
+                                                        onChange={handleCompletedReportFileChange}
+                                                    />
+
+                                                    {/* Live photo previews */}
+                                                    {completedReportPreviews.length > 0 && (
+                                                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(90px, 1fr))', gap: '0.5rem', marginTop: '0.75rem' }}>
+                                                            {completedReportPreviews.map((url, idx) => (
+                                                                <div key={idx} style={{ position: 'relative', height: '80px', borderRadius: '6px', overflow: 'hidden', border: '1px solid var(--border)' }}>
+                                                                    <img src={url} alt={`Preview ${idx + 1}`} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                                                    <button
+                                                                        type="button"
+                                                                        onClick={() => {
+                                                                            const nextFiles = completedReportFiles.filter((_, i) => i !== idx);
+                                                                            const nextPreviews = completedReportPreviews.filter((_, i) => i !== idx);
+                                                                            setCompletedReportFiles(nextFiles);
+                                                                            setCompletedReportPreviews(nextPreviews);
+                                                                        }}
+                                                                        style={{
+                                                                            position: 'absolute', top: 2, right: 2, background: 'rgba(0,0,0,0.65)',
+                                                                            color: '#fff', border: 'none', borderRadius: '50%', width: '20px',
+                                                                            height: '20px', cursor: 'pointer', fontSize: '11px', display: 'flex',
+                                                                            alignItems: 'center', justifyContent: 'center'
+                                                                        }}
+                                                                    >
+                                                                        ✕
+                                                                    </button>
+                                                                </div>
+                                                            ))}
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        )}
+
+                                        {eventForm.category === "Special Camp" && (
+                                            <SpecialCampFormSection
+                                                specialCampDetails={specialCampDetails || getInitialSpecialCampDetails(college, unit, {
+                                                    dateFrom: eventForm.dateFrom,
+                                                    dateTo: eventForm.dateTo,
+                                                    date: eventForm.date
+                                                })}
+                                                setSpecialCampDetails={setSpecialCampDetails}
+                                                college={college}
+                                                unit={unit}
+                                                onPreviewPdf={() => {
+                                                    setSpecialCampEventForModal({
+                                                        ...eventForm,
+                                                        category: "Special Camp",
+                                                        specialCampDetails: specialCampDetails || getInitialSpecialCampDetails(college, unit, {
+                                                            dateFrom: eventForm.dateFrom,
+                                                            dateTo: eventForm.dateTo,
+                                                            date: eventForm.date
+                                                        })
+                                                    });
+                                                    setShowSpecialCampProposalModal(true);
+                                                }}
+                                            />
+                                        )}
+
+                                        <div className="flex-between pt-4" style={{ borderTop: '1px solid var(--border)' }}>
+                                            <button type="button" className="btn btn-secondary" onClick={() => setShowEventFormModal(false)} disabled={isSavingCompletedEvent}>Cancel</button>
+                                            <button type="submit" className="btn btn-primary" disabled={isSavingCompletedEvent}>
+                                                {isSavingCompletedEvent
+                                                    ? "Saving & Generating Report..."
+                                                    : isEditingEvent
+                                                        ? "Update Activity"
+                                                        : activityMode === "completed"
+                                                            ? "Save Activity & Submit Report"
+                                                            : "Post Upcoming Activity"
+                                                }
+                                            </button>
+                                        </div>
+                                    </form>
+                                </div>
+                            </div>
+                            )
+            }
+
+                            {/* Event Report Form Modal */}
+                            {
+                                showReportModal && reportingEvent && (
+                                    <div className="modal-overlay">
+                                        <div className="modal-content" style={{ maxWidth: '800px', width: '95%', maxHeight: '90vh', overflowY: 'auto' }}>
+                                            <div className="flex-between mb-4">
+                                                <h2 className="mb-0" style={{ fontSize: '1.5rem', fontWeight: 800 }}>Activity Report: {reportingEvent.name}</h2>
+                                                <button className="btn btn-sm btn-secondary" onClick={() => setShowReportModal(false)}>&times;</button>
+                                            </div>
+
+                                            <form onSubmit={handleReportSubmit}>
+                                                <div className="form-group mb-4 p-3" style={{ background: 'var(--bg-2)', borderRadius: '8px' }}>
+                                                    <label className="d-flex align-items-center cursor-pointer" style={{ textTransform: 'none' }}>
+                                                        <input
+                                                            type="checkbox"
+                                                            name="conductedOnDate"
+                                                            checked={reportForm.conductedOnDate}
+                                                            onChange={handleReportInputChange}
+                                                            className="form-check-input me-2"
+                                                        />
+                                                        <span>Was the activity conducted on the scheduled date?</span>
+                                                    </label>
+                                                </div>
+
+                                                <div className="grid-cols-2 gap-3 mb-3">
+                                                    <div className="form-group">
+                                                        <label className="form-label">Total Participants *</label>
+                                                        <input
+                                                            type="number"
+                                                            name="participantsCount"
+                                                            className="form-control"
+                                                            value={reportForm.participantsCount}
+                                                            onChange={handleReportInputChange}
+                                                            required
+                                                            placeholder="e.g. 50"
+                                                        />
+                                                    </div>
+                                                    <div className="form-group">
+                                                        <label className="form-label">Colleges Participated *</label>
+                                                        <input
+                                                            type="number"
+                                                            name="collegesCount"
+                                                            className="form-control"
+                                                            value={reportForm.collegesCount}
+                                                            onChange={handleReportInputChange}
+                                                            required
+                                                            placeholder="e.g. 1"
+                                                        />
+                                                    </div>
+                                                </div>
+
+                                                {/* Tree Plantation specific field */}
+                                                {reportingEvent.category === 'Tree Plantation' && (
+                                                    <div className="form-group mb-3 p-3" style={{ background: 'rgba(22,163,74,0.07)', border: '1px solid rgba(22,163,74,0.2)', borderRadius: '8px' }}>
+                                                        <label className="form-label" style={{ color: 'var(--success-600)', fontWeight: 700 }}>
+                                                            🌱 Number of Trees Planted *
+                                                        </label>
+                                                        <input
+                                                            type="number"
+                                                            name="treesPlanted"
+                                                            className="form-control"
+                                                            value={reportForm.treesPlanted}
+                                                            onChange={handleReportInputChange}
+                                                            required
+                                                            min="1"
+                                                            placeholder="e.g. 100"
+                                                        />
+                                                    </div>
+                                                )}
+
+                                                {/* Blood Donation specific field */}
+                                                {reportingEvent.category === 'Blood Donation' && (
+                                                    <div className="form-group mb-3 p-3" style={{ background: 'rgba(220,38,38,0.06)', border: '1px solid rgba(220,38,38,0.2)', borderRadius: '8px' }}>
+                                                        <label className="form-label" style={{ color: 'var(--danger-600)', fontWeight: 700 }}>
+                                                            🩸 Units of Blood Donated *
+                                                        </label>
+                                                        <input
+                                                            type="number"
+                                                            name="bloodUnitsCollected"
+                                                            className="form-control"
+                                                            value={reportForm.bloodUnitsCollected}
+                                                            onChange={handleReportInputChange}
+                                                            required
+                                                            min="1"
+                                                            placeholder="e.g. 25"
+                                                        />
+                                                    </div>
+                                                )}
+
+                                                {/* Beneficiaries count — for health camps, anti-drug, voter, road safety, hosted meetings */}
+                                                {['Health & Hygiene Awareness', 'Road Safety Awareness', 'Digital Literacy Workshop', 'Disaster Management Training'].includes(reportingEvent.category) && (
+                                                    <div className="form-group mb-3 p-3" style={{ background: 'rgba(99,102,241,0.06)', border: '1px solid rgba(99,102,241,0.2)', borderRadius: '8px' }}>
+                                                        <label className="form-label" style={{ color: 'var(--primary-color)', fontWeight: 700 }}>
+                                                            👥 Number of Beneficiaries
+                                                        </label>
+                                                        <input
+                                                            type="number"
+                                                            name="beneficiariesCount"
+                                                            className="form-control"
+                                                            value={reportForm.beneficiariesCount}
+                                                            onChange={handleReportInputChange}
+                                                            min="0"
+                                                            placeholder="e.g. 200"
+                                                        />
+                                                    </div>
+                                                )}
+
+                                                {/* Rally Distance — for Cleanliness Rally / Road Safety */}
+                                                {['Cleanliness Rally', 'Road Safety Awareness'].includes(reportingEvent.category) && (
+                                                    <div className="form-group mb-3 p-3" style={{ background: 'rgba(245,158,11,0.06)', border: '1px solid rgba(245,158,11,0.2)', borderRadius: '8px' }}>
+                                                        <label className="form-label" style={{ color: 'var(--warning-600)', fontWeight: 700 }}>
+                                                            📍 Rally Distance (km)
+                                                        </label>
+                                                        <input
+                                                            type="number"
+                                                            name="rallyDistance"
+                                                            className="form-control"
+                                                            value={reportForm.rallyDistance}
+                                                            onChange={handleReportInputChange}
+                                                            min="0"
+                                                            step="0.1"
+                                                            placeholder="e.g. 3.5"
+                                                        />
+                                                    </div>
+                                                )}
+
+                                                {/* Guests Dynamic list */}
+                                                <div className="form-group mb-3 p-3" style={{ background: 'var(--bg-2)', borderRadius: '8px' }}>
+                                                    <div className="flex-between mb-2">
+                                                        <label className="mb-0 fw-bold">Guest(s) / Resource Person(s)</label>
+                                                        <button
+                                                            type="button"
+                                                            className="btn btn-sm btn-outline-primary"
+                                                            onClick={() => setReportForm(prev => ({ ...prev, guests: [...prev.guests, ""] }))}
+                                                        >
+                                                            + Add Guest
+                                                        </button>
+                                                    </div>
+                                                    {reportForm.guests?.map((guest, idx) => (
+                                                        <div key={idx} className="d-flex gap-2 mb-2">
+                                                            <input
+                                                                type="text"
+                                                                className="form-control"
+                                                                value={guest}
+                                                                placeholder={`Guest/Resource Person #${idx + 1}`}
+                                                                onChange={(e) => {
+                                                                    const updatedGuests = [...reportForm.guests];
+                                                                    updatedGuests[idx] = e.target.value;
+                                                                    setReportForm(prev => ({ ...prev, guests: updatedGuests }));
                                                                 }}
-                                                                style={{
-                                                                    position: 'absolute', top: 2, right: 2, background: 'rgba(0,0,0,0.65)',
-                                                                    color: '#fff', border: 'none', borderRadius: '50%', width: '20px',
-                                                                    height: '20px', cursor: 'pointer', fontSize: '11px', display: 'flex',
-                                                                    alignItems: 'center', justifyContent: 'center'
-                                                                }}
-                                                            >
-                                                                ✕
-                                                            </button>
+                                                                required
+                                                            />
+                                                            {reportForm.guests.length > 1 && (
+                                                                <button
+                                                                    type="button"
+                                                                    className="btn btn-danger btn-sm"
+                                                                    onClick={() => {
+                                                                        const updatedGuests = reportForm.guests.filter((_, i) => i !== idx);
+                                                                        setReportForm(prev => ({ ...prev, guests: updatedGuests }));
+                                                                    }}
+                                                                >
+                                                                    ✕
+                                                                </button>
+                                                            )}
                                                         </div>
                                                     ))}
+                                                </div>
+
+                                                <div className="form-group mb-3">
+                                                    <label className="form-label">Outcome of the Activity *</label>
+                                                    <textarea
+                                                        name="outcome"
+                                                        className="form-control"
+                                                        rows="3"
+                                                        value={reportForm.outcome}
+                                                        onChange={handleReportInputChange}
+                                                        required
+                                                        placeholder="Describe the impact/outcome for students and community..."
+                                                    ></textarea>
+                                                </div>
+
+                                                <div className="form-group mb-4">
+                                                    <label className="form-label">Upload Report Photos ( Newspaper cuttings, certificate or invitation ) *</label>
+                                                    <div style={{ background: 'rgba(245,158,11,0.08)', border: '1px solid rgba(245,158,11,0.25)', color: 'var(--warning-700)', padding: '0.75rem', borderRadius: '6px', fontSize: '0.8rem', marginBottom: '0.75rem' }}>
+                                                        ⚠️ <strong>Required:</strong> Please upload at least one photo showing <strong>Newspaper cuttings</strong>, <strong>invitation</strong>, or <strong>certificate</strong>. (Max: 5 photos in total)
+                                                    </div>
+                                                    <input
+                                                        type="file"
+                                                        accept="image/*"
+                                                        multiple
+                                                        className="form-control"
+                                                        onChange={handleReportFileChange}
+                                                    />
+                                                    <small className="text-muted d-block mt-1">Select up to 5 best photos of the activity.</small>
+                                                    {(reportForm.reportPhotos && reportForm.reportPhotos.length > 0) && (
+                                                        <small className="text-success d-block mt-1">✓ {reportForm.reportPhotos.length} photos already attached</small>
+                                                    )}
+                                                </div>
+
+                                                <div className="flex-between pt-4" style={{ borderTop: '1px solid var(--border)' }}>
+                                                    <button type="button" className="btn btn-secondary" onClick={() => setShowReportModal(false)} disabled={isSubmittingReport}>Cancel</button>
+                                                    <button type="submit" className="btn btn-primary" disabled={isSubmittingReport}>
+                                                        {isSubmittingReport ? "Submitting..." : "Submit Activity Report"}
+                                                    </button>
+                                                </div>
+                                            </form>
+                                        </div>
+                                    </div>
+                                )
+                            }
+
+                            {
+                                showEditPoModal && unit?.head && (
+                                    <ProgramOfficerModal
+                                        isOpen={showEditPoModal}
+                                        onClose={() => setShowEditPoModal(false)}
+                                        insName={college?.insName}
+                                        insCode={college?.code}
+                                        units={[unit.unitNumber]}
+                                        initialData={{ ...unit.head, unit: unit.head.unit || unit.unitNumber }}
+                                        readOnly={false}
+                                        onSuccess={() => {
+                                            fetchDashboardData();
+                                        }}
+                                    />
+                                )
+                            }
+
+                            {/* Edit Bank Details OTP Protected Modal */}
+                            {
+                                showEditBankModal && (
+                                    <div className="modal-overlay" style={{ zIndex: 1100 }}>
+                                        <div className="modal-content" style={{ maxWidth: '650px' }}>
+                                            <div className="flex-between mb-4 pb-2" style={{ borderBottom: '1px solid var(--border)' }}>
+                                                <h3 className="mb-0" style={{ fontWeight: 800, color: 'var(--txt-1)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                                    <span>🏦</span>
+                                                    <span>Edit Unit Bank Account Details</span>
+                                                </h3>
+                                                <button className="btn btn-sm btn-secondary" onClick={() => setShowEditBankModal(false)}>&times;</button>
+                                            </div>
+
+                                            {bankOtpStep === 1 ? (
+                                                <div className="text-center py-4">
+                                                    <div style={{ width: '64px', height: '64px', borderRadius: '50%', background: 'rgba(37,99,235,0.12)', color: '#2563eb', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1.25rem', fontSize: '1.75rem' }}>
+                                                        🔒
+                                                    </div>
+                                                    <h4 style={{ fontWeight: 700, marginBottom: '0.5rem', color: 'var(--txt-1)' }}>Security OTP Verification Required</h4>
+                                                    <p style={{ color: 'var(--txt-3)', fontSize: '0.88rem', maxWidth: '480px', margin: '0 auto 1.5rem', lineHeight: 1.6 }}>
+                                                        To protect sensitive grant funding bank accounts, updating Bank Details requires One-Time Password (OTP) verification. An OTP will be sent to the Programme Officer's registered email:
+                                                    </p>
+                                                    <div style={{ background: 'var(--bg)', padding: '0.75rem 1rem', borderRadius: '8px', border: '1px solid var(--border)', display: 'inline-block', fontWeight: 700, color: 'var(--primary-color)', marginBottom: '1.75rem', fontSize: '0.92rem' }}>
+                                                        📧 {unit?.head?.email || 'Programme Officer Email'}
+                                                    </div>
+                                                    <div style={{ display: 'flex', justifyContent: 'center', gap: '1rem' }}>
+                                                        <button className="btn btn-secondary" onClick={() => setShowEditBankModal(false)} disabled={bankOtpSending}>Cancel</button>
+                                                        <button className="btn btn-primary" onClick={handleSendBankOtp} disabled={bankOtpSending}>
+                                                            {bankOtpSending ? 'Sending OTP...' : '📩 Request OTP to PO Email'}
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            ) : (
+                                                <div>
+                                                    <div style={{ background: 'rgba(16, 185, 129, 0.08)', border: '1px solid rgba(16, 185, 129, 0.3)', borderRadius: '8px', padding: '0.75rem 1rem', marginBottom: '1.25rem', fontSize: '0.83rem', color: '#047857', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                                        <div>
+                                                            <strong>OTP Sent!</strong> Check <span>{bankOtpMaskedEmail || unit?.head?.email}</span> for the 6-digit code.
+                                                        </div>
+                                                        <button type="button" className="btn btn-sm btn-secondary" onClick={handleSendBankOtp} disabled={bankOtpSending} style={{ fontSize: '0.72rem', padding: '0.2rem 0.5rem' }}>
+                                                            Resend OTP
+                                                        </button>
+                                                    </div>
+
+                                                    <div className="form-group mb-4" style={{ background: 'var(--bg)', padding: '1rem', borderRadius: '10px', border: '1.5px solid var(--primary-color)' }}>
+                                                        <label className="form-label" style={{ fontWeight: 800, color: 'var(--txt-1)' }}>Enter 6-Digit OTP Code <span style={{ color: 'red' }}>*</span></label>
+                                                        <input
+                                                            className="form-input"
+                                                            type="text"
+                                                            maxLength={6}
+                                                            placeholder="e.g. 123456"
+                                                            value={bankOtpInput}
+                                                            onChange={(e) => setBankOtpInput(e.target.value.replace(/[^0-9]/g, ''))}
+                                                            style={{ letterSpacing: '4px', fontWeight: 800, fontSize: '1.1rem', textAlign: 'center', height: '44px' }}
+                                                        />
+                                                    </div>
+
+                                                    {/* 1. ZBSCA Account Inputs */}
+                                                    <div style={{ background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: '10px', padding: '1rem', marginBottom: '1rem' }}>
+                                                        <h5 style={{ margin: '0 0 0.75rem', fontSize: '0.85rem', fontWeight: 700, color: 'var(--primary-color)' }}>
+                                                            1. ZBSCA Account Details (Zero Balance Subsidiary)
+                                                        </h5>
+                                                        <div className="grid-cols-2 mb-3" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.85rem' }}>
+                                                            <div className="form-group">
+                                                                <label className="form-label">ZBSCA Account Number <span style={{ color: 'red' }}>*</span></label>
+                                                                <input className="form-input" type="text" placeholder="Account No" value={editBankDetails.zbsca.accountNo} onChange={(e) => setEditBankDetails({ ...editBankDetails, zbsca: { ...editBankDetails.zbsca, accountNo: e.target.value } })} required />
+                                                            </div>
+                                                            <div className="form-group">
+                                                                <label className="form-label">IFSC Code <span style={{ color: 'red' }}>*</span></label>
+                                                                <input className="form-input" type="text" placeholder="IFSC Code" value={editBankDetails.zbsca.ifscCode} onChange={(e) => setEditBankDetails({ ...editBankDetails, zbsca: { ...editBankDetails.zbsca, ifscCode: e.target.value.toUpperCase() } })} required />
+                                                            </div>
+                                                        </div>
+                                                        <div className="grid-cols-2" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.85rem' }}>
+                                                            <div className="form-group">
+                                                                <label className="form-label">Bank Name</label>
+                                                                <input className="form-input" type="text" value="State Bank of India" readOnly disabled style={{ background: 'var(--bg-tertiary, rgba(255,255,255,0.05))', cursor: 'not-allowed', fontWeight: 600, color: 'var(--txt-1)' }} />
+                                                            </div>
+                                                            <div className="form-group">
+                                                                <label className="form-label">Branch Name</label>
+                                                                <input className="form-input" type="text" placeholder="Branch Name" value={editBankDetails.zbsca.branchName} onChange={(e) => setEditBankDetails({ ...editBankDetails, zbsca: { ...editBankDetails.zbsca, branchName: e.target.value } })} />
+                                                            </div>
+                                                        </div>
+                                                    </div>
+
+                                                    <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem' }}>
+                                                        <button className="btn btn-secondary" onClick={() => setShowEditBankModal(false)} disabled={bankOtpSending}>Cancel</button>
+                                                        <button className="btn btn-primary" onClick={handleSaveBankDetailsWithOtp} disabled={bankOtpSending}>
+                                                            {bankOtpSending ? 'Updating...' : 'Verify OTP & Save Bank Details'}
+                                                        </button>
+                                                    </div>
                                                 </div>
                                             )}
                                         </div>
                                     </div>
-                                )}
+                                )
+                            }
 
-                                <div className="flex-between pt-4" style={{ borderTop: '1px solid var(--border)' }}>
-                                    <button type="button" className="btn btn-secondary" onClick={() => setShowEventFormModal(false)} disabled={isSavingCompletedEvent}>Cancel</button>
-                                    <button type="submit" className="btn btn-primary" disabled={isSavingCompletedEvent}>
-                                        {isSavingCompletedEvent
-                                            ? "Saving & Generating Report..."
-                                            : isEditingEvent
-                                                ? "Update Activity"
-                                                : activityMode === "completed"
-                                                    ? "Save Activity & Submit Report"
-                                                    : "Post Upcoming Activity"
-                                        }
-                                    </button>
-                                </div>
-                            </form>
-                        </div>
-                    </div>
-                )
-            }
+                            {/* Activity Type Selection Choice Modal */}
+                            {
+                                showActivityTypeChoiceModal && (
+                                    <div className="modal-overlay" style={{ zIndex: 1100 }}>
+                                        <div className="modal-content" style={{ maxWidth: '580px', width: '92%', borderRadius: '16px', padding: '2rem' }}>
+                                            <div className="flex-between mb-4">
+                                                <div>
+                                                    <h2 style={{ fontSize: '1.4rem', fontWeight: 800, margin: 0, color: 'var(--txt-1)' }}>
+                                                        Choose Activity Type
+                                                    </h2>
+                                                    <p style={{ margin: '4px 0 0', color: 'var(--txt-3)', fontSize: '0.85rem' }}>
+                                                        Select whether you are scheduling a future event or recording a completed event
+                                                    </p>
+                                                </div>
+                                                <button className="btn btn-sm btn-secondary" onClick={() => setShowActivityTypeChoiceModal(false)}>&times;</button>
+                                            </div>
 
-            {/* Event Report Form Modal */}
-            {
-                showReportModal && reportingEvent && (
-                    <div className="modal-overlay">
-                        <div className="modal-content" style={{ maxWidth: '800px', width: '95%', maxHeight: '90vh', overflowY: 'auto' }}>
-                            <div className="flex-between mb-4">
-                                <h2 className="mb-0" style={{ fontSize: '1.5rem', fontWeight: 800 }}>Activity Report: {reportingEvent.name}</h2>
-                                <button className="btn btn-sm btn-secondary" onClick={() => setShowReportModal(false)}>&times;</button>
-                            </div>
-
-                            <form onSubmit={handleReportSubmit}>
-                                <div className="form-group mb-4 p-3" style={{ background: 'var(--bg-2)', borderRadius: '8px' }}>
-                                    <label className="d-flex align-items-center cursor-pointer" style={{ textTransform: 'none' }}>
-                                        <input
-                                            type="checkbox"
-                                            name="conductedOnDate"
-                                            checked={reportForm.conductedOnDate}
-                                            onChange={handleReportInputChange}
-                                            className="form-check-input me-2"
-                                        />
-                                        <span>Was the activity conducted on the scheduled date?</span>
-                                    </label>
-                                </div>
-
-                                <div className="grid-cols-2 gap-3 mb-3">
-                                    <div className="form-group">
-                                        <label className="form-label">Total Participants *</label>
-                                        <input
-                                            type="number"
-                                            name="participantsCount"
-                                            className="form-control"
-                                            value={reportForm.participantsCount}
-                                            onChange={handleReportInputChange}
-                                            required
-                                            placeholder="e.g. 50"
-                                        />
-                                    </div>
-                                    <div className="form-group">
-                                        <label className="form-label">Colleges Participated *</label>
-                                        <input
-                                            type="number"
-                                            name="collegesCount"
-                                            className="form-control"
-                                            value={reportForm.collegesCount}
-                                            onChange={handleReportInputChange}
-                                            required
-                                            placeholder="e.g. 1"
-                                        />
-                                    </div>
-                                </div>
-
-                                {/* Tree Plantation specific field */}
-                                {reportingEvent.category === 'Tree Plantation' && (
-                                    <div className="form-group mb-3 p-3" style={{ background: 'rgba(22,163,74,0.07)', border: '1px solid rgba(22,163,74,0.2)', borderRadius: '8px' }}>
-                                        <label className="form-label" style={{ color: 'var(--success-600)', fontWeight: 700 }}>
-                                            🌱 Number of Trees Planted *
-                                        </label>
-                                        <input
-                                            type="number"
-                                            name="treesPlanted"
-                                            className="form-control"
-                                            value={reportForm.treesPlanted}
-                                            onChange={handleReportInputChange}
-                                            required
-                                            min="1"
-                                            placeholder="e.g. 100"
-                                        />
-                                    </div>
-                                )}
-
-                                {/* Blood Donation specific field */}
-                                {reportingEvent.category === 'Blood Donation' && (
-                                    <div className="form-group mb-3 p-3" style={{ background: 'rgba(220,38,38,0.06)', border: '1px solid rgba(220,38,38,0.2)', borderRadius: '8px' }}>
-                                        <label className="form-label" style={{ color: 'var(--danger-600)', fontWeight: 700 }}>
-                                            🩸 Units of Blood Donated *
-                                        </label>
-                                        <input
-                                            type="number"
-                                            name="bloodUnitsCollected"
-                                            className="form-control"
-                                            value={reportForm.bloodUnitsCollected}
-                                            onChange={handleReportInputChange}
-                                            required
-                                            min="1"
-                                            placeholder="e.g. 25"
-                                        />
-                                    </div>
-                                )}
-
-                                {/* Beneficiaries count — for health camps, anti-drug, voter, road safety, hosted meetings */}
-                                {['Health & Hygiene Awareness', 'Road Safety Awareness', 'Digital Literacy Workshop', 'Disaster Management Training'].includes(reportingEvent.category) && (
-                                    <div className="form-group mb-3 p-3" style={{ background: 'rgba(99,102,241,0.06)', border: '1px solid rgba(99,102,241,0.2)', borderRadius: '8px' }}>
-                                        <label className="form-label" style={{ color: 'var(--primary-color)', fontWeight: 700 }}>
-                                            👥 Number of Beneficiaries
-                                        </label>
-                                        <input
-                                            type="number"
-                                            name="beneficiariesCount"
-                                            className="form-control"
-                                            value={reportForm.beneficiariesCount}
-                                            onChange={handleReportInputChange}
-                                            min="0"
-                                            placeholder="e.g. 200"
-                                        />
-                                    </div>
-                                )}
-
-                                {/* Rally Distance — for Cleanliness Rally / Road Safety */}
-                                {['Cleanliness Rally', 'Road Safety Awareness'].includes(reportingEvent.category) && (
-                                    <div className="form-group mb-3 p-3" style={{ background: 'rgba(245,158,11,0.06)', border: '1px solid rgba(245,158,11,0.2)', borderRadius: '8px' }}>
-                                        <label className="form-label" style={{ color: 'var(--warning-600)', fontWeight: 700 }}>
-                                            📍 Rally Distance (km)
-                                        </label>
-                                        <input
-                                            type="number"
-                                            name="rallyDistance"
-                                            className="form-control"
-                                            value={reportForm.rallyDistance}
-                                            onChange={handleReportInputChange}
-                                            min="0"
-                                            step="0.1"
-                                            placeholder="e.g. 3.5"
-                                        />
-                                    </div>
-                                )}
-
-                                {/* Guests Dynamic list */}
-                                <div className="form-group mb-3 p-3" style={{ background: 'var(--bg-2)', borderRadius: '8px' }}>
-                                    <div className="flex-between mb-2">
-                                        <label className="mb-0 fw-bold">Guest(s) / Resource Person(s)</label>
-                                        <button
-                                            type="button"
-                                            className="btn btn-sm btn-outline-primary"
-                                            onClick={() => setReportForm(prev => ({ ...prev, guests: [...prev.guests, ""] }))}
-                                        >
-                                            + Add Guest
-                                        </button>
-                                    </div>
-                                    {reportForm.guests?.map((guest, idx) => (
-                                        <div key={idx} className="d-flex gap-2 mb-2">
-                                            <input
-                                                type="text"
-                                                className="form-control"
-                                                value={guest}
-                                                placeholder={`Guest/Resource Person #${idx + 1}`}
-                                                onChange={(e) => {
-                                                    const updatedGuests = [...reportForm.guests];
-                                                    updatedGuests[idx] = e.target.value;
-                                                    setReportForm(prev => ({ ...prev, guests: updatedGuests }));
-                                                }}
-                                                required
-                                            />
-                                            {reportForm.guests.length > 1 && (
-                                                <button
-                                                    type="button"
-                                                    className="btn btn-danger btn-sm"
+                                            <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '1rem' }}>
+                                                {/* Option 1: Upcoming Activity */}
+                                                <div
                                                     onClick={() => {
-                                                        const updatedGuests = reportForm.guests.filter((_, i) => i !== idx);
-                                                        setReportForm(prev => ({ ...prev, guests: updatedGuests }));
+                                                        setShowActivityTypeChoiceModal(false);
+                                                        setActivityMode("upcoming");
+                                                        handleOpenEventForm(false, null, targetIsExternal, "upcoming");
                                                     }}
+                                                    style={{
+                                                        border: '2px solid var(--border)',
+                                                        borderRadius: '12px',
+                                                        padding: '1.25rem',
+                                                        cursor: 'pointer',
+                                                        display: 'flex',
+                                                        gap: '1rem',
+                                                        alignItems: 'flex-start',
+                                                        transition: 'all 0.2s',
+                                                        background: 'var(--card)'
+                                                    }}
+                                                    onMouseEnter={e => { e.currentTarget.style.borderColor = '#2563eb'; e.currentTarget.style.background = 'rgba(37,99,235,0.04)'; }}
+                                                    onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.background = 'var(--card)'; }}
                                                 >
-                                                    ✕
+                                                    <div style={{
+                                                        width: '48px',
+                                                        height: '48px',
+                                                        borderRadius: '10px',
+                                                        background: 'rgba(37, 99, 235, 0.12)',
+                                                        color: '#2563eb',
+                                                        display: 'flex',
+                                                        alignItems: 'center',
+                                                        justifyContent: 'center',
+                                                        fontSize: '1.4rem',
+                                                        flexShrink: 0
+                                                    }}>
+                                                        📅
+                                                    </div>
+                                                    <div style={{ flex: 1 }}>
+                                                        <div className="flex-between">
+                                                            <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 700, color: 'var(--txt-1)' }}>Upcoming Activity</h3>
+                                                            <span className="badge badge-primary" style={{ fontSize: '0.65rem' }}>Scheduled</span>
+                                                        </div>
+                                                        <p style={{ margin: '6px 0 0', fontSize: '0.82rem', color: 'var(--txt-2)', lineHeight: 1.45 }}>
+                                                            Schedule a future activity or awareness program. Once conducted, you can upload and submit the completion report after the activity date.
+                                                        </p>
+                                                    </div>
+                                                </div>
+
+                                                {/* Option 2: Completed Activity */}
+                                                <div
+                                                    onClick={() => {
+                                                        setShowActivityTypeChoiceModal(false);
+                                                        setActivityMode("completed");
+                                                        handleOpenEventForm(false, null, targetIsExternal, "completed");
+                                                    }}
+                                                    style={{
+                                                        border: '2px solid var(--border)',
+                                                        borderRadius: '12px',
+                                                        padding: '1.25rem',
+                                                        cursor: 'pointer',
+                                                        display: 'flex',
+                                                        gap: '1rem',
+                                                        alignItems: 'flex-start',
+                                                        transition: 'all 0.2s',
+                                                        background: 'var(--card)'
+                                                    }}
+                                                    onMouseEnter={e => { e.currentTarget.style.borderColor = '#16a34a'; e.currentTarget.style.background = 'rgba(22,163,74,0.04)'; }}
+                                                    onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.background = 'var(--card)'; }}
+                                                >
+                                                    <div style={{
+                                                        width: '48px',
+                                                        height: '48px',
+                                                        borderRadius: '10px',
+                                                        background: 'rgba(22, 163, 74, 0.12)',
+                                                        color: '#16a34a',
+                                                        display: 'flex',
+                                                        alignItems: 'center',
+                                                        justifyContent: 'center',
+                                                        fontSize: '1.4rem',
+                                                        flexShrink: 0
+                                                    }}>
+                                                        ✅
+                                                    </div>
+                                                    <div style={{ flex: 1 }}>
+                                                        <div className="flex-between">
+                                                            <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 700, color: 'var(--txt-1)' }}>Completed Activity</h3>
+                                                            <span className="badge badge-success" style={{ fontSize: '0.65rem' }}>Conducted</span>
+                                                        </div>
+                                                        <p style={{ margin: '6px 0 0', fontSize: '0.82rem', color: 'var(--txt-2)', lineHeight: 1.45 }}>
+                                                            Log an activity that has already taken place. Enter particulars, participants, impact outcomes, and attach photos in one single form. Generates a printable report document immediately!
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <div className="text-end mt-4 pt-3" style={{ borderTop: '1px solid var(--border)' }}>
+                                                <button type="button" className="btn btn-secondary btn-sm" onClick={() => setShowActivityTypeChoiceModal(false)}>
+                                                    Cancel
                                                 </button>
-                                            )}
-                                        </div>
-                                    ))}
-                                </div>
-
-                                <div className="form-group mb-3">
-                                    <label className="form-label">Outcome of the Activity *</label>
-                                    <textarea
-                                        name="outcome"
-                                        className="form-control"
-                                        rows="3"
-                                        value={reportForm.outcome}
-                                        onChange={handleReportInputChange}
-                                        required
-                                        placeholder="Describe the impact/outcome for students and community..."
-                                    ></textarea>
-                                </div>
-
-                                <div className="form-group mb-4">
-                                    <label className="form-label">Upload Report Photos ( Newspaper cuttings, certificate or invitation ) *</label>
-                                    <div style={{ background: 'rgba(245,158,11,0.08)', border: '1px solid rgba(245,158,11,0.25)', color: 'var(--warning-700)', padding: '0.75rem', borderRadius: '6px', fontSize: '0.8rem', marginBottom: '0.75rem' }}>
-                                        ⚠️ <strong>Required:</strong> Please upload at least one photo showing <strong>Newspaper cuttings</strong>, <strong>invitation</strong>, or <strong>certificate</strong>. (Max: 5 photos in total)
-                                    </div>
-                                    <input
-                                        type="file"
-                                        accept="image/*"
-                                        multiple
-                                        className="form-control"
-                                        onChange={handleReportFileChange}
-                                    />
-                                    <small className="text-muted d-block mt-1">Select up to 5 best photos of the activity.</small>
-                                    {(reportForm.reportPhotos && reportForm.reportPhotos.length > 0) && (
-                                        <small className="text-success d-block mt-1">✓ {reportForm.reportPhotos.length} photos already attached</small>
-                                    )}
-                                </div>
-
-                                <div className="flex-between pt-4" style={{ borderTop: '1px solid var(--border)' }}>
-                                    <button type="button" className="btn btn-secondary" onClick={() => setShowReportModal(false)} disabled={isSubmittingReport}>Cancel</button>
-                                    <button type="submit" className="btn btn-primary" disabled={isSubmittingReport}>
-                                        {isSubmittingReport ? "Submitting..." : "Submit Activity Report"}
-                                    </button>
-                                </div>
-                            </form>
-                        </div>
-                    </div>
-                )
-            }
-
-            {
-                showEditPoModal && unit?.head && (
-                    <ProgramOfficerModal
-                        isOpen={showEditPoModal}
-                        onClose={() => setShowEditPoModal(false)}
-                        insName={college?.insName}
-                        insCode={college?.code}
-                        units={[unit.unitNumber]}
-                        initialData={{ ...unit.head, unit: unit.head.unit || unit.unitNumber }}
-                        readOnly={false}
-                        onSuccess={() => {
-                            fetchDashboardData();
-                        }}
-                    />
-                )
-            }
-
-            {/* Edit Bank Details OTP Protected Modal */}
-            {
-                showEditBankModal && (
-                    <div className="modal-overlay" style={{ zIndex: 1100 }}>
-                        <div className="modal-content" style={{ maxWidth: '650px' }}>
-                            <div className="flex-between mb-4 pb-2" style={{ borderBottom: '1px solid var(--border)' }}>
-                                <h3 className="mb-0" style={{ fontWeight: 800, color: 'var(--txt-1)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                                    <span>🏦</span>
-                                    <span>Edit Unit Bank Account Details</span>
-                                </h3>
-                                <button className="btn btn-sm btn-secondary" onClick={() => setShowEditBankModal(false)}>&times;</button>
-                            </div>
-
-                            {bankOtpStep === 1 ? (
-                                <div className="text-center py-4">
-                                    <div style={{ width: '64px', height: '64px', borderRadius: '50%', background: 'rgba(37,99,235,0.12)', color: '#2563eb', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1.25rem', fontSize: '1.75rem' }}>
-                                        🔒
-                                    </div>
-                                    <h4 style={{ fontWeight: 700, marginBottom: '0.5rem', color: 'var(--txt-1)' }}>Security OTP Verification Required</h4>
-                                    <p style={{ color: 'var(--txt-3)', fontSize: '0.88rem', maxWidth: '480px', margin: '0 auto 1.5rem', lineHeight: 1.6 }}>
-                                        To protect sensitive grant funding bank accounts, updating Bank Details requires One-Time Password (OTP) verification. An OTP will be sent to the Programme Officer's registered email:
-                                    </p>
-                                    <div style={{ background: 'var(--bg)', padding: '0.75rem 1rem', borderRadius: '8px', border: '1px solid var(--border)', display: 'inline-block', fontWeight: 700, color: 'var(--primary-color)', marginBottom: '1.75rem', fontSize: '0.92rem' }}>
-                                        📧 {unit?.head?.email || 'Programme Officer Email'}
-                                    </div>
-                                    <div style={{ display: 'flex', justifyContent: 'center', gap: '1rem' }}>
-                                        <button className="btn btn-secondary" onClick={() => setShowEditBankModal(false)} disabled={bankOtpSending}>Cancel</button>
-                                        <button className="btn btn-primary" onClick={handleSendBankOtp} disabled={bankOtpSending}>
-                                            {bankOtpSending ? 'Sending OTP...' : '📩 Request OTP to PO Email'}
-                                        </button>
-                                    </div>
-                                </div>
-                            ) : (
-                                <div>
-                                    <div style={{ background: 'rgba(16, 185, 129, 0.08)', border: '1px solid rgba(16, 185, 129, 0.3)', borderRadius: '8px', padding: '0.75rem 1rem', marginBottom: '1.25rem', fontSize: '0.83rem', color: '#047857', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                                        <div>
-                                            <strong>OTP Sent!</strong> Check <span>{bankOtpMaskedEmail || unit?.head?.email}</span> for the 6-digit code.
-                                        </div>
-                                        <button type="button" className="btn btn-sm btn-secondary" onClick={handleSendBankOtp} disabled={bankOtpSending} style={{ fontSize: '0.72rem', padding: '0.2rem 0.5rem' }}>
-                                            Resend OTP
-                                        </button>
-                                    </div>
-
-                                    <div className="form-group mb-4" style={{ background: 'var(--bg)', padding: '1rem', borderRadius: '10px', border: '1.5px solid var(--primary-color)' }}>
-                                        <label className="form-label" style={{ fontWeight: 800, color: 'var(--txt-1)' }}>Enter 6-Digit OTP Code <span style={{ color: 'red' }}>*</span></label>
-                                        <input
-                                            className="form-input"
-                                            type="text"
-                                            maxLength={6}
-                                            placeholder="e.g. 123456"
-                                            value={bankOtpInput}
-                                            onChange={(e) => setBankOtpInput(e.target.value.replace(/[^0-9]/g, ''))}
-                                            style={{ letterSpacing: '4px', fontWeight: 800, fontSize: '1.1rem', textAlign: 'center', height: '44px' }}
-                                        />
-                                    </div>
-
-                                    {/* 1. ZBSCA Account Inputs */}
-                                    <div style={{ background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: '10px', padding: '1rem', marginBottom: '1rem' }}>
-                                        <h5 style={{ margin: '0 0 0.75rem', fontSize: '0.85rem', fontWeight: 700, color: 'var(--primary-color)' }}>
-                                            1. ZBSCA Account Details (Zero Balance Subsidiary)
-                                        </h5>
-                                        <div className="grid-cols-2 mb-3" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.85rem' }}>
-                                            <div className="form-group">
-                                                <label className="form-label">ZBSCA Account Number <span style={{ color: 'red' }}>*</span></label>
-                                                <input className="form-input" type="text" placeholder="Account No" value={editBankDetails.zbsca.accountNo} onChange={(e) => setEditBankDetails({ ...editBankDetails, zbsca: { ...editBankDetails.zbsca, accountNo: e.target.value } })} required />
-                                            </div>
-                                            <div className="form-group">
-                                                <label className="form-label">IFSC Code <span style={{ color: 'red' }}>*</span></label>
-                                                <input className="form-input" type="text" placeholder="IFSC Code" value={editBankDetails.zbsca.ifscCode} onChange={(e) => setEditBankDetails({ ...editBankDetails, zbsca: { ...editBankDetails.zbsca, ifscCode: e.target.value.toUpperCase() } })} required />
-                                            </div>
-                                        </div>
-                                        <div className="grid-cols-2" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.85rem' }}>
-                                            <div className="form-group">
-                                                <label className="form-label">Bank Name</label>
-                                                <input className="form-input" type="text" value="State Bank of India" readOnly disabled style={{ background: 'var(--bg-tertiary, rgba(255,255,255,0.05))', cursor: 'not-allowed', fontWeight: 600, color: 'var(--txt-1)' }} />
-                                            </div>
-                                            <div className="form-group">
-                                                <label className="form-label">Branch Name</label>
-                                                <input className="form-input" type="text" placeholder="Branch Name" value={editBankDetails.zbsca.branchName} onChange={(e) => setEditBankDetails({ ...editBankDetails, zbsca: { ...editBankDetails.zbsca, branchName: e.target.value } })} />
                                             </div>
                                         </div>
                                     </div>
+                                )
+                            }
 
-                                    <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem' }}>
-                                        <button className="btn btn-secondary" onClick={() => setShowEditBankModal(false)} disabled={bankOtpSending}>Cancel</button>
-                                        <button className="btn btn-primary" onClick={handleSaveBankDetailsWithOtp} disabled={bankOtpSending}>
-                                            {bankOtpSending ? 'Updating...' : 'Verify OTP & Save Bank Details'}
-                                        </button>
-                                    </div>
-                                </div>
-                            )}
-                        </div>
-                    </div>
-                )
-            }
+                            {/* Official Printable Activity Completion Report Modal */}
+                            <ActivityReportModal
+                                isOpen={showPrintableReportModal}
+                                onClose={() => setShowPrintableReportModal(false)}
+                                event={printableReportEvent}
+                                collegeData={college}
+                                unitData={unit}
+                            />
 
-            {/* Activity Type Selection Choice Modal */}
-            {
-                showActivityTypeChoiceModal && (
-                    <div className="modal-overlay" style={{ zIndex: 1100 }}>
-                        <div className="modal-content" style={{ maxWidth: '580px', width: '92%', borderRadius: '16px', padding: '2rem' }}>
-                            <div className="flex-between mb-4">
-                                <div>
-                                    <h2 style={{ fontSize: '1.4rem', fontWeight: 800, margin: 0, color: 'var(--txt-1)' }}>
-                                        Choose Activity Type
-                                    </h2>
-                                    <p style={{ margin: '4px 0 0', color: 'var(--txt-3)', fontSize: '0.85rem' }}>
-                                        Select whether you are scheduling a future event or recording a completed event
-                                    </p>
-                                </div>
-                                <button className="btn btn-sm btn-secondary" onClick={() => setShowActivityTypeChoiceModal(false)}>&times;</button>
-                            </div>
-
-                            <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '1rem' }}>
-                                {/* Option 1: Upcoming Activity */}
-                                <div
-                                    onClick={() => {
-                                        setShowActivityTypeChoiceModal(false);
-                                        setActivityMode("upcoming");
-                                        handleOpenEventForm(false, null, targetIsExternal, "upcoming");
-                                    }}
-                                    style={{
-                                        border: '2px solid var(--border)',
-                                        borderRadius: '12px',
-                                        padding: '1.25rem',
-                                        cursor: 'pointer',
-                                        display: 'flex',
-                                        gap: '1rem',
-                                        alignItems: 'flex-start',
-                                        transition: 'all 0.2s',
-                                        background: 'var(--card)'
-                                    }}
-                                    onMouseEnter={e => { e.currentTarget.style.borderColor = '#2563eb'; e.currentTarget.style.background = 'rgba(37,99,235,0.04)'; }}
-                                    onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.background = 'var(--card)'; }}
-                                >
-                                    <div style={{
-                                        width: '48px',
-                                        height: '48px',
-                                        borderRadius: '10px',
-                                        background: 'rgba(37, 99, 235, 0.12)',
-                                        color: '#2563eb',
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        justifyContent: 'center',
-                                        fontSize: '1.4rem',
-                                        flexShrink: 0
-                                    }}>
-                                        📅
-                                    </div>
-                                    <div style={{ flex: 1 }}>
-                                        <div className="flex-between">
-                                            <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 700, color: 'var(--txt-1)' }}>Upcoming Activity</h3>
-                                            <span className="badge badge-primary" style={{ fontSize: '0.65rem' }}>Scheduled</span>
-                                        </div>
-                                        <p style={{ margin: '6px 0 0', fontSize: '0.82rem', color: 'var(--txt-2)', lineHeight: 1.45 }}>
-                                            Schedule a future activity or awareness program. Once conducted, you can upload and submit the completion report after the activity date.
-                                        </p>
-                                    </div>
-                                </div>
-
-                                {/* Option 2: Completed Activity */}
-                                <div
-                                    onClick={() => {
-                                        setShowActivityTypeChoiceModal(false);
-                                        setActivityMode("completed");
-                                        handleOpenEventForm(false, null, targetIsExternal, "completed");
-                                    }}
-                                    style={{
-                                        border: '2px solid var(--border)',
-                                        borderRadius: '12px',
-                                        padding: '1.25rem',
-                                        cursor: 'pointer',
-                                        display: 'flex',
-                                        gap: '1rem',
-                                        alignItems: 'flex-start',
-                                        transition: 'all 0.2s',
-                                        background: 'var(--card)'
-                                    }}
-                                    onMouseEnter={e => { e.currentTarget.style.borderColor = '#16a34a'; e.currentTarget.style.background = 'rgba(22,163,74,0.04)'; }}
-                                    onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.background = 'var(--card)'; }}
-                                >
-                                    <div style={{
-                                        width: '48px',
-                                        height: '48px',
-                                        borderRadius: '10px',
-                                        background: 'rgba(22, 163, 74, 0.12)',
-                                        color: '#16a34a',
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        justifyContent: 'center',
-                                        fontSize: '1.4rem',
-                                        flexShrink: 0
-                                    }}>
-                                        ✅
-                                    </div>
-                                    <div style={{ flex: 1 }}>
-                                        <div className="flex-between">
-                                            <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 700, color: 'var(--txt-1)' }}>Completed Activity</h3>
-                                            <span className="badge badge-success" style={{ fontSize: '0.65rem' }}>Conducted</span>
-                                        </div>
-                                        <p style={{ margin: '6px 0 0', fontSize: '0.82rem', color: 'var(--txt-2)', lineHeight: 1.45 }}>
-                                            Log an activity that has already taken place. Enter particulars, participants, impact outcomes, and attach photos in one single form. Generates a printable report document immediately!
-                                        </p>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div className="text-end mt-4 pt-3" style={{ borderTop: '1px solid var(--border)' }}>
-                                <button type="button" className="btn btn-secondary btn-sm" onClick={() => setShowActivityTypeChoiceModal(false)}>
-                                    Cancel
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                )
-            }
-
-            {/* Official Printable Activity Completion Report Modal */}
-            <ActivityReportModal
-                isOpen={showPrintableReportModal}
-                onClose={() => setShowPrintableReportModal(false)}
-                event={printableReportEvent}
-                collegeData={college}
-                unitData={unit}
-            />
-        </div >
-    );
+                            {/* Official Special Camp Proposal Form 1 Modal */}
+                            <SpecialCampProposalModal
+                                isOpen={showSpecialCampProposalModal}
+                                onClose={() => setShowSpecialCampProposalModal(false)}
+                                event={specialCampEventForModal}
+                                collegeData={college}
+                                unitData={unit}
+                            />
+                        </div >
+                        );
 };
 
-export default UnitDashboard;
+                        export default UnitDashboard;

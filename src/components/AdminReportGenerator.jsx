@@ -6,18 +6,30 @@ import { jsPDF } from 'jspdf';
 import html2canvas from 'html2canvas';
 
 const activitiesConfig = [
+    { key: "special_camp", label: "Special Camp", beneficiaryField: "beneficiaries", beneficiaryLabel: "Beneficiaries" },
     { key: "blood_donation", label: "Blood Donation Camps", beneficiaryField: "bloodUnits", beneficiaryLabel: "Units of Blood" },
-    { key: "health_camps", label: "Health Camps", beneficiaryField: "beneficiaries", beneficiaryLabel: "" },
-    { key: "anti_drug", label: "Anti Drug Camps", beneficiaryField: "beneficiaries", beneficiaryLabel: "" },
-    { key: "voter_sir", label: "Voters Awareness SIR", beneficiaryField: "beneficiaries", beneficiaryLabel: "" },
-    { key: "voter_sveep", label: "Voters Awareness SVEEP", beneficiaryField: "beneficiaries", beneficiaryLabel: "" },
-    { key: "road_safety", label: "Road Safety Awareness", beneficiaryField: "beneficiaries", beneficiaryLabel: "" },
     { key: "tree_plantation", label: "Tree Plantation", beneficiaryField: "saplings", beneficiaryLabel: "Saplings" },
+    { key: "cleanliness_drive", label: "Cleanliness Drive", beneficiaryField: "beneficiaries", beneficiaryLabel: "Beneficiaries" },
+    { key: "awareness_programme", label: "Awareness Programmes", beneficiaryField: "beneficiaries", beneficiaryLabel: "Beneficiaries" },
+    { key: "health_camps", label: "Health Camps / Health Care", beneficiaryField: "beneficiaries", beneficiaryLabel: "Beneficiaries" },
+    { key: "anti_drug", label: "Anti Drug Camps", beneficiaryField: "beneficiaries", beneficiaryLabel: "Beneficiaries" },
+    { key: "voter_sir", label: "Voters Awareness SIR", beneficiaryField: "beneficiaries", beneficiaryLabel: "Beneficiaries" },
+    { key: "voter_sveep", label: "Voters Awareness SVEEP", beneficiaryField: "beneficiaries", beneficiaryLabel: "Beneficiaries" },
+    { key: "road_safety", label: "Road Safety Awareness", beneficiaryField: "beneficiaries", beneficiaryLabel: "Beneficiaries" },
+    { key: "rallies", label: "Rallies conducted", beneficiaryField: "distance", beneficiaryLabel: "KMs" },
     { key: "important_days", label: "Important Days Celebrations", beneficiaryField: null, beneficiaryLabel: "-" },
     { key: "pledge", label: "Pledge taken", beneficiaryField: null, beneficiaryLabel: "-" },
-    { key: "rallies", label: "Rallies conducted", beneficiaryField: "distance", beneficiaryLabel: "KMs" },
-    { key: "hosted_meetings", label: "Hosted Meetings", beneficiaryField: "beneficiaries", beneficiaryLabel: "" },
-    { key: "any_other", label: "Any Other Programmes", beneficiaryField: "beneficiaries", beneficiaryLabel: "" }
+    { key: "hosted_meetings", label: "Hosted Meetings", beneficiaryField: "beneficiaries", beneficiaryLabel: "Beneficiaries" },
+    { key: "conference", label: "Conferences", beneficiaryField: "beneficiaries", beneficiaryLabel: "Beneficiaries" },
+    { key: "seminar", label: "Seminars", beneficiaryField: "beneficiaries", beneficiaryLabel: "Beneficiaries" },
+    { key: "workshop", label: "Workshops", beneficiaryField: "beneficiaries", beneficiaryLabel: "Beneficiaries" },
+    { key: "sports", label: "Sports Events", beneficiaryField: "beneficiaries", beneficiaryLabel: "Beneficiaries" },
+    { key: "cultural", label: "Cultural Programmes", beneficiaryField: "beneficiaries", beneficiaryLabel: "Beneficiaries" },
+    { key: "environmental", label: "Environmental Activities", beneficiaryField: "beneficiaries", beneficiaryLabel: "Beneficiaries" },
+    { key: "social", label: "Social Service", beneficiaryField: "beneficiaries", beneficiaryLabel: "Beneficiaries" },
+    { key: "exhibition", label: "Exhibitions", beneficiaryField: "beneficiaries", beneficiaryLabel: "Beneficiaries" },
+    { key: "creation_of_assets", label: "Creation of Assets", beneficiaryField: "beneficiaries", beneficiaryLabel: "Beneficiaries" },
+    { key: "any_other", label: "Any Other Programmes", beneficiaryField: "beneficiaries", beneficiaryLabel: "Beneficiaries" }
 ];
 
 const isValidSocialLink = (url) => {
@@ -245,59 +257,35 @@ const AdminReportGenerator = () => {
     };
 
     const exportToExcel = (reportData) => {
-        const act = reportData.activities;
-        const rowData = [
-            { Category: "1. Blood Donation Camps", Detail: "No of Programmes Conducted", Value: act.blood_donation?.programmes || 0 },
-            { Category: "1. Blood Donation Camps", Detail: "Number of Volunteers Participated", Value: act.blood_donation?.volunteers || 0 },
-            { Category: "1. Blood Donation Camps", Detail: "No of Units of Blood Donated", Value: act.blood_donation?.bloodUnits || 0 },
+        const act = reportData.activities || {};
+        const rowData = [];
 
-            { Category: "2. Health Camps", Detail: "No of Programmes Conducted", Value: act.health_camps?.programmes || 0 },
-            { Category: "2. Health Camps", Detail: "Number of Volunteers Participated", Value: act.health_camps?.volunteers || 0 },
-            { Category: "2. Health Camps", Detail: "No of Beneficiaries", Value: act.health_camps?.beneficiaries || 0 },
+        activitiesConfig.forEach((cfg, idx) => {
+            const data = act[cfg.key] || {};
+            const prefix = `${idx + 1}. ${cfg.label}`;
+            rowData.push({ Category: prefix, Detail: "No of Programmes Conducted", Value: data.programmes || 0 });
+            rowData.push({ Category: prefix, Detail: "Number of Volunteers Participated", Value: data.volunteers || 0 });
 
-            { Category: "3. Anti Drug Camps", Detail: "No of Programmes Conducted", Value: act.anti_drug?.programmes || 0 },
-            { Category: "3. Anti Drug Camps", Detail: "Number of Volunteers Participated", Value: act.anti_drug?.volunteers || 0 },
-            { Category: "3. Anti Drug Camps", Detail: "No of Beneficiaries", Value: act.anti_drug?.beneficiaries || 0 },
-
-            { Category: "4. Voters Awareness SIR", Detail: "No of Programmes Conducted", Value: act.voter_sir?.programmes || 0 },
-            { Category: "4. Voters Awareness SIR", Detail: "Number of Volunteers Participated", Value: act.voter_sir?.volunteers || 0 },
-            { Category: "4. Voters Awareness SIR", Detail: "No of Beneficiaries", Value: act.voter_sir?.beneficiaries || 0 },
-
-            { Category: "5. Voters Awareness SVEEP", Detail: "No of Programmes Conducted", Value: act.voter_sveep?.programmes || 0 },
-            { Category: "5. Voters Awareness SVEEP", Detail: "Number of Volunteers Participated", Value: act.voter_sveep?.volunteers || 0 },
-            { Category: "5. Voters Awareness SVEEP", Detail: "No of Beneficiaries", Value: act.voter_sveep?.beneficiaries || 0 },
-
-            { Category: "6. Road Safety", Detail: "No of Programmes Conducted", Value: act.road_safety?.programmes || 0 },
-            { Category: "6. Road Safety", Detail: "Number of Volunteers Participated", Value: act.road_safety?.volunteers || 0 },
-            { Category: "6. Road Safety", Detail: "No of Beneficiaries", Value: act.road_safety?.beneficiaries || 0 },
-
-            { Category: "7. Tree Plantation", Detail: "No of Programmes Conducted", Value: act.tree_plantation?.programmes || 0 },
-            { Category: "7. Tree Plantation", Detail: "Number of Volunteers Participated", Value: act.tree_plantation?.volunteers || 0 },
-            { Category: "7. Tree Plantation", Detail: "No of Saplings Planted", Value: act.tree_plantation?.saplings || 0 },
-
-            { Category: "8. Important Days Celebrations", Detail: "No of Programmes Conducted", Value: act.important_days?.programmes || 0 },
-            { Category: "8. Important Days Celebrations", Detail: "Number of Volunteers Participated", Value: act.important_days?.volunteers || 0 },
-            { Category: "8. Important Days Celebrations", Detail: "Date of Conduct", Value: act.important_days?.date || "" },
-
-            { Category: "9. Pledge taken", Detail: "No of Programmes Conducted", Value: act.pledge?.programmes || 0 },
-            { Category: "9. Pledge taken", Detail: "Number of Volunteers Participated", Value: act.pledge?.volunteers || 0 },
-
-            { Category: "10. Rallies", Detail: "No of Programmes Conducted", Value: act.rallies?.programmes || 0 },
-            { Category: "10. Rallies", Detail: "Number of Volunteers Participated", Value: act.rallies?.volunteers || 0 },
-            { Category: "10. Rallies", Detail: "Date of Conduct", Value: act.rallies?.date || "" },
-            { Category: "10. Rallies", Detail: "Distance Covered (KM)", Value: act.rallies?.distance || 0 },
-
-            { Category: "11. Hosted Meetings", Detail: "No of Programmes Conducted", Value: act.hosted_meetings?.programmes || 0 },
-            { Category: "11. Hosted Meetings", Detail: "Guest Name", Value: act.hosted_meetings?.guestName || "" },
-            { Category: "11. Hosted Meetings", Detail: "Number of Volunteers Participated", Value: act.hosted_meetings?.volunteers || 0 },
-            { Category: "11. Hosted Meetings", Detail: "No of Beneficiaries", Value: act.hosted_meetings?.beneficiaries || 0 },
-
-            { Category: "12. Any Other Programmes", Detail: "No of Programmes Conducted", Value: act.any_other?.programmes || 0 },
-            { Category: "12. Any Other Programmes", Detail: "No of Colleges Participated", Value: act.any_other?.colleges || 0 },
-            { Category: "12. Any Other Programmes", Detail: "Number of Volunteers Participated", Value: act.any_other?.volunteers || 0 },
-            { Category: "12. Any Other Programmes", Detail: "No of Beneficiaries", Value: act.any_other?.beneficiaries || 0 },
-            { Category: "12. Any Other Programmes", Detail: "Remarks/Outcome", Value: act.any_other?.remarks || "" }
-        ];
+            if (cfg.key === 'blood_donation') {
+                rowData.push({ Category: prefix, Detail: "No of Units of Blood Donated", Value: data.bloodUnits || 0 });
+            } else if (cfg.key === 'tree_plantation') {
+                rowData.push({ Category: prefix, Detail: "No of Saplings Planted", Value: data.saplings || 0 });
+            } else if (cfg.key === 'rallies') {
+                rowData.push({ Category: prefix, Detail: "Date of Conduct", Value: data.date || "" });
+                rowData.push({ Category: prefix, Detail: "Distance Covered (KM)", Value: data.distance || 0 });
+            } else if (cfg.key === 'important_days') {
+                rowData.push({ Category: prefix, Detail: "Date of Conduct", Value: data.date || "" });
+            } else if (cfg.key === 'hosted_meetings') {
+                rowData.push({ Category: prefix, Detail: "Guest Name", Value: data.guestName || "" });
+                rowData.push({ Category: prefix, Detail: "No of Beneficiaries", Value: data.beneficiaries || 0 });
+            } else if (cfg.key === 'any_other') {
+                rowData.push({ Category: prefix, Detail: "No of Colleges Participated", Value: data.colleges || 0 });
+                rowData.push({ Category: prefix, Detail: "No of Beneficiaries", Value: data.beneficiaries || 0 });
+                rowData.push({ Category: prefix, Detail: "Remarks/Outcome", Value: data.remarks || "" });
+            } else if (cfg.beneficiaryField) {
+                rowData.push({ Category: prefix, Detail: `No of ${cfg.beneficiaryLabel || 'Beneficiaries'}`, Value: data[cfg.beneficiaryField] || 0 });
+            }
+        });
 
         const worksheet = XLSX.utils.json_to_sheet(rowData);
         const workbook = XLSX.utils.book_new();

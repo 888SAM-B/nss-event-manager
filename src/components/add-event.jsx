@@ -3,6 +3,8 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import axios from 'axios';
 import toast from 'react-hot-toast';
 import ThemeToggle from './ThemeToggle';
+import SpecialCampProposalModal from "./SpecialCampProposalModal";
+import SpecialCampFormSection, { getInitialSpecialCampDetails } from "./SpecialCampFormSection";
 
 // Cloudinary Configuration (Replace with your actual values)
 const CLOUDINARY_CLOUD_NAME = import.meta.env.VITE_CLOUD_NAME;
@@ -22,9 +24,30 @@ const AddEvent = () => {
     const eventToEdit = location.state?.eventToEdit;
 
     const standardCategories = [
-        "Special Camp", "Blood Donation", "Tree Plantation", "Cleanliness Drive", "Awareness Programme",
-        "Conference", "Seminar", "Workshop", "Sports", "Cultural", "Health",
-        "Environmental", "Social", "Exhibition", "Health care", "Creation of Assets"
+        "Special Camp",
+        "Blood Donation",
+        "Tree Plantation",
+        "Cleanliness Drive",
+        "Awareness Programme",
+        "Health",
+        "Health care",
+        "Anti-Drug Campaign",
+        "Voter Awareness - SIR",
+        "Voter Awareness - SVEEP",
+        "Road Safety Awareness",
+        "Rallies",
+        "Important Days Celebrations",
+        "Pledge Taken",
+        "Hosted Meetings",
+        "Conference",
+        "Seminar",
+        "Workshop",
+        "Sports",
+        "Cultural",
+        "Environmental",
+        "Social",
+        "Exhibition",
+        "Creation of Assets"
     ];
 
     const isCustomCategory = eventToEdit && !standardCategories.includes(eventToEdit.category);
@@ -56,6 +79,12 @@ const AddEvent = () => {
     const [uploadingBrochure, setUploadingBrochure] = useState(false);
     const [submitting, setSubmitting] = useState(false);
 
+    // College & Unit Details for auto-filling Special Camp Form 1
+    const [college, setCollege] = useState(null);
+    const [unit, setUnit] = useState(null);
+    const [specialCampDetails, setSpecialCampDetails] = useState(eventToEdit?.specialCampDetails || null);
+    const [showSpecialCampProposalModal, setShowSpecialCampProposalModal] = useState(false);
+
     // Collaboration State
     const [availableUnits, setAvailableUnits] = useState([]);
     const [collaborators, setCollaborators] = useState([]);
@@ -73,6 +102,26 @@ const AddEvent = () => {
                     }
                 })
                 .catch(err => console.error("Error fetching units:", err));
+        }
+
+        // Fetch Unit & College profile to auto-fill Special Camp Proposal Form
+        const token = localStorage.getItem("unitToken") || localStorage.getItem("nsstoken");
+        if (unitCode && collegeCode && token) {
+            axios.get(`${import.meta.env.VITE_API_URL}/unit-dashboard/${unitCode}/${collegeCode}`, {
+                headers: { Authorization: `Bearer ${token}` }
+            }).then(res => {
+                if (res.data.success) {
+                    setUnit(res.data.unit);
+                    setCollege(res.data.college);
+                    if (eventForm.category === 'Special Camp' && !specialCampDetails) {
+                        setSpecialCampDetails(eventToEdit?.specialCampDetails || getInitialSpecialCampDetails(res.data.college, res.data.unit, {
+                            dateFrom: eventForm.dateFrom,
+                            dateTo: eventForm.dateTo,
+                            date: eventForm.date
+                        }));
+                    }
+                }
+            }).catch(e => console.error("Error fetching unit & college details:", e));
         }
     }, [collegeCode, unitCode]);
 
@@ -94,6 +143,22 @@ const AddEvent = () => {
             ...prevForm,
             [id]: type === 'checkbox' ? checked : value
         }));
+
+        if (id === 'category') {
+            const isSpecial = value === 'Special Camp';
+            setEventForm(prevForm => ({
+                ...prevForm,
+                category: value,
+                singleDay: isSpecial ? false : prevForm.singleDay
+            }));
+            if (isSpecial && !specialCampDetails) {
+                setSpecialCampDetails(getInitialSpecialCampDetails(college, unit, {
+                    dateFrom: eventForm.dateFrom,
+                    dateTo: eventForm.dateTo,
+                    date: eventForm.date
+                }));
+            }
+        }
 
         if (id === 'singleDay' && checked) {
             setEventForm(prevForm => ({ ...prevForm, dateFrom: "", dateTo: "" }));
@@ -245,8 +310,14 @@ const AddEvent = () => {
             brochure: eventForm.brochure,
             unitCode: unitCode,
             collegeCode: collegeCode,
-            collaborators: collaborators
-
+            collaborators: collaborators,
+            ...(eventForm.category === "Special Camp" && {
+                specialCampDetails: specialCampDetails || getInitialSpecialCampDetails(college, unit, {
+                    dateFrom: eventForm.dateFrom,
+                    dateTo: eventForm.dateTo,
+                    date: eventForm.date
+                })
+            })
         };
 
         console.log("Submitting Activity Data:", eventData);
@@ -285,369 +356,389 @@ const AddEvent = () => {
     };
 
     return (
-            <div className="container animate-fadeIn" style={{ maxWidth: '850px', marginTop: '110px', paddingBottom: '4rem' }}>
-                <div className="card" style={{ padding: '2.5rem' }}>
-                    <div className="form-section-header">
-                        <span>📋</span> Basic Information
-                    </div>
-                    <form onSubmit={handleSubmit}>
-                        {/* Event Name */}
-                        <div className="form-group mb-3">
-                            <label htmlFor="name">Activity Name <span className="text-danger">*</span></label>
-                            <input
-                                type="text"
-                                className="form-control"
-                                id="name"
-                                placeholder="Enter activity name"
-                                value={eventForm.name}
-                                onChange={handleChange}
-                                required
-                            />
+        <>
+                <div className="container animate-fadeIn" style={{ maxWidth: eventForm.category === 'Special Camp' ? '1100px' : '850px', marginTop: '110px', paddingBottom: '4rem', transition: 'max-width 0.3s ease' }}>
+                    <div className="card" style={{ padding: '2.5rem' }}>
+                        <div className="form-section-header">
+                            <span>📋</span> Basic Information
                         </div>
-
-                        {/* Event Description */}
-                        <div className="form-group mb-3">
-                            <label htmlFor="description">Activity Description <span className="text-danger">*</span></label>
-                            <textarea
-                                className="form-control"
-                                id="description"
-                                rows="3"
-                                value={eventForm.description}
-                                onChange={handleChange}
-                                required
-                            ></textarea>
-                        </div>
-
-                        {/* Event Category */}
-                        <div className="form-group mb-3">
-                            <label htmlFor="category">Activity Category <span className="text-danger">*</span></label>
-                            <select
-                                className="form-control"
-                                id="category"
-                                value={eventForm.category}
-                                onChange={handleChange}
-                                required
-                            >
-                                <option value="">Select Category</option>
-                                <option value="Special Camp">Special Camp</option>
-                                <option value="Blood Donation">Blood Donation</option>
-                                <option value="Tree Plantation">Tree Plantation</option>
-                                <option value="Cleanliness Drive">Cleanliness Drive</option>
-                                <option value="Awareness Programme">Awareness Programme</option>
-                                <option value="Conference">Conference</option>
-                                <option value="Seminar">Seminar</option>
-                                <option value="Workshop">Workshop</option>
-                                <option value="Sports">Sports</option>
-                                <option value="Cultural">Cultural</option>
-                                <option value="Health">Health</option>
-                                <option value="Health care">Health care</option>
-                                <option value="Environmental">Environmental</option>
-                                <option value="Social">Social</option>
-                                <option value="Exhibition">Exhibition</option>
-                                <option value="Creation of Assets">Creation of Assets</option>
-                                <option value="Other">Other</option>
-                            </select>
-                        </div>
-                        {eventForm.category === "Other" && (
+                        <form onSubmit={handleSubmit}>
+                            {/* Event Name */}
                             <div className="form-group mb-3">
-                                <label htmlFor="otherCategory">Specify Category</label>
+                                <label htmlFor="name">Activity Name <span className="text-danger">*</span></label>
                                 <input
                                     type="text"
                                     className="form-control"
-                                    id="otherCategory"
-                                    placeholder="Enter your category"
-                                    value={eventForm.otherCategory || ""}
+                                    id="name"
+                                    placeholder="Enter activity name"
+                                    value={eventForm.name}
                                     onChange={handleChange}
+                                    required
                                 />
                             </div>
-                        )}
 
-                        {/* Single Day / Multi Day Toggle */}
-                        <div className="form-check mb-4 p-3" style={{ background: 'var(--bg-secondary)', borderRadius: 'var(--radius-md)' }}>
-                            <input
-                                type="checkbox"
-                                className="form-check-input"
-                                id="singleDay"
-                                checked={eventForm.singleDay}
-                                onChange={handleChange}
-                            />
-                            <label className="form-check-label ms-2" htmlFor="singleDay">This is a single-day activity</label>
-                        </div>
-
-                        {/* Date Fields */}
-                        {eventForm.singleDay ? (
+                            {/* Event Description */}
                             <div className="form-group mb-3">
-                                <label htmlFor="date">Date <span className="text-danger">*</span></label>
-                                <input
-                                    type="date"
+                                <label htmlFor="description">Activity Description <span className="text-danger">*</span></label>
+                                <textarea
                                     className="form-control"
-                                    id="date"
-                                    value={eventForm.date}
+                                    id="description"
+                                    rows="3"
+                                    value={eventForm.description}
                                     onChange={handleChange}
-                                    required={eventForm.singleDay}
-                                />
+                                    required
+                                ></textarea>
                             </div>
-                        ) : (
-                            <div className="grid-cols-2 mb-3">
-                                <div>
-                                    <label htmlFor="dateFrom">Date From <span className="text-danger">*</span></label>
-                                    <input
-                                        type="date"
-                                        className="form-control"
-                                        id="dateFrom"
-                                        value={eventForm.dateFrom}
-                                        onChange={handleChange}
-                                        required={!eventForm.singleDay}
-                                    />
-                                </div>
-                                <div>
-                                    <label htmlFor="dateTo">Date To <span className="text-danger">*</span></label>
-                                    <input
-                                        type="date"
-                                        className="form-control"
-                                        id="dateTo"
-                                        value={eventForm.dateTo}
-                                        onChange={handleChange}
-                                        required={!eventForm.singleDay}
-                                    />
-                                </div>
-                            </div>
-                        )}
 
-                        {/* Time Fields */}
-                        <div className="grid-cols-2 mb-3">
-                            <div>
-                                <label htmlFor="timeFrom">Time From</label>
-                                <input
-                                    type="time"
-                                    className="form-control"
-                                    id="timeFrom"
-                                    value={eventForm.timeFrom}
-                                    onChange={handleChange}
-                                />
-                            </div>
-                            <div>
-                                <label htmlFor="timeTo">Time To</label>
-                                <input
-                                    type="time"
-                                    className="form-control"
-                                    id="timeTo"
-                                    value={eventForm.timeTo}
-                                    onChange={handleChange}
-                                />
-                            </div>
-                        </div>
-
-                        {/* Venue */}
-                        <div className="form-group mb-4">
-                            <label htmlFor="venue">Venue <span className="text-danger">*</span></label>
-                            <input
-                                type="text"
-                                className="form-control"
-                                id="venue"
-                                placeholder="Enter activity venue"
-                                value={eventForm.venue}
-                                onChange={handleChange}
-                                required
-                            />
-                        </div>
-
-                        {/* Resource Person */}
-                        <div className="form-group mb-4">
-                            <label htmlFor="resourcePerson">Resource Person (Optional)</label>
-                            <input
-                                type="text"
-                                className="form-control"
-                                id="resourcePerson"
-                                placeholder="Enter name and details of Resource Person"
-                                value={eventForm.resourcePerson}
-                                onChange={handleChange}
-                            />
-                        </div>
-
-                        {/* Event Level & Sponsorship */}
-                        <div className="grid-cols-2 mb-4">
-                            <div>
-                                <label htmlFor="level">Level of Activity <span className="text-danger">*</span></label>
+                            {/* Event Category */}
+                            <div className="form-group mb-3">
+                                <label htmlFor="category">Activity Category <span className="text-danger">*</span></label>
                                 <select
                                     className="form-control"
-                                    id="level"
-                                    value={eventForm.level}
+                                    id="category"
+                                    value={eventForm.category}
                                     onChange={handleChange}
                                     required
                                 >
-                                    <option value="College">College</option>
-                                    <option value="University">University</option>
-                                    <option value="District">District</option>
-                                    <option value="Regional">Regional</option>
-                                    <option value="State">State</option>
-                                    <option value="National">National</option>
+                                    <option value="">Select Category</option>
+                                    {standardCategories.map((cat, i) => (
+                                        <option key={i} value={cat}>{cat}</option>
+                                    ))}
+                                    <option value="Other">Other</option>
                                 </select>
                             </div>
-                            <div>
-                                <label htmlFor="sponsorship">Sponsorship (Optional)</label>
+                            {eventForm.category === "Other" && (
+                                <div className="form-group mb-3">
+                                    <label htmlFor="otherCategory">Specify Category</label>
+                                    <input
+                                        type="text"
+                                        className="form-control"
+                                        id="otherCategory"
+                                        placeholder="Enter your category"
+                                        value={eventForm.otherCategory || ""}
+                                        onChange={handleChange}
+                                    />
+                                </div>
+                            )}
+
+                            {/* Single Day / Multi Day Toggle */}
+                            <div className="form-check mb-4 p-3" style={{ background: 'var(--bg-secondary)', borderRadius: 'var(--radius-md)' }}>
+                                <input
+                                    type="checkbox"
+                                    className="form-check-input"
+                                    id="singleDay"
+                                    checked={eventForm.singleDay}
+                                    onChange={handleChange}
+                                />
+                                <label className="form-check-label ms-2" htmlFor="singleDay">This is a single-day activity</label>
+                            </div>
+
+                            {/* Date Fields */}
+                            {eventForm.singleDay ? (
+                                <div className="form-group mb-3">
+                                    <label htmlFor="date">Date <span className="text-danger">*</span></label>
+                                    <input
+                                        type="date"
+                                        className="form-control"
+                                        id="date"
+                                        value={eventForm.date}
+                                        onChange={handleChange}
+                                        required={eventForm.singleDay}
+                                    />
+                                </div>
+                            ) : (
+                                <div className="grid-cols-2 mb-3">
+                                    <div>
+                                        <label htmlFor="dateFrom">Date From <span className="text-danger">*</span></label>
+                                        <input
+                                            type="date"
+                                            className="form-control"
+                                            id="dateFrom"
+                                            value={eventForm.dateFrom}
+                                            onChange={handleChange}
+                                            required={!eventForm.singleDay}
+                                        />
+                                    </div>
+                                    <div>
+                                        <label htmlFor="dateTo">Date To <span className="text-danger">*</span></label>
+                                        <input
+                                            type="date"
+                                            className="form-control"
+                                            id="dateTo"
+                                            value={eventForm.dateTo}
+                                            onChange={handleChange}
+                                            required={!eventForm.singleDay}
+                                        />
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Time Fields */}
+                            <div className="grid-cols-2 mb-3">
+                                <div>
+                                    <label htmlFor="timeFrom">Time From</label>
+                                    <input
+                                        type="time"
+                                        className="form-control"
+                                        id="timeFrom"
+                                        value={eventForm.timeFrom}
+                                        onChange={handleChange}
+                                    />
+                                </div>
+                                <div>
+                                    <label htmlFor="timeTo">Time To</label>
+                                    <input
+                                        type="time"
+                                        className="form-control"
+                                        id="timeTo"
+                                        value={eventForm.timeTo}
+                                        onChange={handleChange}
+                                    />
+                                </div>
+                            </div>
+
+                            {/* Venue */}
+                            <div className="form-group mb-4">
+                                <label htmlFor="venue">Venue <span className="text-danger">*</span></label>
                                 <input
                                     type="text"
                                     className="form-control"
-                                    id="sponsorship"
-                                    placeholder="e.g. Funded / Self Financing / Sponsor name"
-                                    value={eventForm.sponsorship}
+                                    id="venue"
+                                    placeholder="Enter activity venue"
+                                    value={eventForm.venue}
+                                    onChange={handleChange}
+                                    required
+                                />
+                            </div>
+
+                            {/* Resource Person */}
+                            <div className="form-group mb-4">
+                                <label htmlFor="resourcePerson">Resource Person (Optional)</label>
+                                <input
+                                    type="text"
+                                    className="form-control"
+                                    id="resourcePerson"
+                                    placeholder="Enter name and details of Resource Person"
+                                    value={eventForm.resourcePerson}
                                     onChange={handleChange}
                                 />
                             </div>
-                        </div>
 
-                        <div className="form-section-header">
-                            <span>🖼️</span> Media & Documents
-                        </div>
-
-                        {/* Image Upload Section */}
-                        <div className="form-group mb-4">
-                            <label>Activity Images</label>
-                            <div className="input-group evt-imgs">
-                                <input
-                                    type="file"
-                                    className="form-control choose-img "
-                                    id="images"
-                                    multiple
-                                    onChange={handleFileChange}
-                                    accept="image/*"
-                                />
-                                <button
-                                    type="button"
-                                    className="btn btn-secondary"
-                                    onClick={uploadImagesToCloudinary}
-                                    disabled={selectedFiles.length === 0 || uploading}
-                                >
-                                    {uploading ? 'Uploading...' : 'Upload Selected Images'}
-                                </button>
-                            </div>
-                            {fileSizeError && <small className="text-danger mt-1 d-block">{fileSizeError}</small>} {/* Display file size error */}
-                            {uploadError && <small className="text-danger mt-1 d-block">{uploadError}</small>}
-
-                            {/* Image Previews */}
-                            <div className="d-flex flex-wrap mt-3 gap-2">
-                                {eventForm.images.length > 0 && eventForm.images.map((imageUrl, index) => (
-                                    <div key={index} className="position-relative" style={{ width: '100px', height: '100px', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-md)', overflow: 'hidden' }}>
-                                        <img
-                                            src={imageUrl}
-                                            alt={`Activity Image ${index + 1}`}
-                                            className="img-fluid"
-                                            style={{ objectFit: 'cover', width: '100%', height: '100%' }}
-                                        />
-                                        <button
-                                            type="button"
-                                            className="btn btn-danger btn-sm position-absolute top-0 end-0"
-                                            style={{ borderRadius: '50%', width: '24px', height: '24px', padding: 0, lineHeight: '24px', fontSize: '14px', margin: '2px' }}
-                                            onClick={() => handleImageRemove(index)}
-                                        >
-                                            &times;
-                                        </button>
-                                    </div>
-                                ))}
-                                {selectedFiles.length > 0 && selectedFiles.map((file, index) => (
-                                    // Only show preview if the file is not yet uploaded and part of eventForm.images
-                                    // We use URL.createObjectURL for fresh previews
-                                    <div key={`preview-${file.name}-${index}`} className="position-relative" style={{ width: '100px', height: '100px', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-md)', overflow: 'hidden', opacity: uploading ? 0.6 : 1 }}>
-                                        <img
-                                            src={URL.createObjectURL(file)}
-                                            alt={`Selected Image ${file.name}`}
-                                            className="img-fluid"
-                                            style={{ objectFit: 'cover', width: '100%', height: '100%' }}
-                                            onLoad={() => URL.revokeObjectURL(file.src)} // Clean up memory after image loads
-                                        />
-                                        {uploading && <div className="position-absolute top-50 start-50 translate-middle text-white fw-bold">...</div>}
-                                    </div>
-                                ))}
-                            </div>
-                            {eventForm.images.length === 0 && selectedFiles.length === 0 && !fileSizeError && !uploadError && (
-                                <small className="text-muted d-block mt-2">No images selected or uploaded yet.</small>
-                            )}
-                        </div>
-
-                        {/* Brochure Upload Section */}
-                        <div className="form-group mb-4">
-                            <label>Activity Brochure (PDF)</label>
-                            <div className="input-group">
-                                <input
-                                    type="file"
-                                    className="form-control"
-                                    accept=".pdf"
-                                    onChange={(e) => setBrochureFile(e.target.files[0])}
-                                />
-                                <button
-                                    type="button"
-                                    className="btn btn-secondary"
-                                    onClick={uploadBrochureToCloudinary}
-                                    disabled={!brochureFile || uploadingBrochure}
-                                >
-                                    {uploadingBrochure ? 'Uploading...' : 'Upload Brochure'}
-                                </button>
-                            </div>
-                            {eventForm.brochure && (
-                                <div className="mt-2 p-2 border rounded d-flex justify-content-between align-items-center" style={{ background: 'var(--bg-secondary)' }}>
-                                    <span className="text-sm text-success">✓ Brochure uploaded</span>
-                                    <a href={eventForm.brochure} target="_blank" rel="noopener noreferrer" className="btn btn-sm btn-link text-primary">View</a>
-                                    <button type="button" className="btn btn-sm btn-danger" onClick={() => setEventForm(prev => ({ ...prev, brochure: "" }))}>Remove</button>
+                            {/* Event Level & Sponsorship */}
+                            <div className="grid-cols-2 mb-4">
+                                <div>
+                                    <label htmlFor="level">Level of Activity <span className="text-danger">*</span></label>
+                                    <select
+                                        className="form-control"
+                                        id="level"
+                                        value={eventForm.level}
+                                        onChange={handleChange}
+                                        required
+                                    >
+                                        <option value="College">College</option>
+                                        <option value="University">University</option>
+                                        <option value="District">District</option>
+                                        <option value="Regional">Regional</option>
+                                        <option value="State">State</option>
+                                        <option value="National">National</option>
+                                    </select>
                                 </div>
-                            )}
-                        </div>
-
-                        <div className="form-section-header">
-                            <span>🤝</span> Collaboration
-                        </div>
-                        <div className="form-group mb-4 p-3" style={{ border: '1px dashed var(--border-color)', borderRadius: 'var(--radius-md)' }}>
-                            <label className="mb-2 fw-bold">Collaborating Units (Optional)</label>
-                            <div className="d-flex gap-2 mb-2">
-                                <select
-                                    className="form-control"
-                                    value={selectedCollaborator}
-                                    onChange={(e) => setSelectedCollaborator(e.target.value)}
-                                >
-                                    <option value="">Select a Unit to Invite</option>
-                                    {availableUnits.map(unit => (
-                                        <option key={unit.unitNumber} value={unit.unitNumber} disabled={collaborators.includes(unit.unitNumber)}>
-                                            {unit.unitNumber} - {unit.name}
-                                        </option>
-                                    ))}
-                                </select>
-                                <button type="button" className="btn btn-primary" onClick={handleAddCollaborator} disabled={!selectedCollaborator}>
-                                    Add
-                                </button>
+                                <div>
+                                    <label htmlFor="sponsorship">Sponsorship (Optional)</label>
+                                    <input
+                                        type="text"
+                                        className="form-control"
+                                        id="sponsorship"
+                                        placeholder="e.g. Funded / Self Financing / Sponsor name"
+                                        value={eventForm.sponsorship}
+                                        onChange={handleChange}
+                                    />
+                                </div>
                             </div>
 
-                            {collaborators.length > 0 && (
-                                <div className="d-flex flex-wrap gap-2 mt-2">
-                                    {collaborators.map(cCode => (
-                                        <span key={cCode} className="badge badge-secondary d-flex align-items-center gap-2" style={{ padding: '0.5rem 1rem' }}>
-                                            Unit {cCode}
+                            <div className="form-section-header">
+                                <span>🖼️</span> Media & Documents
+                            </div>
+
+                            {/* Image Upload Section */}
+                            <div className="form-group mb-4">
+                                <label>Activity Images</label>
+                                <div className="input-group evt-imgs">
+                                    <input
+                                        type="file"
+                                        className="form-control choose-img "
+                                        id="images"
+                                        multiple
+                                        onChange={handleFileChange}
+                                        accept="image/*"
+                                    />
+                                    <button
+                                        type="button"
+                                        className="btn btn-secondary"
+                                        onClick={uploadImagesToCloudinary}
+                                        disabled={selectedFiles.length === 0 || uploading}
+                                    >
+                                        {uploading ? 'Uploading...' : 'Upload Selected Images'}
+                                    </button>
+                                </div>
+                                {fileSizeError && <small className="text-danger mt-1 d-block">{fileSizeError}</small>} {/* Display file size error */}
+                                {uploadError && <small className="text-danger mt-1 d-block">{uploadError}</small>}
+
+                                {/* Image Previews */}
+                                <div className="d-flex flex-wrap mt-3 gap-2">
+                                    {eventForm.images.length > 0 && eventForm.images.map((imageUrl, index) => (
+                                        <div key={index} className="position-relative" style={{ width: '100px', height: '100px', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-md)', overflow: 'hidden' }}>
+                                            <img
+                                                src={imageUrl}
+                                                alt={`Activity Image ${index + 1}`}
+                                                className="img-fluid"
+                                                style={{ objectFit: 'cover', width: '100%', height: '100%' }}
+                                            />
                                             <button
                                                 type="button"
-                                                className="btn-close btn-close-white"
-                                                style={{ fontSize: '0.6rem', marginLeft: '5px', cursor: 'pointer', background: 'none', border: 'none', color: 'white' }}
-                                                onClick={() => handleRemoveCollaborator(cCode)}
+                                                className="btn btn-danger btn-sm position-absolute top-0 end-0"
+                                                style={{ borderRadius: '50%', width: '24px', height: '24px', padding: 0, lineHeight: '24px', fontSize: '14px', margin: '2px' }}
+                                                onClick={() => handleImageRemove(index)}
                                             >
-                                                ✕
+                                                &times;
                                             </button>
-                                        </span>
+                                        </div>
+                                    ))}
+                                    {selectedFiles.length > 0 && selectedFiles.map((file, index) => (
+                                        // Only show preview if the file is not yet uploaded and part of eventForm.images
+                                        // We use URL.createObjectURL for fresh previews
+                                        <div key={`preview-${file.name}-${index}`} className="position-relative" style={{ width: '100px', height: '100px', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-md)', overflow: 'hidden', opacity: uploading ? 0.6 : 1 }}>
+                                            <img
+                                                src={URL.createObjectURL(file)}
+                                                alt={`Selected Image ${file.name}`}
+                                                className="img-fluid"
+                                                style={{ objectFit: 'cover', width: '100%', height: '100%' }}
+                                                onLoad={() => URL.revokeObjectURL(file.src)} // Clean up memory after image loads
+                                            />
+                                            {uploading && <div className="position-absolute top-50 start-50 translate-middle text-white fw-bold">...</div>}
+                                        </div>
                                     ))}
                                 </div>
-                            )}
-                            <small className="text-muted">Selected units will receive an invitation to collaborate on this activity.</small>
-                        </div>
+                                {eventForm.images.length === 0 && selectedFiles.length === 0 && !fileSizeError && !uploadError && (
+                                    <small className="text-muted d-block mt-2">No images selected or uploaded yet.</small>
+                                )}
+                            </div>
 
-                        <div className="flex-between mt-10 pt-8" style={{ borderTop: "1px solid var(--border)" }}>
-                            <button type="button" className="btn btn-secondary" onClick={() => navigate(-1)} disabled={uploading}>
-                                Cancel
-                            </button>
-                            <button type="submit" className="btn btn-primary btn-lg" disabled={uploading || uploadingBrochure || submitting} style={{ minWidth: '180px' }}>
-                                {submitting ? (eventToEdit ? "Updating..." : "Creating...") : (eventToEdit ? "Update Activity" : "Create Activity")}
-                            </button>
-                        </div>
-        </form>
-            </div>
-        </div>
-    );
+                            {/* Brochure Upload Section */}
+                            <div className="form-group mb-4">
+                                <label>Activity Brochure (PDF)</label>
+                                <div className="input-group">
+                                    <input
+                                        type="file"
+                                        className="form-control"
+                                        accept=".pdf"
+                                        onChange={(e) => setBrochureFile(e.target.files[0])}
+                                    />
+                                    <button
+                                        type="button"
+                                        className="btn btn-secondary"
+                                        onClick={uploadBrochureToCloudinary}
+                                        disabled={!brochureFile || uploadingBrochure}
+                                    >
+                                        {uploadingBrochure ? 'Uploading...' : 'Upload Brochure'}
+                                    </button>
+                                </div>
+                                {eventForm.brochure && (
+                                    <div className="mt-2 p-2 border rounded d-flex justify-content-between align-items-center" style={{ background: 'var(--bg-secondary)' }}>
+                                        <span className="text-sm text-success">✓ Brochure uploaded</span>
+                                        <a href={eventForm.brochure} target="_blank" rel="noopener noreferrer" className="btn btn-sm btn-link text-primary">View</a>
+                                        <button type="button" className="btn btn-sm btn-danger" onClick={() => setEventForm(prev => ({ ...prev, brochure: "" }))}>Remove</button>
+                                    </div>
+                                )}
+                            </div>
+
+                            <div className="form-section-header">
+                                <span>🤝</span> Collaboration
+                            </div>
+                            <div className="form-group mb-4 p-3" style={{ border: '1px dashed var(--border-color)', borderRadius: 'var(--radius-md)' }}>
+                                <label className="mb-2 fw-bold">Collaborating Units (Optional)</label>
+                                <div className="d-flex gap-2 mb-2">
+                                    <select
+                                        className="form-control"
+                                        value={selectedCollaborator}
+                                        onChange={(e) => setSelectedCollaborator(e.target.value)}
+                                    >
+                                        <option value="">Select a Unit to Invite</option>
+                                        {availableUnits.map(unit => (
+                                            <option key={unit.unitNumber} value={unit.unitNumber} disabled={collaborators.includes(unit.unitNumber)}>
+                                                {unit.unitNumber} - {unit.name}
+                                            </option>
+                                        ))}
+                                    </select>
+                                    <button type="button" className="btn btn-primary" onClick={handleAddCollaborator} disabled={!selectedCollaborator}>
+                                        Add
+                                    </button>
+                                </div>
+
+                                {collaborators.length > 0 && (
+                                    <div className="d-flex flex-wrap gap-2 mt-2">
+                                        {collaborators.map(cCode => (
+                                            <span key={cCode} className="badge badge-secondary d-flex align-items-center gap-2" style={{ padding: '0.5rem 1rem' }}>
+                                                Unit {cCode}
+                                                <button
+                                                    type="button"
+                                                    className="btn-close btn-close-white"
+                                                    style={{ fontSize: '0.6rem', marginLeft: '5px', cursor: 'pointer', background: 'none', border: 'none', color: 'white' }}
+                                                    onClick={() => handleRemoveCollaborator(cCode)}
+                                                >
+                                                    ✕
+                                                </button>
+                                            </span>
+                                        ))}
+                                    </div>
+                                )}
+                                <small className="text-muted">Selected units will receive an invitation to collaborate on this activity.</small>
+                            </div>
+
+                            {eventForm.category === "Special Camp" && (
+                                <SpecialCampFormSection
+                                    specialCampDetails={specialCampDetails || getInitialSpecialCampDetails(college, unit, {
+                                        dateFrom: eventForm.dateFrom,
+                                        dateTo: eventForm.dateTo,
+                                        date: eventForm.date
+                                    })}
+                                    setSpecialCampDetails={setSpecialCampDetails}
+                                    college={college}
+                                    unit={unit}
+                                    onPreviewPdf={() => setShowSpecialCampProposalModal(true)}
+                                />
+                            )}
+
+                            <div className="flex-between mt-10 pt-8" style={{ borderTop: "1px solid var(--border)" }}>
+                                <button type="button" className="btn btn-secondary" onClick={() => navigate(-1)} disabled={uploading}>
+                                    Cancel
+                                </button>
+                                <button type="submit" className="btn btn-primary btn-lg" disabled={uploading || uploadingBrochure || submitting} style={{ minWidth: '180px' }}>
+                                    {submitting ? (eventToEdit ? "Updating..." : "Creating...") : (eventToEdit ? "Update Activity" : "Create Activity")}
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+                {/* Official Special Camp Proposal Form 1 Modal */}
+                <SpecialCampProposalModal
+                    isOpen={showSpecialCampProposalModal}
+                    onClose={() => setShowSpecialCampProposalModal(false)}
+                    event={{
+                        ...eventForm,
+                        category: "Special Camp",
+                        specialCampDetails: specialCampDetails || getInitialSpecialCampDetails(college, unit, {
+                            dateFrom: eventForm.dateFrom,
+                            dateTo: eventForm.dateTo,
+                            date: eventForm.date
+                        })
+                    }}
+                    collegeData={college}
+                    unitData={unit}
+                />
+            </>
+            );
 };
 
-export default AddEvent;
+            export default AddEvent;
