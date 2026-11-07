@@ -24,4 +24,8 @@ const unitSchema = new mongoose.Schema({
     collegeId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' }
 });
 
+// Database Indexes for Performance & Scalability
+unitSchema.index({ unitNumber: 1, collegeId: 1 });
+unitSchema.index({ collegeId: 1 });
+
 module.exports = mongoose.model('Unit', unitSchema);

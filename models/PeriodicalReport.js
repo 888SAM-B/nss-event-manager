@@ -152,4 +152,9 @@ const periodicalReportSchema = new mongoose.Schema({
     submittedAt: { type: Date, default: Date.now }
 });
 
+// Database Indexes for Performance & Scalability
+periodicalReportSchema.index({ unitId: 1, reportType: 1, periodLabel: 1 });
+periodicalReportSchema.index({ collegeId: 1 });
+periodicalReportSchema.index({ submittedAt: -1 });
+
 module.exports = mongoose.model('PeriodicalReport', periodicalReportSchema);

@@ -59,6 +59,10 @@ const insLoginScheme = new mongoose.Schema({
         pincode: String,
         distance: { type: Number, default: 0 } // Distance in KM
     }]
-});
+}, { timestamps: true });
+
+// Database Indexes for Performance & Scalability
+insLoginScheme.index({ userName: 1 });
+insLoginScheme.index({ 'collegeLocation.district': 1 });
 
 module.exports = mongoose.model('User', insLoginScheme);

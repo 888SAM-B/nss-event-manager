@@ -8,11 +8,6 @@ const submitPeriodicalReport = async (req, res) => {
         return res.status(403).json({ success: false, message: "Unauthorized access" });
     }
 
-    // BUG-19: Unit users must only submit reports for their own unit
-    if (req.user.role === 'unit' && req.user.unitNumber !== unitCode) {
-        return res.status(403).json({ success: false, message: "Unauthorized: You can only submit reports for your own unit" });
-    }
-
     const { 
         unitCode, 
         collegeCode, 
@@ -26,6 +21,11 @@ const submitPeriodicalReport = async (req, res) => {
         activities, 
         socialMedia 
     } = req.body;
+
+    // BUG-19 FIX: Unit users must only submit reports for their own unit
+    if (req.user.role === 'unit' && req.user.unitNumber !== unitCode) {
+        return res.status(403).json({ success: false, message: "Unauthorized: You can only submit reports for your own unit" });
+    }
 
     if (!unitCode || !collegeCode || !reportType || !fromDate || !toDate || !periodLabel) {
         return res.status(400).json({ success: false, message: "Missing required fields" });

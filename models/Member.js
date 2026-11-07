@@ -32,4 +32,9 @@ const memberSchema = new mongoose.Schema({
     isEnrolled: { type: Boolean, default: false }
 });
 
+// Database Indexes for Performance & Scalability
+memberSchema.index({ unitId: 1 });
+memberSchema.index({ collegeId: 1 });
+memberSchema.index({ regNo: 1 });
+
 module.exports = mongoose.model('Member', memberSchema);

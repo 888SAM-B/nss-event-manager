@@ -52,4 +52,10 @@ const eventSchema = new mongoose.Schema({
     }
 }, { timestamps: true }); // BUG-25: added timestamps for createdAt/updatedAt
 
+// Database Indexes for Performance & Scalability
+eventSchema.index({ unitId: 1, createdAt: -1 });
+eventSchema.index({ collegeId: 1, createdAt: -1 });
+eventSchema.index({ 'report.submittedAt': 1 });
+eventSchema.index({ category: 1 });
+
 module.exports = mongoose.model('Event', eventSchema);

@@ -29,7 +29,7 @@ const createCircular = async (req, res) => {
             });
         }
 
-        // Handle JSON array of attachments (like external links or pre-uploaded files)
+        // Handle JSON array of attachments (like external links or pre-uploaded Cloudinary files)
         if (attachments) {
             let parsedAttachments = attachments;
             if (typeof attachments === 'string') {
@@ -42,10 +42,16 @@ const createCircular = async (req, res) => {
             if (Array.isArray(parsedAttachments)) {
                 parsedAttachments.forEach(att => {
                     if (att.name && att.fileUrl) {
+                        let fileType = att.fileType || 'link';
+                        if (!att.fileType || att.fileType === 'file') {
+                            const ext = att.name.split('.').pop().toLowerCase();
+                            if (['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(ext)) fileType = 'image';
+                            else if (ext === 'pdf') fileType = 'pdf';
+                        }
                         processedAttachments.push({
                             name: att.name,
                             fileUrl: att.fileUrl,
-                            fileType: att.fileType || 'link'
+                            fileType: fileType
                         });
                     }
                 });
