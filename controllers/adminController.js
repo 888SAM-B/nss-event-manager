@@ -97,7 +97,7 @@ const getAdminEvents = async (req, res) => {
         const filter = collegeIds ? { collegeId: { $in: collegeIds } } : {};
 
         const events = await Event.find(filter)
-            .populate('collegeId', 'insName code')
+            .populate('collegeId', 'insName code collegeLocation location collegeDetails principalDetails phone email')
             .populate('unitId', 'name unitNumber head')
             .sort({ createdAt: -1 });
 
