@@ -111,6 +111,7 @@ const UnitDashboard = () => {
         attendees: []
     });
     const [selectedFiles, setSelectedFiles] = useState([]);
+    const [selectedFilePreviews, setSelectedFilePreviews] = useState([]);
     const [uploading, setUploading] = useState(false);
     const [brochureFile, setBrochureFile] = useState(null);
     const [uploadingBrochure, setUploadingBrochure] = useState(false);
@@ -1045,6 +1046,7 @@ const UnitDashboard = () => {
             setCompletedReportPreviews([]);
         }
         setSelectedFiles([]);
+        setSelectedFilePreviews([]);
         setBrochureFile(null);
         setSelectedCollaborator("");
         setVolunteerSearch("");
@@ -1168,82 +1170,46 @@ const UnitDashboard = () => {
 
     const handleEventFileChange = (e) => {
         const files = Array.from(e.target.files);
-        const validFiles = [];
-        const invalidFiles = [];
+        if (files.length === 0) return;
+
         const MAX_FILE_SIZE = 250 * 1024; // 250KB
+        const oversized = files.filter(f => f.size > MAX_FILE_SIZE);
 
-        for (const file of files) {
-            if (file.size > MAX_FILE_SIZE) {
-                invalidFiles.push(file.name);
-            } else {
-                validFiles.push(file);
-            }
-        }
-
-        if (invalidFiles.length > 0) {
-            toast.error(`Files exceed 250KB limit: ${invalidFiles.join(', ')}`);
-        }
-
-        setSelectedFiles(validFiles);
-    };
-
-    const handleUploadEventImages = async () => {
-        if (selectedFiles.length === 0) {
-            toast.error("Please select files first.");
-            return;
-        }
-
-        setUploading(true);
-        const imageUrls = [...eventForm.images];
-        const toastId = toast.loading("Uploading images...");
-
-        try {
-            for (const file of selectedFiles) {
-                const formData = new FormData();
-                formData.append('file', file);
-                formData.append('upload_preset', CLOUDINARY_UPLOAD_PRESET);
-
-                const response = await axios.post(
-                    `https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/image/upload`,
-                    formData
-                );
-                imageUrls.push(response.data.secure_url);
-            }
-
-            setEventForm(prev => ({ ...prev, images: imageUrls }));
-            setSelectedFiles([]);
-            toast.success("Images uploaded successfully!", { id: toastId });
-        } catch (error) {
-            console.error(error);
-            toast.error("Failed to upload images", { id: toastId });
-        } finally {
-            setUploading(false);
-        }
-    };
-
-    const handleUploadEventBrochure = async () => {
-        if (!brochureFile) return;
-
-        setUploadingBrochure(true);
-        const toastId = toast.loading("Uploading brochure...");
-        try {
-            const formData = new FormData();
-            formData.append('file', brochureFile);
-            formData.append('upload_preset', CLOUDINARY_PDF_UPLOAD_PRESET);
-
-            const response = await axios.post(
-                `https://api.cloudinary.com/v1_1/${CLOUDINARY_PDF_CLOUD_NAME}/raw/upload`,
-                formData
+        if (oversized.length > 0) {
+            toast.error(
+                `⚠️ ${oversized.length} photo(s) exceed the 250KB limit: ${oversized.map(f => `${f.name} (${(f.size / 1024).toFixed(0)}KB)`).join(', ')}. Please remove them before saving.`,
+                { duration: 6000 }
             );
-            setEventForm(prev => ({ ...prev, brochure: response.data.secure_url }));
-            setBrochureFile(null);
-            toast.success("Brochure uploaded successfully!", { id: toastId });
-        } catch (error) {
-            console.error(error);
-            toast.error("Failed to upload brochure.", { id: toastId });
-        } finally {
-            setUploadingBrochure(false);
         }
+
+        setSelectedFiles(prev => [...prev, ...files]);
+        const previews = files.map(file => URL.createObjectURL(file));
+        setSelectedFilePreviews(prev => [...prev, ...previews]);
+        e.target.value = null;
+    };
+
+    const handleBrochureFileChange = (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        const MAX_BROCHURE_SIZE = 5 * 1024 * 1024; // 5MB
+        if (file.size > MAX_BROCHURE_SIZE) {
+            toast.error(`⚠️ Circular/Brochure "${file.name}" exceeds 5MB limit (${(file.size / (1024 * 1024)).toFixed(1)} MB)!`, { duration: 6000 });
+        }
+        setBrochureFile(file);
+        e.target.value = null;
+    };
+
+    const handleRemoveSelectedFile = (idx) => {
+        setSelectedFiles(prev => prev.filter((_, i) => i !== idx));
+        setSelectedFilePreviews(prev => prev.filter((_, i) => i !== idx));
+    };
+
+    const handleRemoveUploadedImage = (idx) => {
+        setEventForm(prev => ({
+            ...prev,
+            images: (prev.images || []).filter((_, i) => i !== idx)
+        }));
     };
 
     const handleSaveEvent = async (e) => {
@@ -1308,8 +1274,29 @@ const UnitDashboard = () => {
             });
         }
 
+        if (activityMode !== "completed" || isEditingEvent) {
+            // Check for oversized photos (> 250KB)
+            const oversizedPhotos = selectedFiles.filter(f => f.size > 250 * 1024);
+            if (oversizedPhotos.length > 0) {
+                toast.error(`Cannot save: "${oversizedPhotos[0].name}" (${(oversizedPhotos[0].size / 1024).toFixed(1)} KB) exceeds 250KB limit. Please remove it using ✕ before saving.`);
+                return;
+            }
+
+            // Check for oversized brochure (> 5MB)
+            if (brochureFile && brochureFile.size > 5 * 1024 * 1024) {
+                toast.error(`Cannot save: Brochure "${brochureFile.name}" (${(brochureFile.size / (1024 * 1024)).toFixed(1)} MB) exceeds 5MB limit. Please choose a smaller PDF.`);
+                return;
+            }
+        }
+
         setIsSavingCompletedEvent(true);
-        const toastId = toast.loading(activityMode === "completed" && !isEditingEvent ? "Uploading photos & recording completed activity..." : "Saving activity...");
+        const toastId = toast.loading(
+            activityMode === "completed" && !isEditingEvent 
+                ? "Uploading photos & recording completed activity..." 
+                : (selectedFiles.length > 0 || brochureFile)
+                    ? "Uploading selected files & saving activity..."
+                    : "Saving activity..."
+        );
         try {
             let finalReportData = null;
             if (activityMode === "completed" && !isEditingEvent) {
@@ -1343,6 +1330,19 @@ const UnitDashboard = () => {
                 if (uploadedPhotoUrls.length > 0) {
                     payload.images = uploadedPhotoUrls;
                 }
+            } else if (activityMode !== "completed" || isEditingEvent) {
+                // Auto-upload any newly selected upcoming/edit activity photos to Cloudinary
+                if (selectedFiles.length > 0) {
+                    const uploadedUrls = await Promise.all(
+                        selectedFiles.map(file => uploadToCloudinary(file, 'image', false))
+                    );
+                    payload.images = [...(payload.images || []), ...uploadedUrls];
+                }
+                // Auto-upload brochure PDF to Cloudinary
+                if (brochureFile) {
+                    const uploadedBrochureUrl = await uploadToCloudinary(brochureFile, 'raw', true);
+                    payload.brochure = uploadedBrochureUrl;
+                }
             }
 
             let res;
@@ -1371,6 +1371,9 @@ const UnitDashboard = () => {
                     { id: toastId }
                 );
                 setShowEventFormModal(false);
+                setSelectedFiles([]);
+                setSelectedFilePreviews([]);
+                setBrochureFile(null);
                 fetchDashboardEvents();
 
                 if (activityMode === "completed" && !isEditingEvent) {
@@ -3347,50 +3350,186 @@ const UnitDashboard = () => {
                                         {/* Images and Brochure Upload - Only for Upcoming Activity or Edit Mode */}
                                         {(activityMode !== 'completed' || isEditingEvent) && (
                                             <div className="grid-cols-2 gap-3 mb-4">
+                                                {/* Photos Section */}
                                                 <div className="form-group">
-                                                    <label className="form-label">Upload Activity Photos (Max 250KB each)</label>
-                                                    <div className="d-flex gap-2">
-                                                        <input
-                                                            type="file"
-                                                            className="form-control"
-                                                            accept="image/*"
-                                                            multiple
-                                                            onChange={handleEventFileChange}
-                                                        />
-                                                        <button
-                                                            type="button"
-                                                            className="btn btn-secondary btn-sm"
-                                                            disabled={uploading || selectedFiles.length === 0}
-                                                            onClick={handleUploadEventImages}
-                                                        >
-                                                            {uploading ? "..." : "Upload"}
-                                                        </button>
-                                                    </div>
+                                                    <label className="form-label" style={{ fontWeight: 600 }}>
+                                                        Activity Photos <span style={{ fontSize: '0.8rem', color: 'var(--txt-3)', fontWeight: 'normal' }}>(Max 250KB each)</span>
+                                                    </label>
+                                                    <input
+                                                        type="file"
+                                                        className="form-control"
+                                                        accept="image/*"
+                                                        multiple
+                                                        onChange={handleEventFileChange}
+                                                    />
+                                                    <small style={{ color: 'var(--txt-3)', fontSize: '0.75rem', display: 'block', marginTop: '3px' }}>
+                                                        💡 Photos will be uploaded automatically when you save the activity.
+                                                    </small>
+
+                                                    {/* Alert if any photo exceeds 250KB */}
+                                                    {selectedFiles.some(f => f.size > 250 * 1024) && (
+                                                        <div style={{ background: 'rgba(239, 68, 68, 0.08)', border: '1px solid rgba(239, 68, 68, 0.35)', color: '#b91c1c', padding: '0.5rem 0.75rem', borderRadius: '6px', fontSize: '0.8rem', marginTop: '0.5rem' }}>
+                                                            <div style={{ fontWeight: 700, display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                                                <span>⚠️</span> File Size Exceeded (Max 250KB Limit)
+                                                            </div>
+                                                            <div style={{ margin: '3px 0 0', lineHeight: 1.4 }}>
+                                                                {selectedFiles.filter(f => f.size > 250 * 1024).map((f, i) => (
+                                                                    <div key={i}>
+                                                                        • <strong>{f.name}</strong> is <strong>{(f.size / 1024).toFixed(1)} KB</strong> ({(f.size / 1024 - 250).toFixed(0)} KB over limit). Please remove using ✕.
+                                                                    </div>
+                                                                ))}
+                                                            </div>
+                                                        </div>
+                                                    )}
+
+                                                    {/* Live Photo Previews (Both selected and uploaded) */}
+                                                    {(selectedFilePreviews.length > 0 || (eventForm.images && eventForm.images.length > 0)) && (
+                                                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(90px, 1fr))', gap: '0.5rem', marginTop: '0.75rem' }}>
+                                                            {/* Uploaded Images */}
+                                                            {eventForm.images && eventForm.images.map((url, idx) => (
+                                                                <div key={`uploaded-${idx}`} style={{ position: 'relative', height: '80px', borderRadius: '6px', overflow: 'hidden', border: '1.5px solid var(--success-500, #16a34a)', background: '#000' }}>
+                                                                    <img src={url} alt={`Uploaded ${idx + 1}`} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                                                    <span style={{ position: 'absolute', bottom: 2, left: 2, background: 'rgba(22, 163, 74, 0.85)', color: '#fff', fontSize: '9px', padding: '1px 4px', borderRadius: '3px', fontWeight: 700 }}>
+                                                                        Saved ✓
+                                                                    </span>
+                                                                    <button
+                                                                        type="button"
+                                                                        onClick={() => handleRemoveUploadedImage(idx)}
+                                                                        title="Remove photo"
+                                                                        style={{
+                                                                            position: 'absolute', top: 2, right: 2, background: 'rgba(0,0,0,0.65)',
+                                                                            color: '#fff', border: 'none', borderRadius: '50%', width: '20px',
+                                                                            height: '20px', cursor: 'pointer', fontSize: '11px', display: 'flex',
+                                                                            alignItems: 'center', justifyContent: 'center'
+                                                                        }}
+                                                                    >
+                                                                        ✕
+                                                                    </button>
+                                                                </div>
+                                                            ))}
+
+                                                            {/* Selected pending upload images */}
+                                                            {selectedFiles.map((file, idx) => {
+                                                                const isOversized = file.size > 250 * 1024;
+                                                                const previewUrl = selectedFilePreviews[idx];
+                                                                return (
+                                                                    <div 
+                                                                        key={`selected-${idx}`} 
+                                                                        style={{ 
+                                                                            position: 'relative', 
+                                                                            height: '80px', 
+                                                                            borderRadius: '6px', 
+                                                                            overflow: 'hidden', 
+                                                                            border: isOversized ? '2px solid #ef4444' : '1.5px dashed var(--primary-500, #2563eb)', 
+                                                                            background: isOversized ? '#fef2f2' : '#f8fafc' 
+                                                                        }}
+                                                                    >
+                                                                        <img src={previewUrl} alt={`Selected ${idx + 1}`} style={{ width: '100%', height: '100%', objectFit: 'cover', opacity: isOversized ? 0.7 : 1 }} />
+                                                                        <span style={{ 
+                                                                            position: 'absolute', 
+                                                                            bottom: 2, 
+                                                                            left: 2, 
+                                                                            background: isOversized ? 'rgba(239, 68, 68, 0.9)' : 'rgba(37, 99, 235, 0.85)', 
+                                                                            color: '#fff', 
+                                                                            fontSize: '8.5px', 
+                                                                            padding: '1px 4px', 
+                                                                            borderRadius: '3px', 
+                                                                            fontWeight: 700 
+                                                                        }}>
+                                                                            {isOversized ? `⚠️ ${(file.size / 1024).toFixed(0)}KB` : `${(file.size / 1024).toFixed(0)}KB`}
+                                                                        </span>
+                                                                        <button
+                                                                        type="button"
+                                                                        onClick={() => handleRemoveSelectedFile(idx)}
+                                                                        title={isOversized ? "Remove oversized photo" : "Remove selected photo"}
+                                                                        style={{
+                                                                            position: 'absolute', top: 2, right: 2, 
+                                                                            background: isOversized ? '#ef4444' : 'rgba(0,0,0,0.65)',
+                                                                            color: '#fff', border: 'none', borderRadius: '50%', width: '20px',
+                                                                            height: '20px', cursor: 'pointer', fontSize: '11px', display: 'flex',
+                                                                            alignItems: 'center', justifyContent: 'center'
+                                                                        }}
+                                                                    >
+                                                                        ✕
+                                                                    </button>
+                                                                    </div>
+                                                                );
+                                                            })}
+                                                        </div>
+                                                    )}
+
                                                     {eventForm.images && eventForm.images.length > 0 && (
-                                                        <small className="text-success d-block mt-1">✓ {eventForm.images.length} photos uploaded</small>
+                                                        <small className="text-success d-block mt-1">✓ {eventForm.images.length} photo(s) saved to activity</small>
                                                     )}
                                                 </div>
 
+                                                {/* Brochure Section */}
                                                 <div className="form-group">
-                                                    <label className="form-label">Upload Circular / Brochure (PDF)</label>
-                                                    <div className="d-flex gap-2">
-                                                        <input
-                                                            type="file"
-                                                            className="form-control"
-                                                            accept="application/pdf"
-                                                            onChange={(e) => setBrochureFile(e.target.files[0])}
-                                                        />
-                                                        <button
-                                                            type="button"
-                                                            className="btn btn-secondary btn-sm"
-                                                            disabled={uploadingBrochure || !brochureFile}
-                                                            onClick={handleUploadEventBrochure}
-                                                        >
-                                                            {uploadingBrochure ? "..." : "Upload"}
-                                                        </button>
-                                                    </div>
-                                                    {eventForm.brochure && (
-                                                        <small className="text-success d-block mt-1">✓ Circular / Brochure uploaded</small>
+                                                    <label className="form-label" style={{ fontWeight: 600 }}>
+                                                        Circular / Brochure PDF <span style={{ fontSize: '0.8rem', color: 'var(--txt-3)', fontWeight: 'normal' }}>(Max 5MB)</span>
+                                                    </label>
+                                                    <input
+                                                        type="file"
+                                                        className="form-control"
+                                                        accept="application/pdf"
+                                                        onChange={handleBrochureFileChange}
+                                                    />
+                                                    <small style={{ color: 'var(--txt-3)', fontSize: '0.75rem', display: 'block', marginTop: '3px' }}>
+                                                        💡 Brochure will be uploaded automatically when you save the activity.
+                                                    </small>
+
+                                                    {/* Selected Brochure Preview */}
+                                                    {brochureFile && (
+                                                        <div style={{
+                                                            marginTop: '0.5rem',
+                                                            padding: '0.5rem 0.75rem',
+                                                            borderRadius: '6px',
+                                                            border: brochureFile.size > 5 * 1024 * 1024 ? '1.5px solid #ef4444' : '1px solid var(--border)',
+                                                            background: brochureFile.size > 5 * 1024 * 1024 ? 'rgba(239, 68, 68, 0.08)' : 'var(--bg-secondary)',
+                                                            display: 'flex',
+                                                            alignItems: 'center',
+                                                            justifyContent: 'space-between'
+                                                        }}>
+                                                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', overflow: 'hidden' }}>
+                                                                <span style={{ fontSize: '1.2rem' }}>📄</span>
+                                                                <div>
+                                                                    <div style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--txt-1)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '200px' }}>
+                                                                        {brochureFile.name}
+                                                                    </div>
+                                                                    <div style={{ fontSize: '0.75rem', color: brochureFile.size > 5 * 1024 * 1024 ? '#b91c1c' : 'var(--txt-3)' }}>
+                                                                        {(brochureFile.size / 1024).toFixed(1)} KB {brochureFile.size > 5 * 1024 * 1024 && '⚠️ Exceeds 5MB limit'}
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => setBrochureFile(null)}
+                                                                title="Remove brochure file"
+                                                                style={{
+                                                                    background: 'none', border: 'none', color: '#ef4444',
+                                                                    cursor: 'pointer', fontSize: '16px', fontWeight: 'bold'
+                                                                }}
+                                                            >
+                                                                ✕
+                                                            </button>
+                                                        </div>
+                                                    )}
+
+                                                    {/* Current Uploaded Brochure */}
+                                                    {eventForm.brochure && !brochureFile && (
+                                                        <div style={{ marginTop: '0.5rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.4rem 0.75rem', background: 'rgba(22, 163, 74, 0.08)', border: '1px solid rgba(22, 163, 74, 0.25)', borderRadius: '6px' }}>
+                                                            <a href={eventForm.brochure} target="_blank" rel="noopener noreferrer" style={{ fontSize: '0.8rem', color: 'var(--success-700)', textDecoration: 'underline', fontWeight: 600 }}>
+                                                                ✓ View Current Brochure PDF
+                                                            </a>
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => setEventForm(prev => ({ ...prev, brochure: "" }))}
+                                                                style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', fontSize: '12px' }}
+                                                                title="Remove brochure"
+                                                            >
+                                                                ✕ Remove
+                                                            </button>
+                                                        </div>
                                                     )}
                                                 </div>
                                             </div>

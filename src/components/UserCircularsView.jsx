@@ -196,20 +196,52 @@ const UserCircularsView = ({ userRole = 'college' }) => {
                                         <h4 style={{ fontSize: '0.8rem', fontWeight: 700, margin: '0 0 8px', color: 'var(--txt-2)' }}>
                                             ATTACHMENTS & LINKS ({c.attachments.length})
                                         </h4>
+
+                                        {/* Image thumbnails preview */}
+                                        {c.attachments.some(att => att.fileType === 'image' || ['jpg', 'jpeg', 'png', 'webp', 'gif'].includes(att.name.split('.').pop().toLowerCase())) && (
+                                            <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', marginBottom: '10px' }}>
+                                                {c.attachments.filter(att => att.fileType === 'image' || ['jpg', 'jpeg', 'png', 'webp', 'gif'].includes(att.name.split('.').pop().toLowerCase())).map((att, imgIdx) => (
+                                                    <a 
+                                                        key={imgIdx} 
+                                                        href={getAttachmentUrl(att.fileUrl)} 
+                                                        target="_blank" 
+                                                        rel="noopener noreferrer"
+                                                        title={att.name}
+                                                        style={{ display: 'block', borderRadius: '6px', overflow: 'hidden', border: '1px solid var(--border)', boxShadow: '0 2px 4px rgba(0,0,0,0.05)' }}
+                                                    >
+                                                        <img 
+                                                            src={getAttachmentUrl(att.fileUrl)} 
+                                                            alt={att.name} 
+                                                            style={{ width: '80px', height: '80px', objectFit: 'cover', display: 'block', transition: 'transform 0.2s' }}
+                                                            onMouseOver={e => e.currentTarget.style.transform = 'scale(1.05)'}
+                                                            onMouseOut={e => e.currentTarget.style.transform = 'scale(1)'}
+                                                        />
+                                                    </a>
+                                                ))}
+                                            </div>
+                                        )}
+
                                         <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                                            {c.attachments.map((att, idx) => (
-                                                <a
-                                                    key={idx}
-                                                    href={getAttachmentUrl(att.fileUrl)}
-                                                    target="_blank"
-                                                    rel="noopener noreferrer"
-                                                    className="btn btn-sm btn-primary"
-                                                    style={{ fontSize: '0.75rem', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
-                                                >
-                                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48" /></svg>
-                                                    {att.name}
-                                                </a>
-                                            ))}
+                                            {c.attachments.map((att, idx) => {
+                                                const isImg = att.fileType === 'image' || ['jpg', 'jpeg', 'png', 'webp', 'gif'].includes(att.name.split('.').pop().toLowerCase());
+                                                return (
+                                                    <a
+                                                        key={idx}
+                                                        href={getAttachmentUrl(att.fileUrl)}
+                                                        target="_blank"
+                                                        rel="noopener noreferrer"
+                                                        className={`btn btn-sm ${isImg ? 'btn-outline-primary' : 'btn-primary'}`}
+                                                        style={{ fontSize: '0.75rem', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
+                                                    >
+                                                        {isImg ? (
+                                                            <span>🖼️</span>
+                                                        ) : (
+                                                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48" /></svg>
+                                                        )}
+                                                        {att.name}
+                                                    </a>
+                                                );
+                                            })}
                                         </div>
                                     </div>
                                 )}

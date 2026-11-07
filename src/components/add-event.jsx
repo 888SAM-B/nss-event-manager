@@ -169,100 +169,33 @@ const AddEvent = () => {
 
     const handleFileChange = (e) => {
         const files = Array.from(e.target.files);
-        const validFiles = [];
-        const invalidFiles = [];
+        if (files.length === 0) return;
 
-        // Reset errors
         setUploadError(null);
         setFileSizeError(null);
 
-        for (const file of files) {
-            if (file.size > MAX_FILE_SIZE) {
-                invalidFiles.push(file.name);
-            } else {
-                validFiles.push(file);
-            }
-        }
-
-        if (invalidFiles.length > 0) {
+        const oversized = files.filter(f => f.size > MAX_FILE_SIZE);
+        if (oversized.length > 0) {
             setFileSizeError(
-                `The following files exceed the 250KB limit: ${invalidFiles.join(', ')}. ` +
-                `They will not be uploaded. Please select smaller files.`
+                `⚠️ The following file(s) exceed the 250KB limit: ${oversized.map(f => `${f.name} (${(f.size / 1024).toFixed(0)}KB)`).join(', ')}. Please remove them before submitting.`
             );
+            toast.error(`⚠️ ${oversized.length} photo(s) exceed 250KB limit!`, { duration: 5000 });
         }
 
-        setSelectedFiles(validFiles);
-        // If there were invalid files, clear the input so the user can re-select
-        if (invalidFiles.length > 0) {
-            e.target.value = null;
-        }
+        setSelectedFiles(prev => [...prev, ...files]);
+        e.target.value = null;
     };
 
-    const uploadImagesToCloudinary = async () => {
-        if (selectedFiles.length === 0) {
-            setUploadError("Please select files to upload.");
-            return;
+    const handleBrochureFileChange = (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        const MAX_BROCHURE_SIZE = 5 * 1024 * 1024; // 5MB
+        if (file.size > MAX_BROCHURE_SIZE) {
+            toast.error(`⚠️ Circular/Brochure "${file.name}" exceeds 5MB limit (${(file.size / (1024 * 1024)).toFixed(1)} MB)!`, { duration: 6000 });
         }
-
-        setUploading(true);
-        setUploadError(null);
-        setFileSizeError(null); // Clear file size error on upload attempt
-
-        const imageUrls = [...eventForm.images];
-
-        try {
-            for (const file of selectedFiles) {
-                const formData = new FormData();
-                formData.append('file', file);
-                formData.append('upload_preset', CLOUDINARY_UPLOAD_PRESET);
-
-                const response = await axios.post(
-                    `https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/image/upload`,
-                    formData
-                );
-                imageUrls.push(response.data.secure_url);
-            }
-
-            setEventForm(prevForm => ({
-                ...prevForm,
-                images: imageUrls
-            }));
-            setSelectedFiles([]);
-            toast.success("Images uploaded successfully!");
-        } catch (error) {
-            console.error("Error uploading images to Cloudinary:", error);
-            setUploadError("Failed to upload images. Please try again.");
-            toast.error("Failed to upload images");
-            if (error.response) {
-                console.error("Cloudinary response error:", error.response.data);
-            }
-        } finally {
-            setUploading(false);
-        }
-    };
-
-    const uploadBrochureToCloudinary = async () => {
-        if (!brochureFile) return;
-
-        setUploadingBrochure(true);
-        try {
-            const formData = new FormData();
-            formData.append('file', brochureFile);
-            formData.append('upload_preset', CLOUDINARY_PDF_UPLOAD_PRESET);
-
-            const response = await axios.post(
-                `https://api.cloudinary.com/v1_1/${CLOUDINARY_PDF_CLOUD_NAME}/raw/upload`,
-                formData
-            );
-            setEventForm(prev => ({ ...prev, brochure: response.data.secure_url }));
-            setBrochureFile(null);
-            toast.success("Brochure uploaded successfully!");
-        } catch (error) {
-            console.error("Error uploading brochure:", error);
-            toast.error("Failed to upload brochure.");
-        } finally {
-            setUploadingBrochure(false);
-        }
+        setBrochureFile(file);
+        e.target.value = null;
     };
 
     const handleImageRemove = (indexToRemove) => {
@@ -290,40 +223,75 @@ const AddEvent = () => {
             return;
         }
 
-        const eventData = {
-            name: eventForm.name,
-            description: eventForm.description,
-            category: eventForm.category === "Other" ? eventForm.otherCategory : eventForm.category,
-            singleDay: eventForm.singleDay,
-            date: eventForm.singleDay ? eventForm.date : undefined,
-            dateFrom: !eventForm.singleDay ? eventForm.dateFrom : undefined,
-            dateTo: !eventForm.singleDay ? eventForm.dateTo : undefined,
-            timeFrom: eventForm.timeFrom,
-            timeTo: eventForm.timeTo,
-            venue: eventForm.venue,
-            resourcePerson: eventForm.resourcePerson,
-            level: eventForm.level,
-            sponsorship: eventForm.sponsorship,
-            registeredMeriBharath: "No",
-            meriBharathUrl: "",
-            images: eventForm.images,
-            brochure: eventForm.brochure,
-            unitCode: unitCode,
-            collegeCode: collegeCode,
-            collaborators: collaborators,
-            ...(eventForm.category === "Special Camp" && {
-                specialCampDetails: specialCampDetails || getInitialSpecialCampDetails(college, unit, {
-                    dateFrom: eventForm.dateFrom,
-                    dateTo: eventForm.dateTo,
-                    date: eventForm.date
-                })
-            })
-        };
+        // Check for oversized photos (> 250KB)
+        const oversizedPhotos = selectedFiles.filter(f => f.size > MAX_FILE_SIZE);
+        if (oversizedPhotos.length > 0) {
+            toast.error(`Cannot submit: "${oversizedPhotos[0].name}" (${(oversizedPhotos[0].size / 1024).toFixed(1)} KB) exceeds 250KB limit. Please remove it using ✕ before saving.`);
+            return;
+        }
 
-        console.log("Submitting Activity Data:", eventData);
+        // Check for oversized brochure (> 5MB)
+        if (brochureFile && brochureFile.size > 5 * 1024 * 1024) {
+            toast.error(`Cannot submit: Brochure "${brochureFile.name}" (${(brochureFile.size / (1024 * 1024)).toFixed(1)} MB) exceeds 5MB limit. Please choose a smaller PDF.`);
+            return;
+        }
+
         setSubmitting(true);
+        const toastId = toast.loading((selectedFiles.length > 0 || brochureFile) ? "Uploading files & saving activity..." : "Saving activity...");
 
         try {
+            let finalImages = [...eventForm.images];
+            let finalBrochure = eventForm.brochure;
+
+            // Auto-upload selected photos to Cloudinary
+            if (selectedFiles.length > 0) {
+                for (const file of selectedFiles) {
+                    const formData = new FormData();
+                    formData.append('file', file);
+                    formData.append('upload_preset', CLOUDINARY_UPLOAD_PRESET);
+                    const res = await axios.post(`https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/image/upload`, formData);
+                    finalImages.push(res.data.secure_url);
+                }
+            }
+
+            // Auto-upload brochure PDF to Cloudinary
+            if (brochureFile) {
+                const formData = new FormData();
+                formData.append('file', brochureFile);
+                formData.append('upload_preset', CLOUDINARY_PDF_UPLOAD_PRESET);
+                const res = await axios.post(`https://api.cloudinary.com/v1_1/${CLOUDINARY_PDF_CLOUD_NAME}/raw/upload`, formData);
+                finalBrochure = res.data.secure_url;
+            }
+
+            const eventData = {
+                name: eventForm.name,
+                description: eventForm.description,
+                category: eventForm.category === "Other" ? eventForm.otherCategory : eventForm.category,
+                singleDay: eventForm.singleDay,
+                date: eventForm.singleDay ? eventForm.date : undefined,
+                dateFrom: !eventForm.singleDay ? eventForm.dateFrom : undefined,
+                dateTo: !eventForm.singleDay ? eventForm.dateTo : undefined,
+                timeFrom: eventForm.timeFrom,
+                timeTo: eventForm.timeTo,
+                venue: eventForm.venue,
+                resourcePerson: eventForm.resourcePerson,
+                level: eventForm.level,
+                sponsorship: eventForm.sponsorship,
+                registeredMeriBharath: "No",
+                meriBharathUrl: "",
+                images: finalImages,
+                brochure: finalBrochure,
+                unitCode: unitCode,
+                collegeCode: collegeCode,
+                collaborators: collaborators,
+                ...(eventForm.category === "Special Camp" && {
+                    specialCampDetails: specialCampDetails || getInitialSpecialCampDetails(college, unit, {
+                        dateFrom: eventForm.dateFrom,
+                        dateTo: eventForm.dateTo,
+                        date: eventForm.date
+                    })
+                })
+            };
             const config = {
                 headers: {
                     Authorization: `Bearer ${localStorage.getItem("unitToken")}`
@@ -335,18 +303,18 @@ const AddEvent = () => {
                     eventId: eventToEdit._id,
                     eventData: eventData
                 }, config);
-                toast.success('Activity updated successfully!');
+                toast.success('Activity updated successfully!', { id: toastId });
                 console.log('Backend Response:', response.data);
                 navigate('/explore-events', { state: { unitCode, collegeCode } }); // Go back to explore events
             } else {
                 const response = await axios.post(`${import.meta.env.VITE_API_URL}/addEvent`, { eventData: eventData }, config);
-                toast.success('Activity created successfully!');
+                toast.success('Activity created successfully!', { id: toastId });
                 console.log('Backend Response:', response.data);
                 navigate('/unit-dashboard');
             }
         } catch (error) {
             console.error('Error saving activity:', error);
-            toast.error('Failed to save activity. Please try again.');
+            toast.error(error.response?.data?.message || 'Failed to save activity. Please try again.', { id: toastId });
             if (error.response) {
                 console.error('Backend Error Details:', error.response.data);
             }
@@ -562,62 +530,110 @@ const AddEvent = () => {
 
                             {/* Image Upload Section */}
                             <div className="form-group mb-4">
-                                <label>Activity Images</label>
-                                <div className="input-group evt-imgs">
-                                    <input
-                                        type="file"
-                                        className="form-control choose-img "
-                                        id="images"
-                                        multiple
-                                        onChange={handleFileChange}
-                                        accept="image/*"
-                                    />
-                                    <button
-                                        type="button"
-                                        className="btn btn-secondary"
-                                        onClick={uploadImagesToCloudinary}
-                                        disabled={selectedFiles.length === 0 || uploading}
-                                    >
-                                        {uploading ? 'Uploading...' : 'Upload Selected Images'}
-                                    </button>
-                                </div>
-                                {fileSizeError && <small className="text-danger mt-1 d-block">{fileSizeError}</small>} {/* Display file size error */}
+                                <label style={{ fontWeight: 600 }}>
+                                    Activity Images <span style={{ fontSize: '0.85rem', color: 'var(--txt-3)', fontWeight: 'normal' }}>(Max 250KB each)</span>
+                                </label>
+                                <input
+                                    type="file"
+                                    className="form-control choose-img"
+                                    id="images"
+                                    multiple
+                                    onChange={handleFileChange}
+                                    accept="image/*"
+                                />
+                                <small style={{ color: 'var(--txt-3)', fontSize: '0.78rem', display: 'block', marginTop: '4px' }}>
+                                    💡 Select one or multiple photos. They will be uploaded automatically when you submit the activity.
+                                </small>
+
+                                {fileSizeError && (
+                                    <div style={{ background: 'rgba(239, 68, 68, 0.08)', border: '1px solid rgba(239, 68, 68, 0.35)', color: '#b91c1c', padding: '0.5rem 0.75rem', borderRadius: '6px', fontSize: '0.8rem', marginTop: '0.5rem' }}>
+                                        {fileSizeError}
+                                    </div>
+                                )}
                                 {uploadError && <small className="text-danger mt-1 d-block">{uploadError}</small>}
 
                                 {/* Image Previews */}
                                 <div className="d-flex flex-wrap mt-3 gap-2">
+                                    {/* Uploaded Images */}
                                     {eventForm.images.length > 0 && eventForm.images.map((imageUrl, index) => (
-                                        <div key={index} className="position-relative" style={{ width: '100px', height: '100px', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-md)', overflow: 'hidden' }}>
+                                        <div key={`uploaded-${index}`} className="position-relative" style={{ width: '100px', height: '100px', border: '1.5px solid var(--success-500, #16a34a)', borderRadius: 'var(--radius-md)', overflow: 'hidden' }}>
                                             <img
                                                 src={imageUrl}
                                                 alt={`Activity Image ${index + 1}`}
                                                 className="img-fluid"
                                                 style={{ objectFit: 'cover', width: '100%', height: '100%' }}
                                             />
+                                            <span style={{ position: 'absolute', bottom: 2, left: 2, background: 'rgba(22, 163, 74, 0.85)', color: '#fff', fontSize: '9px', padding: '1px 4px', borderRadius: '3px', fontWeight: 700 }}>
+                                                Saved ✓
+                                            </span>
                                             <button
                                                 type="button"
                                                 className="btn btn-danger btn-sm position-absolute top-0 end-0"
-                                                style={{ borderRadius: '50%', width: '24px', height: '24px', padding: 0, lineHeight: '24px', fontSize: '14px', margin: '2px' }}
+                                                style={{ borderRadius: '50%', width: '22px', height: '22px', padding: 0, lineHeight: '22px', fontSize: '13px', margin: '2px' }}
                                                 onClick={() => handleImageRemove(index)}
+                                                title="Remove image"
                                             >
                                                 &times;
                                             </button>
                                         </div>
                                     ))}
-                                    {selectedFiles.length > 0 && selectedFiles.map((file, index) => (
-                                        // Only show preview if the file is not yet uploaded and part of eventForm.images
-                                        // We use URL.createObjectURL for fresh previews
-                                        <div key={`preview-${file.name}-${index}`} className="position-relative" style={{ width: '100px', height: '100px', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-md)', overflow: 'hidden', opacity: uploading ? 0.6 : 1 }}>
-                                            <img
-                                                src={URL.createObjectURL(file)}
-                                                alt={`Selected Image ${file.name}`}
-                                                className="img-fluid"
-                                                style={{ objectFit: 'cover', width: '100%', height: '100%' }}
-                                                onLoad={() => URL.revokeObjectURL(file.src)} // Clean up memory after image loads
-                                            />
-                                            {uploading && <div className="position-absolute top-50 start-50 translate-middle text-white fw-bold">...</div>}
-                                        </div>
-                                    ))}
+
+                                    {/* Selected pending upload images */}
+                                    {selectedFiles.length > 0 && selectedFiles.map((file, index) => {
+                                        const isOversized = file.size > MAX_FILE_SIZE;
+                                        return (
+                                            <div 
+                                                key={`preview-${file.name}-${index}`} 
+                                                className="position-relative" 
+                                                style={{ 
+                                                    width: '100px', 
+                                                    height: '100px', 
+                                                    border: isOversized ? '2px solid #ef4444' : '1.5px dashed var(--primary-500, #2563eb)', 
+                                                    borderRadius: 'var(--radius-md)', 
+                                                    overflow: 'hidden',
+                                                    background: isOversized ? '#fef2f2' : '#f8fafc'
+                                                }}
+                                            >
+                                                <img
+                                                    src={URL.createObjectURL(file)}
+                                                    alt={`Selected Image ${file.name}`}
+                                                    className="img-fluid"
+                                                    style={{ objectFit: 'cover', width: '100%', height: '100%', opacity: isOversized ? 0.7 : 1 }}
+                                                />
+                                                <span style={{ 
+                                                    position: 'absolute', 
+                                                    bottom: 2, 
+                                                    left: 2, 
+                                                    background: isOversized ? 'rgba(239, 68, 68, 0.9)' : 'rgba(37, 99, 235, 0.85)', 
+                                                    color: '#fff', 
+                                                    fontSize: '8.5px', 
+                                                    padding: '1px 4px', 
+                                                    borderRadius: '3px', 
+                                                    fontWeight: 700 
+                                                }}>
+                                                    {isOversized ? `⚠️ ${(file.size / 1024).toFixed(0)}KB` : `${(file.size / 1024).toFixed(0)}KB`}
+                                                </span>
+                                                <button
+                                                    type="button"
+                                                    className="btn btn-danger btn-sm position-absolute top-0 end-0"
+                                                    style={{ 
+                                                        borderRadius: '50%', 
+                                                        width: '22px', 
+                                                        height: '22px', 
+                                                        padding: 0, 
+                                                        lineHeight: '22px', 
+                                                        fontSize: '13px', 
+                                                        margin: '2px',
+                                                        background: isOversized ? '#ef4444' : 'rgba(0,0,0,0.65)'
+                                                    }}
+                                                    onClick={() => setSelectedFiles(prev => prev.filter((_, i) => i !== index))}
+                                                    title={isOversized ? "Remove oversized file" : "Remove selected file"}
+                                                >
+                                                    &times;
+                                                </button>
+                                            </div>
+                                        );
+                                    })}
                                 </div>
                                 {eventForm.images.length === 0 && selectedFiles.length === 0 && !fileSizeError && !uploadError && (
                                     <small className="text-muted d-block mt-2">No images selected or uploaded yet.</small>
@@ -626,27 +642,58 @@ const AddEvent = () => {
 
                             {/* Brochure Upload Section */}
                             <div className="form-group mb-4">
-                                <label>Activity Brochure (PDF)</label>
-                                <div className="input-group">
-                                    <input
-                                        type="file"
-                                        className="form-control"
-                                        accept=".pdf"
-                                        onChange={(e) => setBrochureFile(e.target.files[0])}
-                                    />
-                                    <button
-                                        type="button"
-                                        className="btn btn-secondary"
-                                        onClick={uploadBrochureToCloudinary}
-                                        disabled={!brochureFile || uploadingBrochure}
-                                    >
-                                        {uploadingBrochure ? 'Uploading...' : 'Upload Brochure'}
-                                    </button>
-                                </div>
-                                {eventForm.brochure && (
+                                <label style={{ fontWeight: 600 }}>
+                                    Activity Circular / Brochure PDF <span style={{ fontSize: '0.85rem', color: 'var(--txt-3)', fontWeight: 'normal' }}>(Max 5MB)</span>
+                                </label>
+                                <input
+                                    type="file"
+                                    className="form-control"
+                                    accept=".pdf"
+                                    onChange={handleBrochureFileChange}
+                                />
+                                <small style={{ color: 'var(--txt-3)', fontSize: '0.78rem', display: 'block', marginTop: '4px' }}>
+                                    💡 Brochure PDF will be uploaded automatically when you submit the activity.
+                                </small>
+
+                                {/* Selected Brochure File */}
+                                {brochureFile && (
+                                    <div style={{
+                                        marginTop: '0.5rem',
+                                        padding: '0.5rem 0.75rem',
+                                        borderRadius: '6px',
+                                        border: brochureFile.size > 5 * 1024 * 1024 ? '1.5px solid #ef4444' : '1px solid var(--border)',
+                                        background: brochureFile.size > 5 * 1024 * 1024 ? 'rgba(239, 68, 68, 0.08)' : 'var(--bg-secondary)',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'space-between'
+                                    }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', overflow: 'hidden' }}>
+                                            <span style={{ fontSize: '1.2rem' }}>📄</span>
+                                            <div>
+                                                <div style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--txt-1)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '240px' }}>
+                                                    {brochureFile.name}
+                                                </div>
+                                                <div style={{ fontSize: '0.75rem', color: brochureFile.size > 5 * 1024 * 1024 ? '#b91c1c' : 'var(--txt-3)' }}>
+                                                    {(brochureFile.size / 1024).toFixed(1)} KB {brochureFile.size > 5 * 1024 * 1024 && '⚠️ Exceeds 5MB limit'}
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <button
+                                            type="button"
+                                            onClick={() => setBrochureFile(null)}
+                                            title="Remove brochure"
+                                            style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', fontSize: '16px', fontWeight: 'bold' }}
+                                        >
+                                            ✕
+                                        </button>
+                                    </div>
+                                )}
+
+                                {/* Existing Uploaded Brochure */}
+                                {eventForm.brochure && !brochureFile && (
                                     <div className="mt-2 p-2 border rounded d-flex justify-content-between align-items-center" style={{ background: 'var(--bg-secondary)' }}>
-                                        <span className="text-sm text-success">✓ Brochure uploaded</span>
-                                        <a href={eventForm.brochure} target="_blank" rel="noopener noreferrer" className="btn btn-sm btn-link text-primary">View</a>
+                                        <span className="text-sm text-success">✓ Current Brochure:</span>
+                                        <a href={eventForm.brochure} target="_blank" rel="noopener noreferrer" className="btn btn-sm btn-link text-primary">View PDF</a>
                                         <button type="button" className="btn btn-sm btn-danger" onClick={() => setEventForm(prev => ({ ...prev, brochure: "" }))}>Remove</button>
                                     </div>
                                 )}

@@ -435,6 +435,34 @@ const CircularBellNotification = ({ onBellClick }) => {
                                 <h4 style={{ margin: '0 0 12px', fontSize: '0.85rem', fontWeight: 700, color: 'var(--txt-1)' }}>
                                     Attachments & Links ({selectedCircular.attachments.length})
                                 </h4>
+
+                                {/* Image thumbnails preview */}
+                                {selectedCircular.attachments.some(att => att.fileType === 'image' || ['jpg', 'jpeg', 'png', 'webp', 'gif'].includes(att.name.split('.').pop().toLowerCase())) && (
+                                    <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', marginBottom: '12px' }}>
+                                        {selectedCircular.attachments.filter(att => att.fileType === 'image' || ['jpg', 'jpeg', 'png', 'webp', 'gif'].includes(att.name.split('.').pop().toLowerCase())).map((att, imgIdx) => {
+                                            const fileUrl = getAttachmentUrl(att.fileUrl);
+                                            return (
+                                                <a 
+                                                    key={imgIdx} 
+                                                    href={fileUrl} 
+                                                    target="_blank" 
+                                                    rel="noopener noreferrer"
+                                                    title={att.name}
+                                                    style={{ display: 'block', borderRadius: '6px', overflow: 'hidden', border: '1px solid var(--border)', boxShadow: '0 2px 4px rgba(0,0,0,0.05)' }}
+                                                >
+                                                    <img 
+                                                        src={fileUrl} 
+                                                        alt={att.name} 
+                                                        style={{ width: '80px', height: '80px', objectFit: 'cover', display: 'block', transition: 'transform 0.2s' }}
+                                                        onMouseOver={e => e.currentTarget.style.transform = 'scale(1.05)'}
+                                                        onMouseOut={e => e.currentTarget.style.transform = 'scale(1)'}
+                                                    />
+                                                </a>
+                                            );
+                                        })}
+                                    </div>
+                                )}
+
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                                     {selectedCircular.attachments.map((att, idx) => {
                                         const fileUrl = getAttachmentUrl(att.fileUrl);

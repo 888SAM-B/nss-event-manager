@@ -2,6 +2,12 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import toast from 'react-hot-toast';
 
+// Cloudinary Configuration
+const CLOUDINARY_CLOUD_NAME = import.meta.env.VITE_CLOUD_NAME;
+const CLOUDINARY_UPLOAD_PRESET = import.meta.env.VITE_UPLOAD_PRESET;
+const CLOUDINARY_PDF_CLOUD_NAME = import.meta.env.VITE_PDF_CLOUD_NAME || import.meta.env.VITE_CLOUD_NAME;
+const CLOUDINARY_PDF_UPLOAD_PRESET = import.meta.env.VITE_PDF_UPLOAD_PRESET || import.meta.env.VITE_UPLOAD_PRESET;
+
 const AdminCircularsManager = ({ userRole, userDistrict, userName }) => {
     const [circulars, setCirculars] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -62,6 +68,32 @@ const AdminCircularsManager = ({ userRole, userDistrict, userName }) => {
         setExternalLinks(updated);
     };
 
+    const uploadFileToCloudinary = async (file) => {
+        const ext = file.name.split('.').pop().toLowerCase();
+        const isPdf = ext === 'pdf';
+        const isImage = ['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(ext);
+
+        const formData = new FormData();
+        formData.append('file', file);
+
+        const uploadPreset = isPdf ? CLOUDINARY_PDF_UPLOAD_PRESET : CLOUDINARY_UPLOAD_PRESET;
+        const cloudName = isPdf ? CLOUDINARY_PDF_CLOUD_NAME : CLOUDINARY_CLOUD_NAME;
+        const resourceType = isPdf ? 'raw' : (isImage ? 'image' : 'auto');
+
+        formData.append('upload_preset', uploadPreset);
+
+        const response = await axios.post(
+            `https://api.cloudinary.com/v1_1/${cloudName}/${resourceType}/upload`,
+            formData
+        );
+
+        return {
+            name: file.name,
+            fileUrl: response.data.secure_url || response.data.url,
+            fileType: isImage ? 'image' : (isPdf ? 'pdf' : 'file')
+        };
+    };
+
     const handlePublish = async (e) => {
         e.preventDefault();
         if (!title.trim() || !content.trim()) {
@@ -70,37 +102,55 @@ const AdminCircularsManager = ({ userRole, userDistrict, userName }) => {
         }
 
         setPublishing(true);
+        const uploadToast = selectedFiles.length > 0 ? toast.loading(`Uploading ${selectedFiles.length} attachment(s) to Cloudinary...`) : null;
+
         try {
             const token = localStorage.getItem('adminToken');
-            const formData = new FormData();
-            formData.append('title', title);
-            formData.append('content', content);
-            formData.append('targetAudience', targetAudience);
-            formData.append('postedByName', userName || (userRole === 'admin' ? 'System Administrator' : 'District Nodal Officer'));
 
-            // Append attached files
-            selectedFiles.forEach(file => {
-                formData.append('files', file);
-            });
+            // 1. Upload files directly to Cloudinary
+            const uploadedCloudinaryFiles = [];
+            if (selectedFiles.length > 0) {
+                for (let i = 0; i < selectedFiles.length; i++) {
+                    const file = selectedFiles[i];
+                    try {
+                        const uploaded = await uploadFileToCloudinary(file);
+                        uploadedCloudinaryFiles.push(uploaded);
+                    } catch (uploadErr) {
+                        console.error(`Failed to upload ${file.name} to Cloudinary:`, uploadErr);
+                        toast.error(`Failed to upload ${file.name} to Cloudinary`);
+                        throw uploadErr;
+                    }
+                }
+            }
 
-            // Append valid external links
+            if (uploadToast) {
+                toast.dismiss(uploadToast);
+            }
+
+            // 2. Append valid external links
             const validLinks = externalLinks
                 .filter(l => l.name.trim() && l.url.trim())
                 .map(l => ({ name: l.name.trim(), fileUrl: l.url.trim(), fileType: 'link' }));
 
-            if (validLinks.length > 0) {
-                formData.append('attachments', JSON.stringify(validLinks));
-            }
+            // Combine Cloudinary attachments + External links
+            const allAttachments = [...uploadedCloudinaryFiles, ...validLinks];
 
-            const res = await axios.post(`${import.meta.env.VITE_API_URL}/circulars`, formData, {
+            // 3. Post to backend with Cloudinary URLs in attachments
+            const res = await axios.post(`${import.meta.env.VITE_API_URL}/circulars`, {
+                title: title.trim(),
+                content: content.trim(),
+                targetAudience,
+                postedByName: userName || (userRole === 'admin' ? 'System Administrator' : 'District Nodal Officer'),
+                attachments: allAttachments
+            }, {
                 headers: {
                     Authorization: `Bearer ${token}`,
-                    'Content-Type': 'multipart/form-data'
+                    'Content-Type': 'application/json'
                 }
             });
 
             if (res.data.success) {
-                toast.success('Circular published successfully!');
+                toast.success('Circular published successfully with Cloudinary attachments!');
                 setShowCreateModal(false);
                 setTitle('');
                 setContent('');
@@ -111,6 +161,7 @@ const AdminCircularsManager = ({ userRole, userDistrict, userName }) => {
             }
         } catch (err) {
             console.error(err);
+            if (uploadToast) toast.dismiss(uploadToast);
             toast.error(err.response?.data?.message || 'Failed to publish circular.');
         } finally {
             setPublishing(false);
@@ -253,20 +304,52 @@ const AdminCircularsManager = ({ userRole, userDistrict, userName }) => {
                                     <h4 style={{ fontSize: '0.8rem', fontWeight: 700, margin: '0 0 8px', color: 'var(--txt-2)' }}>
                                         ATTACHMENTS ({c.attachments.length})
                                     </h4>
+                                    
+                                    {/* Image thumbnails preview */}
+                                    {c.attachments.some(att => att.fileType === 'image' || ['jpg', 'jpeg', 'png', 'webp', 'gif'].includes(att.name.split('.').pop().toLowerCase())) && (
+                                        <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', marginBottom: '10px' }}>
+                                            {c.attachments.filter(att => att.fileType === 'image' || ['jpg', 'jpeg', 'png', 'webp', 'gif'].includes(att.name.split('.').pop().toLowerCase())).map((att, imgIdx) => (
+                                                <a 
+                                                    key={imgIdx} 
+                                                    href={getAttachmentUrl(att.fileUrl)} 
+                                                    target="_blank" 
+                                                    rel="noopener noreferrer"
+                                                    title={att.name}
+                                                    style={{ display: 'block', borderRadius: '6px', overflow: 'hidden', border: '1px solid var(--border)', boxShadow: '0 2px 4px rgba(0,0,0,0.05)' }}
+                                                >
+                                                    <img 
+                                                        src={getAttachmentUrl(att.fileUrl)} 
+                                                        alt={att.name} 
+                                                        style={{ width: '80px', height: '80px', objectFit: 'cover', display: 'block', transition: 'transform 0.2s' }}
+                                                        onMouseOver={e => e.currentTarget.style.transform = 'scale(1.05)'}
+                                                        onMouseOut={e => e.currentTarget.style.transform = 'scale(1)'}
+                                                    />
+                                                </a>
+                                            ))}
+                                        </div>
+                                    )}
+
                                     <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                                        {c.attachments.map((att, idx) => (
-                                            <a
-                                                key={idx}
-                                                href={getAttachmentUrl(att.fileUrl)}
-                                                target="_blank"
-                                                rel="noopener noreferrer"
-                                                className="btn btn-sm btn-secondary"
-                                                style={{ fontSize: '0.75rem', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
-                                            >
-                                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48" /></svg>
-                                                {att.name}
-                                            </a>
-                                        ))}
+                                        {c.attachments.map((att, idx) => {
+                                            const isImg = att.fileType === 'image' || ['jpg', 'jpeg', 'png', 'webp', 'gif'].includes(att.name.split('.').pop().toLowerCase());
+                                            return (
+                                                <a
+                                                    key={idx}
+                                                    href={getAttachmentUrl(att.fileUrl)}
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                    className={`btn btn-sm ${isImg ? 'btn-outline-primary' : 'btn-secondary'}`}
+                                                    style={{ fontSize: '0.75rem', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
+                                                >
+                                                    {isImg ? (
+                                                        <span>🖼️</span>
+                                                    ) : (
+                                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48" /></svg>
+                                                    )}
+                                                    {att.name}
+                                                </a>
+                                            );
+                                        })}
                                     </div>
                                 </div>
                             )}
@@ -325,16 +408,27 @@ const AdminCircularsManager = ({ userRole, userDistrict, userName }) => {
 
                             {/* File Upload Attachment */}
                             <div className="mb-4">
-                                <label className="form-label fw-bold">File Attachments (PDFs, Images)</label>
+                                <label className="form-label fw-bold">File Attachments (Images, PDFs)</label>
                                 <input
                                     type="file"
                                     className="form-control"
                                     multiple
-                                    accept=".pdf,.jpg,.jpeg,.png"
+                                    accept=".pdf,.jpg,.jpeg,.png,.webp,.gif"
                                     onChange={handleFileChange}
                                 />
+                                {selectedFiles.length > 0 && (
+                                    <div style={{ marginTop: '8px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                                        {selectedFiles.map((file, i) => (
+                                            <div key={i} style={{ fontSize: '0.8rem', color: 'var(--txt-2)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                                <span>{['jpg','jpeg','png','webp','gif'].includes(file.name.split('.').pop().toLowerCase()) ? '🖼️' : '📄'}</span>
+                                                <span style={{ fontWeight: 600 }}>{file.name}</span>
+                                                <span style={{ color: 'var(--txt-3)' }}>({(file.size / 1024).toFixed(1)} KB)</span>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
                                 <small style={{ color: 'var(--txt-3)', display: 'block', marginTop: '4px' }}>
-                                    Supported file types: PDF, JPG, PNG (Max 10MB per file)
+                                    Supported file types: Images (JPG, PNG, WEBP), PDF. Uploaded directly to Cloudinary storage.
                                 </small>
                             </div>
 
