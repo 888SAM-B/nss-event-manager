@@ -35,14 +35,14 @@ const activitiesConfig = [
 const isValidSocialLink = (url) => {
     if (!url) return false;
     const clean = url.trim().toLowerCase();
-    return clean !== "" && 
-           clean !== "nil" && 
-           clean !== "-" && 
-           clean !== "none" && 
-           clean !== "no link" && 
-           clean !== "n/a" && 
-           clean !== "na" &&
-           clean !== "nil.";
+    return clean !== "" &&
+        clean !== "nil" &&
+        clean !== "-" &&
+        clean !== "none" &&
+        clean !== "no link" &&
+        clean !== "n/a" &&
+        clean !== "na" &&
+        clean !== "nil.";
 };
 
 const AdminReportGenerator = () => {
@@ -167,11 +167,11 @@ const AdminReportGenerator = () => {
             filteredReports.forEach(rep => {
                 const activityData = rep.activities?.[act.key] || {};
                 const progCount = activityData.programmes || 0;
-                
+
                 if (progCount > 0) {
                     programmesSum += progCount;
                     volunteersSum += activityData.volunteers || 0;
-                    
+
                     if (rep.collegeId?._id) {
                         collegeIdsSet.add(rep.collegeId._id);
                     }
@@ -364,15 +364,15 @@ const AdminReportGenerator = () => {
             const printableHeight = pdfHeight - (margin * 2);
 
             const imgData = canvas.toDataURL('image/png');
-            
+
             let imgWidth = printableWidth;
             let imgHeight = (canvas.height * imgWidth) / canvas.width;
-            
+
             if (imgHeight > printableHeight) {
                 imgHeight = printableHeight;
                 imgWidth = (canvas.width * imgHeight) / canvas.height;
             }
-            
+
             const xPos = margin + (printableWidth - imgWidth) / 2;
             const yPos = margin + (printableHeight - imgHeight) / 2;
 
@@ -473,9 +473,9 @@ const AdminReportGenerator = () => {
                 <div className="grid-cols-4 gap-4 align-items-end">
                     <div className="form-group">
                         <label className="form-label">College</label>
-                        <select 
-                            className="form-input" 
-                            value={selectedCollegeId} 
+                        <select
+                            className="form-input"
+                            value={selectedCollegeId}
                             onChange={(e) => setSelectedCollegeId(e.target.value)}
                         >
                             <option value="">All Colleges</option>
@@ -487,9 +487,9 @@ const AdminReportGenerator = () => {
 
                     <div className="form-group">
                         <label className="form-label">Unit</label>
-                        <select 
-                            className="form-input" 
-                            value={selectedUnitId} 
+                        <select
+                            className="form-input"
+                            value={selectedUnitId}
                             onChange={(e) => setSelectedUnitId(e.target.value)}
                             disabled={!selectedCollegeId}
                         >
@@ -502,9 +502,9 @@ const AdminReportGenerator = () => {
 
                     <div className="form-group">
                         <label className="form-label">Report Type</label>
-                        <select 
-                            className="form-input" 
-                            value={reportType} 
+                        <select
+                            className="form-input"
+                            value={reportType}
                             onChange={(e) => setReportType(e.target.value)}
                         >
                             <option value="">All Types</option>
@@ -517,9 +517,9 @@ const AdminReportGenerator = () => {
 
                     <div className="form-group">
                         <label className="form-label">District</label>
-                        <select 
-                            className="form-input" 
-                            value={selectedDistrict} 
+                        <select
+                            className="form-input"
+                            value={selectedDistrict}
                             onChange={(e) => setSelectedDistrict(e.target.value)}
                         >
                             <option value="">All Districts</option>
@@ -533,9 +533,9 @@ const AdminReportGenerator = () => {
                 <div className="grid-cols-4 gap-4 mt-4 align-items-end">
                     <div className="form-group">
                         <label className="form-label">Reporting Period</label>
-                        <select 
-                            className="form-input" 
-                            value={selectedPeriod} 
+                        <select
+                            className="form-input"
+                            value={selectedPeriod}
                             onChange={(e) => setSelectedPeriod(e.target.value)}
                         >
                             <option value="">All Periods</option>
@@ -565,13 +565,13 @@ const AdminReportGenerator = () => {
 
             {/* View Sub-tab Toggles */}
             <div className="flex gap-4 mb-6">
-                <button 
+                <button
                     className={`btn ${activeView === 'cumulative' ? 'btn-primary' : 'btn-outline-primary'}`}
                     onClick={() => setActiveView('cumulative')}
                 >
                     Cumulative Summary View
                 </button>
-                <button 
+                <button
                     className={`btn ${activeView === 'individual' ? 'btn-primary' : 'btn-outline-primary'}`}
                     onClick={() => setActiveView('individual')}
                 >
@@ -611,15 +611,15 @@ const AdminReportGenerator = () => {
                                     <tbody>
                                         {aggregatedMetrics.activities.map((act, index) => {
                                             return (
-                                                <tr 
-                                                    key={act.key} 
+                                                <tr
+                                                    key={act.key}
                                                     style={{ borderBottom: '1px solid var(--border)' }}
                                                 >
                                                     <td style={{ padding: '12px 8px', textAlign: 'center' }}>{index + 1}</td>
                                                     <td style={{ padding: '12px 8px', fontWeight: 'bold' }}>{act.label}</td>
-                                                    
+
                                                     {/* Programmes Conducted Cell */}
-                                                    <td 
+                                                    <td
                                                         onClick={() => {
                                                             if (act.programmes > 0) {
                                                                 setDrillDownData({
@@ -651,7 +651,7 @@ const AdminReportGenerator = () => {
                                                     </td>
 
                                                     {/* Colleges Participated Cell */}
-                                                    <td 
+                                                    <td
                                                         onClick={() => {
                                                             if (act.collegesCount > 0) {
                                                                 const uniqueCollegeReports = [];
@@ -692,7 +692,7 @@ const AdminReportGenerator = () => {
                                                     </td>
 
                                                     {/* Volunteers Cell */}
-                                                    <td 
+                                                    <td
                                                         onClick={() => {
                                                             if (act.volunteers > 0) {
                                                                 setDrillDownData({
@@ -724,7 +724,7 @@ const AdminReportGenerator = () => {
                                                     </td>
 
                                                     {/* Beneficiaries/Key Details Cell */}
-                                                    <td 
+                                                    <td
                                                         onClick={() => {
                                                             if (act.beneficiaryValue > 0 && act.beneficiaryField) {
                                                                 setDrillDownData({
@@ -777,7 +777,7 @@ const AdminReportGenerator = () => {
                                 <h4 className="mb-3 text-md" style={{ fontWeight: 'bold' }}>Social Media Campaign Metrics</h4>
                                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '1.5rem', fontSize: '0.95rem' }}>
                                     {aggregatedMetrics.socialMedia.map((sm, idx) => (
-                                        <div 
+                                        <div
                                             key={sm.key}
                                             onClick={() => {
                                                 if (sm.count > 0) {
@@ -857,8 +857,8 @@ const AdminReportGenerator = () => {
                                                 </div>
 
                                                 {/* Hidden PDF Template element for each report */}
-                                                <div 
-                                                    id={`pdf-preview-pane-admin-${rep._id}`} 
+                                                <div
+                                                    id={`pdf-preview-pane-admin-${rep._id}`}
                                                     style={{
                                                         display: 'none',
                                                         position: 'absolute',
@@ -971,8 +971,8 @@ const AdminReportGenerator = () => {
             )}
 
             {/* Hidden Landscape PDF Template for Cumulative Report */}
-            <div 
-                id="cumulative-pdf-pane" 
+            <div
+                id="cumulative-pdf-pane"
                 style={{
                     display: 'none',
                     position: 'absolute',
@@ -1045,13 +1045,13 @@ const AdminReportGenerator = () => {
 
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '50px', fontSize: '12px', color: '#000' }}>
                     <div style={{ textAlign: 'center', width: '250px', color: '#000' }}>
-                        <div style={{ borderTop: '1px solid #000', paddingTop: '5px', color: '#000' }}>
-                            NSS Programme Coordinator Signature
+                        <div style={{ borderTop: '0px solid #000', paddingTop: '5px', color: '#000' }}>
+
                         </div>
                     </div>
                     <div style={{ textAlign: 'center', width: '250px', color: '#000' }}>
                         <div style={{ borderTop: '1px solid #000', paddingTop: '5px', color: '#000' }}>
-                            University Registrar Signature
+                            NSS Programme Coordinator Signature
                         </div>
                     </div>
                 </div>
@@ -1085,7 +1085,7 @@ const AdminReportGenerator = () => {
                     }}>
                         <div className="flex-between mb-4 pb-2" style={{ borderBottom: '1px solid var(--border)' }}>
                             <h3 style={{ margin: 0, fontWeight: 800, fontSize: '1.25rem' }}>{drillDownData.title}</h3>
-                            <button 
+                            <button
                                 onClick={() => setDrillDownData(null)}
                                 style={{
                                     background: 'none',
@@ -1099,7 +1099,7 @@ const AdminReportGenerator = () => {
                                 &times;
                             </button>
                         </div>
-                        
+
                         {drillDownData.contributors.length === 0 ? (
                             <p className="text-muted text-center py-4">No contributors found.</p>
                         ) : (
@@ -1122,10 +1122,10 @@ const AdminReportGenerator = () => {
                                                 <td>{c.poName}</td>
                                                 <td>
                                                     {drillDownData.isLink ? (
-                                                        <a 
-                                                            href={c.value} 
-                                                            target="_blank" 
-                                                            rel="noopener noreferrer" 
+                                                        <a
+                                                            href={c.value}
+                                                            target="_blank"
+                                                            rel="noopener noreferrer"
                                                             style={{ color: 'var(--brand-500)', textDecoration: 'underline', wordBreak: 'break-all' }}
                                                         >
                                                             {c.value}
@@ -1135,7 +1135,7 @@ const AdminReportGenerator = () => {
                                                     )}
                                                 </td>
                                                 <td className="text-center">
-                                                    <button 
+                                                    <button
                                                         className="btn btn-sm btn-primary"
                                                         onClick={() => {
                                                             setDrillDownData(null);
@@ -1151,7 +1151,7 @@ const AdminReportGenerator = () => {
                                 </table>
                             </div>
                         )}
-                        
+
                         <div className="text-right mt-4">
                             <button className="btn btn-secondary" onClick={() => setDrillDownData(null)}>
                                 Close
@@ -1190,7 +1190,7 @@ const AdminReportGenerator = () => {
                     }}>
                         <div className="flex-between mb-4 pb-2" style={{ borderBottom: '2px solid #333' }}>
                             <h3 style={{ margin: 0, fontWeight: 800, color: '#333' }}>Detailed Report View</h3>
-                            <button 
+                            <button
                                 onClick={() => setActivePreviewReport(null)}
                                 style={{
                                     background: 'none',
@@ -1204,7 +1204,7 @@ const AdminReportGenerator = () => {
                                 &times;
                             </button>
                         </div>
-                        
+
                         {/* Report Content styled matching PDF standard */}
                         <div style={{ padding: '10px', color: '#000000', fontFamily: 'serif' }}>
                             <div style={{ textAlign: 'center', borderBottom: '3px double #000', paddingBottom: '15px', marginBottom: '20px' }}>
@@ -1283,7 +1283,7 @@ const AdminReportGenerator = () => {
                                 </ul>
                             </div>
                         </div>
-                        
+
                         <div className="text-right mt-6 pt-4" style={{ borderTop: '1px solid #eee' }}>
                             <button className="btn btn-secondary mr-2" onClick={() => setActivePreviewReport(null)}>
                                 Close
