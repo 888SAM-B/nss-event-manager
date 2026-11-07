@@ -26,7 +26,7 @@ export const getCategoryColor = (category) => {
 const monthNames = ['January','February','March','April','May','June',
     'July','August','September','October','November','December'];
 
-const EventsCalendar = ({ events = [], compact = false }) => {
+const EventsCalendar = ({ events = [], compact = false, selectedDate = null, onSelectDate = null, onViewEvent = null, onViewReport = null, onViewForm1 = null }) => {
     const [currentDate, setCurrentDate] = useState(new Date());
     const [selectedDayEvents, setSelectedDayEvents] = useState(null);
     const [selectedDateLabel, setSelectedDateLabel] = useState('');
@@ -48,6 +48,10 @@ const EventsCalendar = ({ events = [], compact = false }) => {
     };
 
     const handleDayClick = (day, dayEvents) => {
+        const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+        if (onSelectDate) {
+            onSelectDate(dateStr, dayEvents);
+        }
         if (dayEvents.length > 0) {
             setSelectedDayEvents(dayEvents);
             setSelectedDateLabel(`${monthNames[month]} ${day}, ${year}`);
@@ -64,27 +68,38 @@ const EventsCalendar = ({ events = [], compact = false }) => {
     }
     for (let day = 1; day <= daysInMonth; day++) {
         const dayEvents = getEventsForDate(day);
+        const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
         const today = new Date();
         const isToday = today.getFullYear() === year && today.getMonth() === month && today.getDate() === day;
+        const isSelected = selectedDate === dateStr;
         const hasEvents = dayEvents.length > 0;
 
         days.push(
             <div
                 key={day}
                 onClick={() => handleDayClick(day, dayEvents)}
-                onMouseEnter={e => { if (hasEvents) e.currentTarget.style.background = 'rgba(99,102,241,0.12)'; }}
-                onMouseLeave={e => { e.currentTarget.style.background = isToday ? 'rgba(99,102,241,0.18)' : 'transparent'; }}
+                onMouseEnter={e => {
+                    if (isSelected) return;
+                    if (hasEvents) e.currentTarget.style.background = 'rgba(99,102,241,0.12)';
+                }}
+                onMouseLeave={e => {
+                    if (isSelected) {
+                        e.currentTarget.style.background = 'rgba(99,102,241,0.22)';
+                    } else {
+                        e.currentTarget.style.background = isToday ? 'rgba(99,102,241,0.18)' : 'transparent';
+                    }
+                }}
                 style={{
                     padding: compact ? '2px 1px' : '4px 2px',
                     borderRadius: compact ? '5px' : '8px',
-                    background: isToday ? 'rgba(99,102,241,0.18)' : 'transparent',
-                    border: isToday ? '1.5px solid rgba(99,102,241,0.5)' : '1.5px solid transparent',
+                    background: isSelected ? 'rgba(99,102,241,0.25)' : (isToday ? 'rgba(99,102,241,0.18)' : 'transparent'),
+                    border: isSelected ? '1.5px solid var(--brand-600, #4f46e5)' : (isToday ? '1.5px solid rgba(99,102,241,0.5)' : '1.5px solid transparent'),
                     minHeight: compact ? '28px' : '48px',
                     display: 'flex',
                     flexDirection: 'column',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    cursor: hasEvents ? 'pointer' : 'default',
+                    cursor: hasEvents || onSelectDate ? 'pointer' : 'default',
                     transition: 'background 0.15s',
                     overflow: 'hidden',
                     gap: compact ? '1px' : '2px',
@@ -92,8 +107,8 @@ const EventsCalendar = ({ events = [], compact = false }) => {
             >
                 <span style={{
                     fontSize: compact ? '0.74rem' : '0.85rem',
-                    fontWeight: isToday ? 700 : 500,
-                    color: isToday ? 'var(--primary-color)' : 'var(--txt-1)',
+                    fontWeight: isSelected || isToday ? 700 : 500,
+                    color: isSelected ? 'var(--brand-600, #4f46e5)' : (isToday ? 'var(--primary-color)' : 'var(--txt-1)'),
                     lineHeight: 1,
                 }}>
                     {day}
@@ -230,12 +245,44 @@ const EventsCalendar = ({ events = [], compact = false }) => {
                                     {event.description && (
                                         <p style={{ margin: '0.75rem 0 0', fontSize: '0.82rem', color: 'var(--txt-2)', lineHeight: 1.5 }}>{event.description}</p>
                                     )}
-                                    {event.report?.submittedAt && (
-                                        <div style={{ marginTop: '0.75rem', padding: '0.5rem 0.75rem', background: 'rgba(16,185,129,0.08)', border: '1px solid rgba(16,185,129,0.2)', borderRadius: '6px', fontSize: '0.78rem' }}>
-                                            <span style={{ color: '#10b981', fontWeight: 700 }}>✓ Report Submitted</span>
-                                            {event.report.participantsCount && <span style={{ color: 'var(--txt-2)', marginLeft: '0.75rem' }}>{event.report.participantsCount} participants</span>}
+                                    {event.report && (event.report.submittedAt || event.report.outcome || event.report.reportPhotos?.length > 0) && (
+                                        <div style={{ marginTop: '0.75rem', padding: '0.5rem 0.75rem', background: 'rgba(16,185,129,0.08)', border: '1px solid rgba(16,185,129,0.2)', borderRadius: '6px', fontSize: '0.78rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.4rem' }}>
+                                            <div>
+                                                <span style={{ color: '#10b981', fontWeight: 700 }}>✓ Report Submitted</span>
+                                                {event.report.participantsCount && <span style={{ color: 'var(--txt-2)', marginLeft: '0.75rem' }}>{event.report.participantsCount} participants</span>}
+                                            </div>
+                                            {onViewReport && (
+                                                <button
+                                                    className="btn btn-sm btn-outline-success"
+                                                    style={{ fontSize: '0.72rem', padding: '0.2rem 0.55rem', fontWeight: 600 }}
+                                                    onClick={() => { setSelectedDayEvents(null); onViewReport(event); }}
+                                                >
+                                                    📄 View Official Report
+                                                </button>
+                                            )}
                                         </div>
                                     )}
+
+                                    <div style={{ marginTop: '0.75rem', display: 'flex', justifyContent: 'flex-end', gap: '0.4rem', flexWrap: 'wrap' }}>
+                                        {(event.category === 'Special Camp' || event.specialCampDetails) && onViewForm1 && (
+                                            <button
+                                                className="btn btn-sm btn-outline-info"
+                                                style={{ fontSize: '0.72rem', padding: '0.2rem 0.55rem', fontWeight: 600 }}
+                                                onClick={() => { setSelectedDayEvents(null); onViewForm1(event); }}
+                                            >
+                                                🏕️ Form 1 Proposal
+                                            </button>
+                                        )}
+                                        {onViewEvent && (
+                                            <button
+                                                className="btn btn-sm btn-secondary"
+                                                style={{ fontSize: '0.72rem', padding: '0.2rem 0.55rem' }}
+                                                onClick={() => { setSelectedDayEvents(null); onViewEvent(event); }}
+                                            >
+                                                View Details
+                                            </button>
+                                        )}
+                                    </div>
                                 </div>
                             ))}
                         </div>
